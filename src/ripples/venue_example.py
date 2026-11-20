@@ -313,7 +313,7 @@ def render(folder, scene, output):
         try:
             for s in range(180):
                 memory.import_recording(f"example:{s}", seconds[s], epoch=BASE_NS/1e9)
-            active, sleep = RipplesVisual("activate"), RipplesVisual("sleep", criticality="activity")
+            active, sleep = RipplesVisual("activate", output_limits=False), RipplesVisual("sleep", criticality="activity", output_limits=False)
             sleep.set_memory(memory.snapshot())
             movie, source = VenueMovie(active.waves.xyz, scene), recorded_spikes()
             displayed = [e for e in events if e["t_ms"] >= 180000]

@@ -3,11 +3,15 @@
 XY is receiver position. Height is a labelled sensor-feature axis, NOT a claim
 of reconstructed world height (camera pose and ceiling sensor extrinsics absent).
 """
+import csv
+
 import numpy as np
 from scipy.ndimage import gaussian_filter, map_coordinates
 
 from ripples.hardware.transport import VALID_MASK
 from ripples.waves import SpikeWaves
+from ripples.transition import StateTransition
+from ripples.paths import LAYOUT_DIR
 
 SIZE = 32
 HEIGHT = 24
@@ -18,7 +22,7 @@ BANDS = (("low", .18, (255, 140, 35)),
 
 
 class RipplesVisual:
-    def __init__(self, state="activate", *, criticality="activity", dream_strength=.45, seed=120):
+    def __init__(self, state="activate", *, criticality="activity", dream_strength=.45, seed=120, transition_direction="up", output_limits=True):
         if criticality not in ("activity", "slow_waves", "legacy_waves"):
             raise ValueError("unknown criticality display mode")
         if not np.isfinite(dream_strength) or not 0 <= dream_strength <= 1:
@@ -35,6 +39,17 @@ class RipplesVisual:
         self.rng = np.random.default_rng(seed)
         self.dream_noise = self.rng.standard_normal(self.trail.shape[:-1]).astype(np.float32)
         self.activity = np.zeros((*VALID_MASK.shape, 3), np.float32)
+        # Weight model samples by the number of physical pixels on their strip.
+        weights = np.ones(VALID_MASK.shape, dtype=float)
+        with (LAYOUT_DIR/"mapping_plus10.csv").open(encoding="utf-8-sig", newline="") as f:
+            for row in csv.DictReader(f):
+                if row["included_in_layout"] == "True":
+                    z, p = int(row["zone"])-1, int(row["port_c"])-1
+                    old = int(VALID_MASK[z,p].sum())
+                    source = np.rint(np.linspace(0, old-1, int(row["led_count"])-1)).astype(int)
+                    weights[z,p,:old] = np.bincount(source, minlength=old)
+        self.transition = StateTransition(self.coords[2]/(HEIGHT-1), weights[VALID_MASK], transition_direction)
+        self.output_limits = output_limits
         self.set_state(state)
 
     def set_state(self, state):
@@ -164,5 +179,7 @@ class RipplesVisual:
             # Model-driven waves are a separate screen-blended layer: no trails,
             # count-dependent gain or re-encoding of the spatial statistics.
             colors = colors+(255-colors)*(base/255.)
-        result[VALID_MASK] = np.clip(colors, 0, 255).astype(np.uint8)
+        logical = np.clip(colors, 0, 255)
+        result[VALID_MASK] = (self.transition.render(logical, self.state, dt) if self.output_limits
+                              else logical.astype(np.uint8))
         return result

@@ -83,3 +83,5 @@ Activate는 최신값의 흔적을 약 0.9초 시간상수로 감쇠합니다. S
 모델 RGB `(12,16,55,3)`를 설치 `(12,16,65,3)`으로 펼치고, 34개 스트립의 R/G를 보정한 뒤 RGB565 LED2로 보냅니다. 가시 LED 10,260개가 각각 독립 뉴런이라는 뜻은 아닙니다. 180개 스트립·물리 10,440개이며 첫 물리 LED는 검정입니다. 포트/보드 확인은 실제 송출 전에 유지합니다.
 
 [전체 네트워크](../../docs/DATA_FLOW.md) · [raw 규격](../../docs/realtime.md) · [하드웨어](../../docs/tower.md) · [M30 예시 폼](../../data_led_example/m30_session/README.md) · [검증](../../docs/validation.md)
+
+상태 변경 시 [높이 방향 전환광과 출력 제한](../../docs/STATE_TRANSITIONS.md)을 적용합니다. 정상 화면도 같은 RGB 예산으로 제한하며 모델의 spike 계산은 유지합니다.

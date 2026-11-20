@@ -1,0 +1,20 @@
+{
+  "example": true,
+  "duration_s": 18,
+  "fps": 10,
+  "switches_s": [
+    2,
+    10
+  ],
+  "directions": [
+    "up",
+    "down"
+  ],
+  "peak_limit": 96.0,
+  "mean_limit": 18.0,
+  "observed_max_channel": 96,
+  "observed_max_weighted_mean": 17.701007147498377,
+  "physical_leds": 10260,
+  "hardware_transmission": false,
+  "current_measured": false
+}

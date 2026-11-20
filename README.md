@@ -91,3 +91,10 @@ Sleep은 앞서 관측한 3바퀴의 평균·표준편차에 8,460 뉴런의 실
 현재 맥 Pi는 음량 요약을 송신하며, raw PCM 송신은 별도 연결이 필요한 선택 경로입니다. 일부 비콘만 켜져 있으면 유효 위치를 만들지 않습니다. 이번 코드/예시는 USB 송출이나 Pi 재배포를 수행하지 않습니다.
 
 상세 실행 참고는 [운영 자료](OPERATIONS.md), 기존 수신 전용 정책은 [수신 점검 문서](docs/RECEIVE_ONLY.md), 원본 모델 출처는 [NOTICE](NOTICE.md)에 있습니다.
+
+### 상태가 바뀔 때의 빛
+
+[전환 방향 비교와 밝기 제한](docs/STATE_TRANSITIONS.md): 아래→위 / 위→아래를 같은 센서 구간에서 비교합니다.
+[3D 심탑](http://127.0.0.1:8000/venue3d?test)의 **비교 아래→위 / 비교 위→아래** 버튼으로 18초 예시를 재생합니다.
+
+![Activate와 Sleep 전환 비교](docs/media/state_transition_compare.gif)

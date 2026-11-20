@@ -35,6 +35,7 @@ def main():
     p.add_argument("--seconds", type=float, default=0, help="wall time; default 0=continuous")
     p.add_argument("--port", help="optional LED USB port; board confirmation required")
     p.add_argument("--reservoir", choices=("live", "recorded"), default="live")
+    p.add_argument("--transition-direction", choices=("up", "down"), default="up", help="state-change sweep direction; RGB output budgets always enabled")
     p.add_argument("--criticality", choices=("activity", "slow_waves"), default="activity")
     p.add_argument("--preview", type=Path, help="optional finite Activate/Sleep GIF, <=120 seconds")
     p.add_argument("--report", type=Path, default=RUNTIME_DIR/"live-status.json")
@@ -64,7 +65,7 @@ def main():
     if a.port:
         from ripples.hardware.board import confirm_board
         confirm_board(a.port, "rgb565")
-    visual = RipplesVisual(criticality=a.criticality)
+    visual = RipplesVisual(criticality=a.criticality, transition_direction=a.transition_direction)
     other = RipplesVisual("sleep", criticality=a.criticality) if a.preview else None
     active = RipplesVisual("activate") if a.preview else None
     preview = Preview(visual.waves.xyz, audio_status="LIVE: see input status", criticality=a.criticality,
@@ -92,7 +93,8 @@ def main():
         report.update(sensors.report(), reservoir=a.reservoir, neurons=8460, gain=9.5, dt_ms=.1,
                       config_file=str(a.config), memory_db=str(a.db) if memory else None,
                       accumulation_enabled=bool(memory),
-                      display_state=state_status,
+                      display_state=state_status, transition_direction=a.transition_direction,
+                      output_limits={"channel_max": 96, "physical_weighted_rgb_mean": 18},
                       steps_per_frame=40, criticality=a.criticality, frames=frames_done,
                       wall_seconds=time.monotonic()-started, usb_requested=bool(a.port),
                       loop_fps=1/float(np.mean(intervals)) if intervals else 0,

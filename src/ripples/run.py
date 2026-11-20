@@ -110,6 +110,7 @@ def main():
     p.add_argument("--seconds", type=float, default=60., help="0 = continuous USB")
     p.add_argument("--port", help="requires interactive board confirmation")
     p.add_argument("--reservoir", choices=("live", "recorded"), default="live")
+    p.add_argument("--transition-direction", choices=("up", "down"), default="up", help="state-change sweep direction; RGB output budgets always enabled")
     p.add_argument("--criticality", choices=("activity", "slow_waves", "legacy_waves"), default="activity")
     p.add_argument("--dream-strength", type=float, default=.45)
     p.add_argument("--preview", type=Path)
@@ -135,7 +136,7 @@ def main():
     args.state_file.parent.mkdir(parents=True, exist_ok=True)
     if args.state or not args.state_file.exists():
         args.state_file.write_text(args.state or "activate", encoding="utf-8")
-    visual = RipplesVisual(criticality=args.criticality, dream_strength=args.dream_strength)
+    visual = RipplesVisual(criticality=args.criticality, dream_strength=args.dream_strength, transition_direction=args.transition_direction)
     visual.set_memory(saved_memory)
     other = RipplesVisual("sleep", criticality=args.criticality, dream_strength=args.dream_strength) if args.preview else None
     active_preview = RipplesVisual("activate") if args.preview else None
@@ -157,6 +158,7 @@ def main():
     info.update(reservoir=args.reservoir, neurons=8460, gain=9.5, dt_ms=.1,
                 steps_per_frame=40, requested_fps=args.fps, usb_verified=False,
                 criticality_display=args.criticality, dream_strength=args.dream_strength,
+                transition_direction=args.transition_direction, output_limits={"channel_max": 96, "physical_weighted_rgb_mean": 18},
                 replay_does_not_add_observations=True)
     pool = ThreadPoolExecutor(max_workers=1) if args.watch else None
     pending = None
