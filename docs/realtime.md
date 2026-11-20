@@ -3,9 +3,15 @@
 ## 실행 중인 센터와 테스트 화면
 
 2026-11-20 확인한 센터는 이 PC의 `C:\Users\Admin\tof-web-viewer`이다.
-그 폴더는 Git checkout이 아니며, 작업 시작 시 이 저장소의 main에는 센터 코드가 없었다.
-따라서 현재 실행 코드의 읽기 전용 프로토콜에 맞춘 어댑터를 추가했다. 센터를 재시작하거나
-화면 설정·Pi 실행본·출력 매핑을 변경하지 않는다. 센터 코드가 합쳐지면 아래 계약을 유지한다.
+그 폴더는 Git checkout이 아니다. 이제 같은 센터/감각기구 소스가 `exhibition-server/`,
+`sensors/`에 합쳐졌다(커밋 c7b1b89). 아래 어댑터는 해당 송신·수신 계약에 맞춘다.
+collector의 5초 무응답 복구 수정은 로컬 파일에도 백업 후 반영했다. 사용자 권한 승인 후
+관리자 권한 서버를 재시작했고 카메라 연결 복구 및 비콘 좌표 유지까지 확인했다.
+기구 화면·프리셋·출력 매핑과 Pi 배포 파일을 덮어쓰지 않는다.
+
+**현재는 [수신 전용 점검](RECEIVE_ONLY.md)만 운영한다.** 아래 통계/표시 경로는 추후 선택 기능이다.
+`ripples.receive`는 DB·모델·LED를 열지 않는다. `ripples.live`도 기본은 누적 OFF이며,
+명시적인 `--accumulate` 없이는 공간 DB를 읽거나 쓰지 않는다. 추가 방사형 파동은 기본 OFF(activity)다.
 
 | 주소 | 역할 |
 |---|---|
@@ -37,7 +43,8 @@ flowchart LR
 
 공유기는 네트워크 전달 장치다. 센터와 심 탑이 같은 PC면 loopback을 사용한다.
 별도 PC면 `--center http://센터_LAN_IP:8000`으로 지정한다. 인터넷 접속은 불필요하지만
-LAN 연결은 필요하다. PC 간 시각을 맞춰야 오래된 프레임 검사가 정확하다.
+LAN 연결은 필요하다. 센터와 심 탑이 별도 PC이면 모니터 capture 시각 검사를 위해 두 PC의
+시각을 맞춘다. raw Pi 입력은 Pi의 wall clock과 PC 시각을 비교하지 않는다.
 기존 TCP9500은 센터가 사용 중이므로 심 탑이 같은 포트를 다시 열지 않는다.
 
 ## 실제 입력 규격과 LED 대응
@@ -46,7 +53,7 @@ LAN 연결은 필요하다. PC 간 시각을 맞춰야 오래된 프레임 검�
 |---|---|---|
 | 혈 원시 카메라 | 240×180, depth `<u2` mm + confidence `<u2`, 약 10 Hz | 유효 화소 검사, 회전, 3×3 영역 거리 median·유효 비율 |
 | 혈 위쪽 거리 | 포인트 **1개**, `id=0`, `distance_mm`, `valid`, `status` | m로 변환. status=255/invalid/0/60m 이상 제외, 혈 XY의 보라 끝점 |
-| 비콘 | 수신기별 nodes, `median_dbm`, `age_ms`, `n`, `state` | 신선한 보정 노드 3개 이상, 지수 4 거리 모델·강건 최소제곱 |
+| 비콘 | 수신기별 nodes, `median_dbm`, `age_ms`, `n`, `state` | 확정 좌표 5개, 신선한 노드 3개 이상. 현재 상대 RSSI 가중 위치 / RF 보정 후 거리 모델 |
 | 맥 현재 실시간 | `/api/maek`: `v:1`, `device`, `seq`, `mics:[L,C,R]` 각 0..1 | `mic_level_0..2`, 낮은 층 베이지 3점. 주파수·dBFS가 아님 |
 | 맥 원시 음성 선택 경로 | 44.1kHz, 16bit signed LE, 3채널 interleaved PCM | PC에서 DC 제거, RMS 전력·Hann FFT, 저/중/고 대역 추출 |
 
@@ -96,31 +103,78 @@ ToF/거리 수집을 끄고 raw 혈 입력을 사용한다. `--audio-port`는 �
 기존 혈 hello의 role 생략은 hyeol로 해석한다. hello 이후:
 
 ```json
-{"type":"tof","seq":1,"t_wall_ns":1790000000000000000,"width":240,"height":180,"depth_dtype":"<u2","conf_dtype":"<u2"}
+{"type":"tof","seq":1,"t_wall_ns":1790000000000000000,"t_mono_ns":1000000000,"width":240,"height":180,"depth_dtype":"<u2","conf_dtype":"<u2"}
 ```
 
 예시 시각은 실제 전송 시 현재 capture 시각으로 바꾼다. payload는 depth 전체 다음 conf 전체,
 각 86,400 bytes, 합계 172,800 bytes. confidence≥60, 0<depth≤4000mm만 사용한다.
 카메라 설치 회전은 hello.rotate 또는 설정 rotate로 **한 번만** 적용한다.
-lidar는 payload 없이 `type,seq,t_wall_ns,id:0,distance_mm,status,valid`를 전송한다.
+lidar는 payload 없이 `type,seq,t_wall_ns,t_mono_ns,id:0,distance_mm,status,valid`를 전송한다.
 
 맥 전용 연결은 hello에 `role:"maek"`, 다음 형태의 확장 메시지를 사용한다:
 
 ```json
-{"type":"audio","seq":1,"t_wall_ns":1790000000000000000,"sample_rate":44100,"channels":3,"dtype":"<i2"}
+{"type":"audio","seq":1,"t_wall_ns":1790000000000000000,"t_mono_ns":1000000000,"sample_rate":44100,"channels":3,"dtype":"<i2"}
 ```
 
 payload는 WAV 파일 헤더 없는 PCM. 최대 1초, 권장 0.1초=4,410 frames=26,460 bytes.
-`t_wall_ns`는 해당 블록 마지막 샘플 시각으로 보낸다. 1초 블록은 그만큼 지연되므로
+`t_wall_ns`/`t_mono_ns`는 해당 블록 마지막 샘플 시각으로 보낸다. 1초 블록은 그만큼 지연되므로
 Activate에는 100ms 블록이 적합하다. 같은 연결에서 type별 seq가 증가해야 한다.
 이 PCM 확장은 심 탑 수신 기능이며 **현재 맥 Pi 펌웨어가 이미 송신한다는 뜻은 아니다**.
 기존 Pi는 현재 센터 음량 경로를 먼저 사용하고, PCM sender 연결은 별도 배포해야 한다.
 
+raw 수신은 연결별 `t_mono_ns`의 진행 간격과 PC 수신 단조 시각을 비교해 누적 지연을 검사한다.
+최소 관측 전달 오프셋보다 0.5초 이상 밀리거나 source clock이 되돌아가면 연결을 닫아
+최신 송신으로 재접속하게 한다. Pi wall clock이 몇 년 틀려도 그 이유만으로 버리지 않는다.
+첫 패킷의 절대 전달 지연은 동기화 없이 알 수 없다. `t_mono_ns` 없는 기존 PCM 확장은
+수신 시각만 사용하며 `arrival_only_raw`로 표시한다. 과거 녹화 파일을 이 live 포트로 재생하지 않는다.
+
+## 확정된 M30 좌표와 대략적인 위치
+
+2026-11-20 사용자 확정, 센터 `/api/simulator.layout.beacons`와 디스크의
+`data/m30/simulator.json` 값이 같음을 확인했다. 단위 mm를 m로 변환해
+[`configs/live.m30.json`](../configs/live.m30.json)에 저장했다.
+후속 업로드 5d97836의 [`beacons.json`](../exhibition-server/venues/m30/beacons.json)과도
+5개 값이 모두 일치한다. 로컬 센터의 기본 배치 코드/파일도 이 버전과 일치한다.
+
+| 노드 | X(m) | Y(m) |
+|---|---:|---:|
+| 1 | 9.933 | 10.526 |
+| 2 | 9.419 | 18.456 |
+| 3 | 1.541 | 14.387 |
+| 4 | 1.525 | 6.472 |
+| 5 | 6.511 | 1.020 |
+
+원점은 X3·Y7 교점, +X는 X3→X5, +Y는 Y7→Y3. 전체 M30(로비 포함)의
+X `[-10.770,11.149]`, Y `[-0.100,19.851]`m를 LED XY 범위로 대응한다.
+현재 비콘은 주 전시실에 모여 있으며, 관측되지 않은 로비를 채우지 않는다.
+센터의 z=0은 실제 설치 높이를 측량했다는 뜻이 아니므로 XY 추정에 사용하지 않는다.
+
+사용자 선택에 따라 **RF 미보정 상대 RSSI 위치**를 먼저 사용한다. 감쇠 지수 n=4,
+`w_i=10^((RSSI_i-max(RSSI))/(5n))`, `XY=sum(w_i*anchor_i)/sum(w_i)`이다.
+이는 거리비의 역제곱에 해당하는 가중 중심이며, RSSI의 공통 offset에 영향을 받지 않는다.
+실제 거리나 정밀 좌표를 복원한 결과가 아니고, 비콘 사이 중앙 쪽으로 치우칠 수 있다.
+`reference_dbm:-59`는 이 모드에서는 쓰지 않는 보정용 자리값이다.
+
+`position_mode=relative_rssi`, `coordinates_confirmed=true`, `calibrated=false`를 구분한다.
+향후 `--accumulate`를 켠 경우에만 추정 위치 통계를 `runtime/m30-relative.sqlite3`,
+namespace **estimated**에 저장한다. 현재 수신 전용 실행에서는 이 DB를 열지 않는다.
+새 비콘/공간 설정을 화면에서 바꿔도 운전 중 DB의 좌표 기준은 자동으로 바꾸지 않는다.
+검토한 새 설정은 아래로 내보낼 수 있다(기존 파일 덮어쓰기 금지).
+
+```powershell
+python -m ripples.site --output runtime/m30-next.json
+```
+
+원래 `range_fit` 방식으로 전환하려면 각 노드 1m RSSI와 알려진 위치의 오차를 보정한 후
+`position_mode=range_fit`, `calibrated=true`로 변경하고 **새 measured DB**를 사용한다.
+과거 estimated 셀을 실측/보정 완료 셀로 다시 이름 붙이지 않는다.
+
 ## 비콘 위치 설정
 
-`configs/live.example.json`은 **미보정 템플릿**이다. 사용자 요청에 따라 실제 좌표가 정해질
-때까지 `calibrated:false`로 둔다. 진단에서는 수신/특징 추출을 하지만 가상 좌표를 만들거나
-measured DB에 기록하지 않는다. 노드 5가 수신되어도 설정에 없는 노드는 위치 계산에서 제외한다.
+`configs/live.example.json`은 다른 장소/수신 진단용 **미보정 템플릿**이다. 명시적으로 이 파일을
+선택하면 수신/특징 추출만 하고 좌표나 DB 기록을 만들지 않는다. 기본 M30 운전은 위의
+`live.m30.json`으로 5개 노드를 사용한다. 설정에 없는 노드는 위치 계산에서 제외한다.
 
 1. `anchors`에 실제 노드 번호, 같은 기준축의 XY(m), 각 노드의 1m RSSI(dBm)를 입력한다.
 2. `bounds_m`을 `[[xmin,xmax],[ymin,ymax]]`로 입력한다. 이 범위를 LED 전체 XY에 선형 대응한다.
@@ -128,14 +182,15 @@ measured DB에 기록하지 않는다. 노드 5가 수신되어도 설정에 없
 4. 현장에서 알려진 위치들과 비교하고 `max_residual_m`을 정한 뒤 `calibrated:true`로 바꾼다.
 5. 설정/입력 경로가 바뀌면 별도 `--db`를 쓴다. fingerprint로 기존 보정과 섞이지 않게 한다.
 
-거리 모델은 `P_mW=10^(RSSI/10)`, `d=10^((reference-RSSI)/(10×4))`이다.
+RF 보정 후 range_fit 거리 모델은 `P_mW=10^(RSSI/10)`, `d=10^((reference-RSSI)/(10×4))`이다.
 센터 operator의 기본 거리 지수 2는 쓰지 않고 median RSSI를 읽어 다시 계산한다.
 노드 state=OK, n>0, 유효 median, `노드 age + 센터 수신 후 시간 <3s`를 만족해야 한다.
-최소 3개의 비공선 노드가 필요하고, 거리 잔차 RMS가 설정값을 넘거나 범위 밖이면 제외한다.
+두 모드 모두 최소 3개의 비공선 노드가 필요하다. range_fit은 거리 잔차 RMS도 검사한다.
+상태 STALE의 null age/median/n은 해당 노드만 제외하고 나머지 정상 노드는 계속 사용한다.
 RSSI는 벽·몸·반사 영향을 받으므로 이것은 위치 추정이며 정밀 측위가 아니다. 서로 같은
 높이라는 근사와 1.5초 RSSI median/최신 센서의 시간 차이가 있다. 세계 방향·점군 재구성은 별도다.
 
-## 지연·누적·용량
+## 지연·누적·용량 (누적은 opt-in)
 
 - 수신/특징 추출, SQLite/공간장 생성, LED 렌더링을 분리한다. LED 루프에서 네트워크나 DB를 기다리지 않는다.
 - 표시 대기는 신호 종류별 최신 1개. raw 처리 대기도 type별 최신 1개이며 밀린 값은 병합한다.
@@ -159,7 +214,8 @@ USB는 `--port`와 보드 확인 후에만 열고, 실제 성능은 보드 완�
 
 ## 연동 기준 파일
 
-확인 시점 SHA256 (센터는 별도 실행 서비스이며 복사본을 임의로 덮어쓰지 않았다):
+첫 연동 확인 시점 SHA256. 이후 센터 코드는 c7b1b89로 합쳐졌으며 collector_client.py의
+로컬 디스크는 저장소의 5초 복구 버전과 일치하며, 서버 재시작으로 실행 프로세스에도 반영했다.
 
 | 파일 | SHA256 |
 |---|---|

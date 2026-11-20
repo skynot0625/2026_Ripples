@@ -23,6 +23,11 @@ TOF_HEADER = struct.Struct("<4sBBHHIdfHHBBHHBBH")
 
 def validate_config(config):
     c = dict(config)
+    mode = c.get("position_mode", "range_fit")
+    if mode not in ("range_fit", "relative_rssi"):
+        raise ValueError("unknown position mode")
+    if mode == "relative_rssi" and c.get("coordinates_confirmed") is not True:
+        raise ValueError("relative RSSI requires confirmed beacon coordinates")
     anchors = c["anchors"]
     points = np.asarray([a["xy_m"] for a in anchors.values()], float)
     refs = np.asarray([a["reference_dbm"] for a in anchors.values()], float)
@@ -45,6 +50,14 @@ def validate_config(config):
     return c
 
 
+def memory_namespace(config):
+    return "estimated" if config.get("position_mode") == "relative_rssi" else "measured"
+
+
+def position_enabled(config):
+    return config.get("position_mode") == "relative_rssi" or config["calibrated"]
+
+
 def calibration_id(config):
     return hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
 
@@ -54,22 +67,29 @@ class Positions:
         self.config = validate_config(config)
         self.lock = threading.Lock()
         self.values = {}
+        self.details = {}
 
     def update(self, doc, now=None):
         now = time.monotonic() if now is None else now
-        c, values = self.config, {}
-        if c["calibrated"]:
+        c, values, details = self.config, {}, {}
+        relative = c.get("position_mode") == "relative_rssi"
+        if position_enabled(c):
             for role, receiver in c["receivers"].items():
                 body = doc.get("receivers", {}).get(receiver, {})
-                elapsed = body.get("received_ago_ms", float("inf"))/1000.
+                elapsed_ms = body.get("received_ago_ms")
+                elapsed = elapsed_ms/1000. if isinstance(elapsed_ms, (int, float)) else float("inf")
+                details[role] = {"reason": "stale_receiver", "mode": c.get("position_mode", "range_fit")}
                 if not np.isfinite(elapsed) or not 0 <= elapsed < c["stale_s"]:
                     continue
                 points, refs, rssi, ages = [], [], [], []
                 for key, anchor in c["anchors"].items():
                     n = body.get("nodes", {}).get(key, {})
                     v = n.get("median_dbm")
-                    age = elapsed + n.get("age_ms", float("inf"))/1000.
-                    if (n.get("state") == "OK" and n.get("n", 0) > 0
+                    age_ms = n.get("age_ms")
+                    age = elapsed + age_ms/1000. if isinstance(age_ms, (int, float)) else float("inf")
+                    samples = n.get("n")
+                    if (n.get("state") == "OK" and isinstance(samples, (int, float)) and samples > 0
+                            and (not anchor.get("hardware_id") or n.get("hardware_id") == anchor["hardware_id"])
                             and isinstance(v, (int, float)) and np.isfinite(v) and -127 < v < 0
                             and np.isfinite(age) and 0 <= age < c["stale_s"]):
                         points.append(anchor["xy_m"])
@@ -77,26 +97,48 @@ class Positions:
                         rssi.append(v)
                         ages.append(age)
                 if len(points) < 3:
+                    details[role].update(reason="insufficient_fresh_nodes", nodes_used=len(points))
                     continue
-                xy = estimate_position(rssi, points, refs, c["exponent"])
+                if np.linalg.matrix_rank(np.asarray(points)-np.mean(points, axis=0)) < 2:
+                    details[role]["reason"] = "collinear_nodes"
+                    continue
+                if relative:
+                    # Relative d^-2 weights: d ratios use P proportional to d^-exponent.
+                    # No assumed reference RSSI is converted to a claimed metre range.
+                    weights = 10.**((np.asarray(rssi)-max(rssi))/(5*c["exponent"]))
+                    xy = np.average(points, axis=0, weights=weights)
+                    residual = None
+                else:
+                    xy = estimate_position(rssi, points, refs, c["exponent"])
+                    distances = 10.**((np.asarray(refs)-rssi)/(10*c["exponent"]))
+                    residual = float(np.sqrt(np.mean((np.linalg.norm(points-xy, axis=1)-distances)**2))) if xy is not None else None
                 if xy is None:
                     continue
-                distances = 10.**((np.asarray(refs)-rssi)/(10*c["exponent"]))
-                residual = float(np.sqrt(np.mean((np.linalg.norm(points-xy, axis=1)-distances)**2)))
                 bounds = np.asarray(c["bounds_m"])
-                if residual > c["max_residual_m"] or np.any(xy < bounds[:, 0]) or np.any(xy > bounds[:, 1]):
+                if residual is not None and residual > c["max_residual_m"]:
+                    details[role].update(reason="range_residual", residual_m=residual)
+                    continue
+                if np.any(xy < bounds[:, 0]) or np.any(xy > bounds[:, 1]):
+                    details[role]["reason"] = "outside_bounds"
                     continue
                 # The renderer/memory use canonical [-5,5]; physical metres remain in config.
                 mapped = (xy-bounds[:, 0])/(bounds[:, 1]-bounds[:, 0])*10-5
                 values[role] = (mapped.tolist(), now+c["stale_s"]-max(ages))
+                details[role].update(reason="ok", xy_m=xy.tolist(), nodes_used=len(points),
+                                     residual_m=residual, approximate=relative)
         with self.lock:
             self.values = values
+            self.details = details
 
     def get(self, role, now=None):
         now = time.monotonic() if now is None else now
         with self.lock:
             value = self.values.get(role)
         return value[0] if value and now < value[1] else None
+
+    def report(self):
+        with self.lock:
+            return {k: dict(v) for k, v in self.details.items()}
 
 
 def decode_monitor(packet):
@@ -135,6 +177,34 @@ def recv_packet(sock):
     return h, recv_exact(sock, nb)
 
 
+class StreamClock:
+    """Compare remote monotonic intervals, never Pi wall time against PC wall time.
+
+    The first packet's one-way latency is unknowable without synchronization.
+    Subsequent excess queueing over the smallest observed transit offset is bounded.
+    """
+    def __init__(self, max_lag):
+        self.max_lag = max_lag
+        self.offset = None
+        self.last = {}
+
+    def accept(self, header, now):
+        if "t_mono_ns" not in header:
+            return "arrival_only"  # legacy PCM extension; no capture-age claim
+        stamp = header["t_mono_ns"]
+        if type(stamp) is not int or stamp < 0:
+            raise ValueError("invalid source monotonic timestamp")
+        kind = header["type"]
+        if stamp <= self.last.get(kind, -1):
+            raise ValueError("source clock reversed; reconnect required")
+        self.last[kind] = stamp
+        offset = now-stamp/1e9
+        self.offset = offset if self.offset is None else min(self.offset, offset)
+        if offset-self.offset > self.max_lag:
+            raise ValueError("source backlog exceeded; reconnect required")
+        return "source_monotonic"
+
+
 class LiveMemory:
     """One SQLite owner, complete 1 s bins, fixed import cursor, bounded ingress.
 
@@ -165,7 +235,7 @@ class LiveMemory:
     def _run(self):
         db = None
         try:
-            db = SpatialMemory(self.path, namespace="measured")
+            db = SpatialMemory(self.path, namespace=memory_namespace(self.config))
             ident = calibration_id(self.config)
             old = db.db.execute("SELECT value FROM settings WHERE key='live_calibration'").fetchone()
             if old and old[0] != ident:
@@ -251,6 +321,8 @@ class LiveSensors:
         self.threads = []
         self.center_valid = False
         self.seen = {}
+        self.input_status = {}
+        self.last_poll = None
 
     def emit(self, role, channel, features):
         self.counts[channel+"_features"] += 1
@@ -296,6 +368,9 @@ class LiveSensors:
             begin = time.monotonic()
             try:
                 status, inputs, beacons = get("/status"), get("/inputs"), get("/api/beacon")
+                self.input_status = {name: {k: ch.get(k) for k in ("source", "connected", "age_s", "rate_hz", "seq", "error")}
+                                     for name, ch in inputs.get("channels", {}).items()}
+                self.last_poll = time.monotonic()
                 self.center_valid = (status.get("mock") is False and status.get("connected") is True
                                      and status.get("confidence") == self.config["monitor_confidence"])
                 if inputs.get("mock") is not False:
@@ -377,6 +452,7 @@ class LiveSensors:
                 with client:
                     client.settimeout(2)
                     role, rotate, last = "hyeol", self.config["rotate"], {}
+                    clock = StreamClock(self.config["max_sensor_age_s"])
                     try:
                         header, _ = recv_packet(client)
                         if header.get("type") != "hello" or header.get("version") != 1:
@@ -397,9 +473,8 @@ class LiveSensors:
                                 self.counts["duplicate_raw"] += 1
                                 continue
                             last[kind] = seq
-                            if abs(time.time()-int(h["t_wall_ns"])/1e9) > self.config["max_sensor_age_s"]:
-                                self.counts["stale_raw"] += 1
-                                continue
+                            clock_mode = clock.accept(h, time.monotonic())
+                            self.counts[clock_mode+"_raw"] += 1
                             with self.lock:
                                 if kind in self.raw:
                                     self.counts["raw_coalesced"] += 1
@@ -438,6 +513,11 @@ class LiveSensors:
 
     def report(self):
         return {"calibrated": self.config["calibrated"], "counts": dict(self.counts),
+                "position_mode": self.config.get("position_mode", "range_fit"),
+                "memory_namespace": memory_namespace(self.config),
+                "position_details": self.positions.report(),
+                "inputs": self.input_status,
+                "center_poll_age_s": time.monotonic()-self.last_poll if self.last_poll is not None else None,
                 "positions_available": {r: self.positions.get(r) is not None for r in ("hyeol", "maek")},
                 "errors": dict(self.errors), "center_tof_accepted": self.center_valid,
                 "memory_error": self.memory.error if self.memory else None,

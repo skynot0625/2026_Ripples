@@ -53,3 +53,36 @@ Sleep 이동 잔상 없음, std 효과의 평균 불변/국소성, 마이크 위
 
 이번 저장소 정리 과정에서는 USB를 열거나 실제 LED에 송출하지 않았다.
 GitHub 업로드는 보드 동작·현장 신호 품질·전원 용량·현재 FPS의 재검증을 뜻하지 않는다.
+
+## M30 확정 좌표·수신 전용·추가 파동 OFF — 2026-11-20 후속
+
+- c7b1b89의 센터/혈/맥/비콘 코드를 받아 송신 계약과 대조했다. 센터 API의 비콘 5개
+  XY와 `data/m30/simulator.json` 저장값이 일치함을 확인하고 mm→m로 변환했다.
+  후속 5d97836의 기본 비콘 JSON도 받아 같은 좌표임을 확인했다. 로컬 venue.py/기본 비콘 파일도 일치한다.
+- 상대 RSSI 위치는 사용자 선택으로 준비했으나, 이후 요청에 따라 **현재 누적 OFF**다.
+  `ripples.receive`는 DB/모델/LED를 열지 않고 `ripples.live`도 `--accumulate`가 없으면
+  DB를 열지 않는다. 기본값에서 DB 접근을 막는 회귀 테스트를 추가했다.
+- STALE 비콘의 null age/n 때문에 정상 수신까지 막히던 경우를 고쳤다.
+  상대 RSSI의 공통 offset 불변성, 5개 좌표 단위 변환, 추정/실측 DB 혼합 거부,
+  Pi wall-clock 오차와 source monotonic 지연 검사도 확인했다.
+- 전체 **193 passed (44.72s)**, 이후 추가된 relative HTTP 통합/누적 OFF/read-only
+  미리보기 항목을 포함한 관련 테스트 **37 passed (5.18s)**. 총 196개 항목 검증.
+- 업로드된 맥 코드: **34 passed, Linux ALSA 전용 1 skipped**(Windows).
+  비콘 스캐너 `--selftest` 통과. Pi 스피커/마이크 하드웨어 재배포 검증은 아니다.
+- 센터 collector 수정은 백업 후 로컬에 복사하고 사용자 권한 승인으로 서버 재시작까지 완료.
+  카메라 재연결, 비콘 배치 동일, 5초 timeout/keepalive 설정을 확인했다.
+  센터 실제 Pi를 일부러 끊는 장애 시험은 하지 않았고 재수락 동작은 localhost 소켓으로 검증했다.
+- 재시작 후 `ripples.receive` 15초: **152개 ToF 프레임**, 오류 없음, 종료 시 센터 약 9.8FPS.
+  전후 모든 기존 spatial DB 파일 크기/mtime 동일. `memory_db=null`, 누적 false,
+  reservoir false, USB false. 원본/특징 이력을 저장하지 않았다.
+- 실제 위치 통계까지 검증하려던 이전 20초 점검에서도 당시 일부 비콘만 켜져 있어
+  fresh 노드 부족으로 공간 기록 **0건**이었다. 이후 사용자가 누적 OFF를 요청했다.
+  맥 입력도 없었으므로 두 기구의 동시 실측은 아직 하지 않았다.
+- 추가 방사형 파동 OFF GIF는 기존 데모 DB를 **read-only**로 읽어서 재생성했다.
+  `new_batches=0`, `added_radial_waves=false`, 2화면/68초, 렌더 p95 **4.96ms**,
+  마지막 Activate 완전 소멸, 기존 std 셀 112개. 실제 발화/잔광과 국소 std 효과만 표시.
+  원래 3화면 파동 비교는 참고 자료이고 기본 예시/실행 스크립트는 activity다.
+- 이번 후속 작업에서도 실제 LED USB를 열거나 펌웨어를 변경하지 않았다.
+- 실행은 문서의 `python -m ripples.receive`를 사용한다. 이 Windows PC에서 pip가 생성한
+  새 console `.exe`는 애플리케이션 제어 정책에 의해 차단됐지만, 공식 Python 모듈 실행으로
+  수신 점검을 완료했다. 애플리케이션 제어 정책은 변경하지 않았다.

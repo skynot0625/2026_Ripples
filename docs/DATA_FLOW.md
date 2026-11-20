@@ -169,7 +169,7 @@ BlueZ와 Bleak로 스캔을 계속 켜 둡니다(`DuplicateData=True`). 1초마�
 
 | 입구 | 형식 | 처리 |
 |---|---|---|
-| TCP 9500 | 혈 메시지 (위 형식) | `collector_client.py`가 읽어 ToF 최신 프레임과 거리 채널을 채움. 이 레포 판은 5초 동안 아무것도 안 오면 연결을 끊고 새 연결을 받음(혈 Pi가 재부팅되면 전시컴이 옛 연결에 묶이던 문제, 전시컴에는 아직 반영 전) |
+| TCP 9500 | 혈 메시지 (위 형식) | `collector_client.py`가 읽어 ToF 최신 프레임과 거리 채널을 채움. 5초 무응답 복구 수정을 로컬 파일에 반영하고 사용자 권한 승인 후 서버 재시작까지 완료 |
 | `POST /api/maek` | 맥 JSON | 입력 채널 `maek_mic` (= `mics`)와 `maek_features` (방향, 진동, RMS)를 채움. 3초 안에 진짜 값이 오는 동안 가짜 입력은 멈춤 |
 | `POST /api/beacon` | 비콘 JSON | 수신기별 마지막 집계를 보관. `GET /api/beacon`이 받은 지 몇 ms인지와 함께 돌려줌 |
 
@@ -199,7 +199,8 @@ BlueZ와 Bleak로 스캔을 계속 켜 둡니다(`DuplicateData=True`). 1초마�
 |---|---|---|
 | 혈 | 혈 메시지와 같은 바이트열을 이어 붙인 `stream.bin`. `tof`에서 회전 보정 후 confidence 60 이상, 0 < depth ≤ 4 m인 화소로 3×3 영역 중앙값을 만들고, `lidar`는 valid와 status를 검사 | 녹화 파일 (`data_led_example/sensors/ripples-hyeol-send-sample_20261116.zip`) |
 | 맥 | 1초짜리 WAV (3채널, 44,100 Hz, 16비트) + `metadata.json` (`device_id`, `session_id`, `chunk_id`, `start_frame`, `frames`, `sha256`). 형식은 `data_led_example/sensors/protocols/sound.md` | 합성 음 |
-| 비콘 | 노드별 RSSI 벡터에서 거리 (`d = 10^((RSSI_1m − RSSI) / (10 × 4))`)를 구하고 최소제곱으로 XY | 가상 방 10 m × 10 m, 모서리 4개의 합성 RSSI |
+| 비콘 (파일 데모) | 합성 RSSI로 거리·최소제곱 XY | 가상 방 10 m × 10 m, 모서리 4개 |
+| 비콘 (기본 live) | 확정 M30 노드 5개와 실제 상대 RSSI로 대략적인 XY | `configs/live.m30.json`. 현재 누적 OFF. 추후 opt-in 시 별도 estimated DB, RF 보정 후 range_fit으로 전환 |
 
 ### 심탑이 보내는 LED2 프레임 (`src/ripples/hardware`)
 
@@ -216,15 +217,23 @@ BlueZ와 Bleak로 스캔을 계속 켜 둡니다(`DuplicateData=True`). 1초마�
 
 ### 전시컴에서 심탑으로
 
-심탑 프로그램의 실시간 브리지(`src/ripples/realtime.py`, 설명 `docs/realtime.md`, 설정 `configs/live.example.json`)가 전시컴을 읽습니다. 혈 Pi는 받는 곳이 하나라서, 심탑은 TCP 9500을 다시 열지 않고 전시컴을 거칩니다.
+심탑 프로그램의 실시간 브리지(`src/ripples/realtime.py`, 설명 `docs/realtime.md`, 기본 설정 `configs/live.m30.json`)가 전시컴을 읽습니다. 혈 Pi는 받는 곳이 하나라서, 심탑은 TCP 9500을 다시 열지 않고 전시컴을 거칩니다. `live.example.json`은 위치를 만들지 않는 수신 진단용입니다.
 
 | 신호 | 심탑이 읽는 곳 | 남은 것 |
 |---|---|---|
 | 혈 깊이 | `ws /ws/monitor`: 전시컴이 confidence로 거르고 방향을 맞춘 깊이 (`TOF3` 헤더 + uint16). 원시 confidence는 들어 있지 않음 | 심탑 설정의 `monitor_confidence`가 전시컴 `/status.confidence`와 같아야 실측 통계에 넣음 |
 | 혈 천장 거리 | `/inputs`의 거리 채널 | 없음 |
 | 맥 | `/inputs`의 `maek_mic` (레벨 3개, 0에서 1) | 저음, 중음, 고음 대역은 원음이 있어야 계산됨. 맥 Pi에는 원음 송신이 아직 없음 |
-| 비콘 | `/api/beacon`의 수신기별 노드 RSSI | 심탑 설정의 `anchors`가 아직 가상 모서리 4개. 실제 좌표는 전시컴 3D 화면에서 찍은 `layout.beacons` (mm, 공간 좌표)를 m로 옮겨 넣고, 1 m 기준 RSSI와 감쇠 지수를 현장에서 보정해야 함 |
-| 전시컴 수신 | | 혈 Pi 재부팅 뒤 9500이 막히는 문제를 고친 `exhibition-server/collector_client.py`를 전시컴에 반영 |
+| 비콘 | `/api/beacon`의 수신기별 노드 RSSI | 확정된 `layout.beacons` 5개를 mm→m 변환해 반영 완료. 상대 RSSI 위치 추정 준비. 현재는 수신만 하고 누적하지 않음 |
+| 전시컴 수신 | | 복구 수정 파일 백업·반영 및 관리자 권한 서버 재시작 완료. 카메라 재연결·비콘 좌표 유지 확인 |
+
+2026-11-20 마지막 실입력 점검은 비콘 일부만 켠 상태(사용자 확인)였다. 신선한 노드가
+3개 미만이면 새 위치/공간 통계를 만들지 않는다. 맥 입력도 없었으므로 동시 기구 실측은
+모두 켠 뒤 확인한다. 같은 수신 계약의 합성 HTTP 입력으로 두 기구·누적·입력 소멸을 검증했다.
+
+현재 요청 범위는 [수신 전용 실행과 데이터 폼](RECEIVE_ONLY.md)이다. `python -m ripples.receive`는
+DB·reservoir·LED를 시작하지 않는다. 앞으로 표시를 켤 때는 추가 방사형 파동 없는 activity를
+기본으로 사용한다. 공간 기억은 별도의 `--accumulate` opt-in이 필요하다.
 
 ## 폴더
 

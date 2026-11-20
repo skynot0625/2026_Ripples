@@ -10,7 +10,7 @@ import time
 import numpy as np
 
 from ripples.paths import ROOT, RUNTIME_DIR
-from ripples.realtime import LiveMemory, LiveSensors, validate_config
+from ripples.realtime import LiveMemory, LiveSensors, validate_config, position_enabled, memory_namespace
 from ripples.run import live_spikes, recorded_spikes, Preview
 from ripples.visualization import RipplesVisual
 from ripples.hardware.rgb565 import InstallationEncoder
@@ -18,12 +18,13 @@ from ripples.hardware.rgb565 import InstallationEncoder
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--config", type=Path, default=ROOT/"configs/live.example.json")
+    p.add_argument("--config", type=Path, default=ROOT/"configs/live.m30.json")
     p.add_argument("--center", default="http://127.0.0.1:8000")
     p.add_argument("--collector-port", type=int, help="optional raw Hyeol TCP listener, e.g. 9501")
     p.add_argument("--audio-port", type=int, help="optional raw Maek PCM TCP listener, e.g. 9502")
     p.add_argument("--bind", default="127.0.0.1", help="set tower LAN IP to receive directly from Pi")
-    p.add_argument("--db", type=Path, default=RUNTIME_DIR/"measured.sqlite3")
+    p.add_argument("--db", type=Path, help="default: estimated or measured DB according to position mode")
+    p.add_argument("--accumulate", action="store_true", help="opt in to persistent spatial statistics; off by default")
     p.add_argument("--state", choices=("activate", "sleep"))
     p.add_argument("--state-file", type=Path, default=RUNTIME_DIR/"state.txt")
     p.add_argument("--fps", type=float, default=10)
@@ -45,6 +46,8 @@ def main():
     config = validate_config(json.loads(a.config.read_text(encoding="utf-8-sig")))
     # A different source/threshold is a different measurement calibration.
     config["input_modes"] = ["raw" if a.collector_port else "monitor", "pcm" if a.audio_port else "levels"]
+    if a.db is None:
+        a.db = RUNTIME_DIR/("m30-relative.sqlite3" if memory_namespace(config) == "estimated" else "measured.sqlite3")
     if a.port:
         from ripples.hardware.board import confirm_board
         confirm_board(a.port, "rgb565")
@@ -76,6 +79,8 @@ def main():
     def write_report():
         nonlocal last_report
         report.update(sensors.report(), reservoir=a.reservoir, neurons=8460, gain=9.5, dt_ms=.1,
+                      config_file=str(a.config), memory_db=str(a.db) if memory else None,
+                      accumulation_enabled=bool(memory),
                       steps_per_frame=40, criticality=a.criticality, frames=frames_done,
                       wall_seconds=time.monotonic()-started, usb_requested=bool(a.port),
                       loop_fps=1/float(np.mean(intervals)) if intervals else 0,
@@ -131,11 +136,14 @@ def main():
             yield frame
 
     try:
-        if config["calibrated"]:
+        if position_enabled(config) and a.accumulate:
             memory = LiveMemory(a.db, config)
             sensors.memory = memory
-        else:
+            print(f"Position mode: {config.get('position_mode', 'range_fit')}; memory: {a.db}", flush=True)
+        elif not position_enabled(config):
             print("UNCALIBRATED: receiving and preprocessing only; no invented XY or measured DB writes.", flush=True)
+        else:
+            print("Accumulation disabled; current sensor display only (no spatial DB opened).", flush=True)
         sensors.start_center(a.center, tof=not a.collector_port, distance=not a.collector_port, mic=not a.audio_port)
         if a.collector_port:
             sensors.start_collector(a.bind, a.collector_port)

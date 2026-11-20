@@ -41,7 +41,7 @@ scp -r ~/Desktop/mamebin/01_projects/ripples/work/2026-11-18_ble_beacon/beacon r
 맥 Pi가 이미 쓰는 방식(`POST /api/maek`, JSON)에 맞춰, 1초마다 집계 하나를 HTTP로 보낸다. 혈 ToF처럼 큰 데이터가 아니라서 9500 TCP 스트림에 섞지 않는다. 그러면 두 Pi가 같은 방식으로 보내고, 혈 송신이 멈춰도 비콘은 따로 간다.
 
 - 켜기: `run/beacon.json`의 `post_url`에 `http://<전시컴>:8000/api/beacon`을 넣는다. 5초 안에 반영되고 재시작은 필요 없다. 비어 있으면 보내지 않고 저장만 한다.
-- 받는 쪽: 전시컴 `server.py`에 `POST /api/beacon`을 하나 추가한다. `receiver`별 마지막 집계를 보관해 입력 채널(예: `beacon`)로 넘기면 된다. 아직 만들지 않았다.
+- 받는 쪽: 현재 `exhibition-server/server.py`에 `POST /api/beacon`과 `GET /api/beacon`이 구현되어 있다. `receiver`별 최신 집계와 수신 후 경과 시간을 심 탑 브리지가 읽는다. 형식과 실시간 경로는 [데이터 흐름](../../docs/DATA_FLOW.md), [심 탑 연동](../../docs/realtime.md)을 따른다.
 
 ```json
 {"v": 1, "type": "beacon", "receiver": "ripples-tof", "seq": 812, "t_wall_ns": 1794..., "window_s": 1.5,

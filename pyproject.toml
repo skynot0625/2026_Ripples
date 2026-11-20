@@ -29,6 +29,7 @@ ripples-demo = "ripples.demo:main"
 ripples-reservoir = "ripples.reservoir:main"
 ripples-spikes = "ripples.spikes:main"
 ripples-live = "ripples.live:main"
+ripples-receive = "ripples.receive:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -63,6 +63,9 @@ Sleep은 네 바퀴의 학습된 평균/std, Activate는 첫 바퀴다. 미래�
 실시간 입력은 [센터 브리지와 원시 TCP](realtime.md)를 사용한다. 파일 재생과 달리
 실측 RSSI만 사용하고, 위치가 없으면 센서 특징을 공간 기억에 누적하지 않는다.
 실측 비콘 좌표/기준 RSSI와 공간 범위를 설정한 뒤 demo DB와 분리된 measured DB를 쓴다.
+현재 M30의 확정 좌표 5개는 `live.m30.json`에 반영했다. 사용자가 선택한 RF 미보정
+상대 RSSI 모드는 대략적인 XY이며 추후 누적을 명시적으로 켤 때 **estimated DB**에 따로 쓴다. calibrated=false는
+좌표 미확정이 아니라 RF 미보정을 뜻한다. 두 모드 모두 fresh 노드 3개 미만은 누적하지 않는다.
 설정 fingerprint가 다른 DB에 새 값을 섞지 않는다. 방향/외부 자세 보정은 아직 없으므로
 카메라 3×3 배열은 기구 중심의 센서 축이고, 세계 좌표상의 물체 점군은 아니다.
 
@@ -71,3 +74,8 @@ Sleep은 네 바퀴의 학습된 평균/std, Activate는 첫 바퀴다. 미래�
 PCM 입력은 기존 `band_low/mid/high` 규칙을 그대로 쓴다. 두 경우 모두 Activate/Sleep의
 표상 규칙은 같으며, Sleep은 해당 특징의 평균·표준편차를 사용한다.
 현재 앱은 WAV 원본을 저장하고 `stored:true`를 회신하는 업로드 서버가 아니다.
+
+현재 운영은 `ripples.receive` 수신 점검만이며 데이터 누적은 OFF다. `ripples.live`도
+`--accumulate` 없이는 DB를 열지 않는다. 기본 예시/실행 스크립트의 추가 방사형 파동은 OFF다.
+`ripples.demo --read-only`는 기존 합성 데모 통계를 읽어 추가 파동 없는 2화면 예시를 만든다.
+옛 3화면 비교가 필요할 때만 `--compare-waves`를 명시한다.

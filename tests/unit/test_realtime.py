@@ -12,7 +12,7 @@ import pytest
 
 from ripples.memory import SpatialMemory
 from ripples.realtime import (LiveMemory, LiveSensors, Positions, TOF_HEADER, decode_monitor,
-                              recv_packet, validate_config)
+                              recv_packet, validate_config, StreamClock)
 from ripples.sensors import depth_features, pcm_features
 from ripples.visualization import RipplesVisual
 
@@ -206,9 +206,108 @@ def test_invalid_config(config):
         validate_config(config)
 
 
-def test_center_http_two_instruments_memory_and_input_loss(tmp_path, config):
+def test_relative_position_uses_confirmed_five_nodes_without_rf_reference(config):
+    from ripples.site import site_config
+    simulator = {"layout": {"beacons": {
+        "1": {"x": 1000, "y": 1000, "z": 0}, "2": {"x": 9000, "y": 1000, "z": 0},
+        "3": {"x": 9000, "y": 9000, "z": 0}, "4": {"x": 1000, "y": 9000, "z": 0},
+        "5": {"x": 5000, "y": 5000, "z": 0}}}}
+    venue = {"id": "m30", "units": "mm", "bounds": {"x0": 0, "x1": 10000, "y0": 0, "y1": 10000}}
+    c = site_config(config, simulator, venue)
+    assert not c["calibrated"] and c["coordinates_confirmed"]
+    assert c["anchors"]["2"]["xy_m"] == [9, 1]
+    nodes = {k: {"state": "OK", "n": 3, "age_ms": 0, "median_dbm": -60} for k in c["anchors"]}
+    doc = {"receivers": {"ripples-tof": {"received_ago_ms": 0, "nodes": nodes}}}
+    p = Positions(c)
+    p.update(doc)
+    np.testing.assert_allclose(p.get("hyeol"), [0, 0], atol=1e-8)
+    nodes["1"]["median_dbm"] = -40
+    p.update(doc)
+    first = p.get("hyeol")
+    assert first[0] < 0 and first[1] < 0
+    # Adding a shared RSSI offset must not change this relative position.
+    for n in nodes.values():
+        n["median_dbm"] -= 20
+    p.update(doc)
+    np.testing.assert_allclose(p.get("hyeol"), first)
+    assert p.report()["hyeol"]["approximate"] and p.report()["hyeol"]["nodes_used"] == 5
+    nodes["1"]["state"] = "CONFLICT"
+    p.update(doc)
+    assert p.report()["hyeol"]["nodes_used"] == 4
+    nodes["1"].update(age_ms=None, median_dbm=None, n=None)
+    p.update(doc)
+    assert p.report()["hyeol"]["nodes_used"] == 4
+    c["coordinates_confirmed"] = False
+    with pytest.raises(ValueError, match="confirmed"):
+        validate_config(c)
+
+
+def test_site_export_refuses_wrong_units_and_outside_nodes(config):
+    from ripples.site import site_config
+    with pytest.raises(ValueError, match="millimetres"):
+        site_config(config, {}, {"id": "m30", "units": "m"})
+
+
+def test_raw_source_clock_ignores_wall_skew_and_rejects_backlog():
+    clock = StreamClock(.5)
+    h = {"type": "tof", "t_mono_ns": 1_000_000_000, "t_wall_ns": 0}
+    assert clock.accept(h, 100) == "source_monotonic"
+    h.update(t_mono_ns=1_100_000_000, t_wall_ns=9999999999999999999)
+    assert clock.accept(h, 100.1) == "source_monotonic"
+    h["t_mono_ns"] = 1_200_000_000
+    with pytest.raises(ValueError, match="backlog"):
+        clock.accept(h, 101)
+    assert StreamClock(.5).accept(h, 101) == "source_monotonic"
+    assert StreamClock(.5).accept({"type": "audio"}, 102) == "arrival_only"
+
+
+def test_estimated_memory_cannot_mix_with_calibrated_memory(tmp_path, config):
+    config.update(position_mode="relative_rssi", coordinates_confirmed=True)
+    path = tmp_path/"relative.db"
+    m = LiveMemory(path, config)
+    m.submit({"t": time.time(), "source": "hyeol", "xy": [0, 0], "features": {"ceiling_0": 2}})
+    m.close()
+    assert m.error is None and m.saved_seconds == 1
+    with pytest.raises(ValueError, match="namespace"):
+        SpatialMemory(path, namespace="measured")
+
+
+def test_receive_and_live_do_not_open_memory_by_default(tmp_path, monkeypatch):
+    import sys
+    import ripples.live as live
+    import ripples.receive as receive
+    def forbidden(*args, **kwargs):
+        raise AssertionError("default runs must not open spatial memory")
+    monkeypatch.setattr(live, "LiveMemory", forbidden)
+    monkeypatch.setattr(LiveSensors, "start_center", lambda *args, **kwargs: None)
+    for module in (receive, live):
+        report = tmp_path/(module.__name__+".json")
+        args = [module.__name__, "--seconds", ".02", "--report", str(report)]
+        if module is live:
+            args += ["--reservoir", "recorded", "--state-file", str(tmp_path/"state.txt")]
+        monkeypatch.setattr(sys, "argv", args)
+        module.main()
+        status = json.loads(report.read_text())
+        assert status["memory_db"] is None and status["accumulation_enabled"] is False
+    assert not list(tmp_path.glob("*.sqlite3*"))
+
+
+def test_preview_read_snapshot_does_not_update_database(tmp_path):
+    path = tmp_path/"demo.sqlite3"
+    memory = SpatialMemory(path)
+    memory.import_recording("test", [{"t": 0, "source": "hyeol", "xy": [0, 0], "features": {"ceiling_0": 2}}])
+    memory.close()
+    before = (path.read_bytes(), path.stat().st_mtime_ns)
+    assert SpatialMemory.read_snapshot(path)[0]["features"]["ceiling_0"] == 2
+    assert (path.read_bytes(), path.stat().st_mtime_ns) == before
+
+
+@pytest.mark.parametrize("mode", ["range_fit", "relative_rssi"])
+def test_center_http_two_instruments_memory_and_input_loss(tmp_path, config, mode):
     from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
     config["calibrated"] = True
+    if mode == "relative_rssi":
+        config.update(calibrated=False, coordinates_confirmed=True, position_mode=mode)
     state = {"seq": 0, "connected": True}
 
     class Handler(BaseHTTPRequestHandler):
@@ -259,7 +358,7 @@ def test_center_http_two_instruments_memory_and_input_loss(tmp_path, config):
         server.server_close()
         serving.join()
     assert memory.error is None
-    db = SpatialMemory(path, namespace="measured")
+    db = SpatialMemory(path, namespace="estimated" if mode == "relative_rssi" else "measured")
     try:
         entries = {e["source"]: e for e in db.snapshot()}
         assert entries["hyeol"]["features"]["ceiling_0"] == pytest.approx(2.4)

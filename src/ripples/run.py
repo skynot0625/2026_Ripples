@@ -73,7 +73,7 @@ class Preview:
     def add(self, active, sleep, seconds):
         im = self.Image.new("RGB", (1020, 570), (7, 11, 20))
         draw = self.Draw.Draw(im)
-        title = "RIPPLES LIVE | calibrated RSSI required; no synthetic fallback" if self.live else "RIPPLES | real Hyeol recording + synthetic circular RSSI"
+        title = "RIPPLES LIVE | RSSI position estimate; check mode in live-status.json" if self.live else "RIPPLES | real Hyeol recording + synthetic circular RSSI"
         draw.text((24, 15), title, fill=(220, 230, 245))
         draw.text((24, 36), "Height = sensor distance/features, not reconstructed world height. Digital preview exposure.", fill=(145, 160, 180))
         for offset, label, frame in ((0, "ACTIVATE | transient observation traces", active),

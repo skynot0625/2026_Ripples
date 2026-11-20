@@ -27,7 +27,7 @@ def cell_xy(xy):
 
 class SpatialMemory:
     def __init__(self, path, *, namespace="demo", retain_days=30):
-        if namespace not in ("demo", "measured") or retain_days < 1:
+        if namespace not in ("demo", "measured", "estimated") or retain_days < 1:
             raise ValueError("invalid memory settings")
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,8 +121,21 @@ class SpatialMemory:
         return True
 
     def snapshot(self):
+        return self._snapshot(self.db)
+
+    @classmethod
+    def read_snapshot(cls, path):
+        """Existing preview statistics only; never create/migrate/update a DB."""
+        db = sqlite3.connect(Path(path).resolve().as_uri()+"?mode=ro", uri=True)
+        try:
+            return cls._snapshot(db)
+        finally:
+            db.close()
+
+    @staticmethod
+    def _snapshot(db):
         groups = {}
-        for source, x, y, feature, n, mean, m2 in self.db.execute(
+        for source, x, y, feature, n, mean, m2 in db.execute(
                 "SELECT source,x,y,feature,n,mean,m2 FROM moments WHERE day=-1"):
             entry = groups.setdefault((source, x, y), {"source": source,
                 "xy": [((x+.5)/GRID)*10-5, ((y+.5)/GRID)*10-5], "features": {}, "counts": {}, "std": {}})

@@ -1,0 +1,105 @@
+{
+  "calibrated": false,
+  "bounds_m": [
+    [
+      -10.77,
+      11.149
+    ],
+    [
+      -0.1,
+      19.851
+    ]
+  ],
+  "anchors": {
+    "1": {
+      "xy_m": [
+        9.933,
+        10.526
+      ],
+      "reference_dbm": -59.0
+    },
+    "2": {
+      "xy_m": [
+        9.419,
+        18.456
+      ],
+      "reference_dbm": -59.0
+    },
+    "3": {
+      "xy_m": [
+        1.541,
+        14.387
+      ],
+      "reference_dbm": -59.0
+    },
+    "4": {
+      "xy_m": [
+        1.525,
+        6.472
+      ],
+      "reference_dbm": -59.0
+    },
+    "5": {
+      "xy_m": [
+        6.511,
+        1.02
+      ],
+      "reference_dbm": -59.0
+    }
+  },
+  "receivers": {
+    "hyeol": "ripples-tof",
+    "maek": "mic"
+  },
+  "exponent": 4.0,
+  "stale_s": 3.0,
+  "max_sensor_age_s": 0.5,
+  "max_residual_m": 2.0,
+  "rotate": 180,
+  "confidence": 60,
+  "monitor_confidence": 30,
+  "coordinates_confirmed": true,
+  "position_mode": "relative_rssi",
+  "site": {
+    "id": "m30",
+    "source": "exhibition-server GET /api/simulator layout.beacons + /api/venue",
+    "confirmed_on": "2026-11-20",
+    "frame": {
+      "origin": "X3 통줄눈과 Y7 통줄눈의 교점(A-313). 바닥 마감면 z = 0",
+      "x": "+x = X3 → X5 방향(평면 가로 11,400)",
+      "y": "+y = Y7(주출입구 쪽) → Y3 방향(평면 세로 19,800)",
+      "z": "위쪽, 바닥 마감면에서 mm",
+      "heading": "simulator heading 0° = +y, 90° = +x"
+    },
+    "source_units": "mm",
+    "beacons_mm": {
+      "1": {
+        "x": 9933.0,
+        "y": 10526.0,
+        "z": 0.0
+      },
+      "2": {
+        "x": 9419.0,
+        "y": 18456.0,
+        "z": 0.0
+      },
+      "3": {
+        "x": 1541.0,
+        "y": 14387.0,
+        "z": 0.0
+      },
+      "4": {
+        "x": 1525.0,
+        "y": 6472.0,
+        "z": 0.0
+      },
+      "5": {
+        "x": 6511.0,
+        "y": 1020.0,
+        "z": 0.0
+      }
+    },
+    "rf_reference_status": "unmeasured; -59 is unused placeholder in relative_rssi mode",
+    "z_status": "not used for XY; zero in center layout is not a surveyed mounting height"
+  }
+}

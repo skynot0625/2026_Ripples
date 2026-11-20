@@ -99,6 +99,7 @@ class RuntimeTests(unittest.TestCase):
                 self.assertGreater(np.max(np.abs(values)),0)
             self.assertNotEqual(subprocess.run(cmd,cwd=tmp,capture_output=True,timeout=10).returncode,0)
 
+    @unittest.skipIf(os.name == 'nt', 'Linux ALSA adapter uses a POSIX executable and pipe select')
     def test_demo_through_aplay_process_adapter(self):
         with tempfile.TemporaryDirectory() as tmp:
             folder = Path(tmp)

@@ -1,4 +1,4 @@
-"""Explicit synthetic microphone demo, isolated statistics and fair three-way preview."""
+"""Activate / Sleep preview without added waves; optional historical comparison."""
 import argparse
 import hashlib
 import json
@@ -59,7 +59,8 @@ def prepare_demo(root):
 
 
 class CompareMovie:
-    def __init__(self, xyz):
+    def __init__(self, xyz, *, compare_waves=False):
+        self.compare_waves = compare_waves
         xyz = xyz[VALID_MASK]
         xyz = (xyz-xyz.min(axis=0))/(xyz.max(axis=0)-xyz.min(axis=0))
         self.points = np.column_stack((22+xyz[:, 0]*285+xyz[:, 1]*48,
@@ -69,7 +70,7 @@ class CompareMovie:
         self.counts = []
 
     def add(self, frames, t, count, positions):
-        image = Image.new("RGB", (1140, 590), (7, 11, 20))
+        image = Image.new("RGB", (1140 if self.compare_waves else 760, 590), (7, 11, 20))
         draw = ImageDraw.Draw(image)
         draw.text((20, 12), "RIPPLES / same recorded reservoir spikes in every panel / 8,460 neurons unchanged", fill=(230, 235, 245))
         draw.text((20, 33), "Real Hyeol + SYNTHETIC 3-channel Maek + synthetic positions. Sleep statistics: 4 audio laps.", fill=(145, 165, 185))
@@ -97,10 +98,12 @@ class CompareMovie:
         draw.text((160, 450), f"{t:05.1f}s | {'inputs off: Activate traces fade' if t >= 59.3 else 'both instruments moving'}", fill=(200, 215, 230))
         draw.text((160, 472), "Actual population spike count / 4 ms model window (fixed scale: 0..3000)", fill=(150, 170, 190))
         recent = self.counts[-600:]
-        pts = [(162+j*1.5, 558-min(n/3000., 1)*58) for j, n in enumerate(recent)]
+        scale = 1.5 if self.compare_waves else .95
+        pts = [(162+j*scale, 558-min(n/3000., 1)*58) for j, n in enumerate(recent)]
         if len(pts) > 1:
             draw.line(pts, fill=(120, 210, 190), width=2)
-        draw.text((160, 572), "Std shimmer is a display effect. Radial waves are NOT proof of spatial critical propagation.", fill=(145, 165, 185))
+        note = "Added waves: comparison only." if self.compare_waves else "NO added radial waves. Firing + afterglow; local std shimmer only."
+        draw.text((160, 572), note, fill=(145, 165, 185))
         self.frames.append(image.convert("P", palette=Image.Palette.ADAPTIVE, colors=128))
 
     def save(self, path):
@@ -111,23 +114,30 @@ class CompareMovie:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=OUTPUT_DIR/"dream_compare.gif")
+    parser.add_argument("--output", type=Path, default=OUTPUT_DIR/"dream_activity.gif")
+    parser.add_argument("--compare-waves", action="store_true", help="explicit historical three-panel comparison")
+    parser.add_argument("--read-only", action="store_true", help="reuse existing demo data/statistics without new accumulation")
     args = parser.parse_args()
     root = RUNTIME_DIR/"dream-demo"
-    folder = prepare_demo(root)
+    folder = root/"input" if args.read_only else prepare_demo(root)
     events, _, info = load_recordings(folder)
-    memory = SpatialMemory(root/"dream.sqlite3", namespace="demo")
-    try:
-        info["new_batches"] = import_events(memory, events)
-        snapshot = memory.snapshot()
-        info["storage"] = memory.report()
-    finally:
-        memory.close()
-    visuals = [RipplesVisual("activate"), RipplesVisual("sleep", criticality="activity"),
-               RipplesVisual("sleep", criticality="slow_waves")]
+    if args.read_only:
+        snapshot = SpatialMemory.read_snapshot(root/"dream.sqlite3")
+        info["new_batches"] = 0
+    else:
+        memory = SpatialMemory(root/"dream.sqlite3", namespace="demo")
+        try:
+            info["new_batches"] = import_events(memory, events)
+            snapshot = memory.snapshot()
+            info["storage"] = memory.report()
+        finally:
+            memory.close()
+    visuals = [RipplesVisual("activate"), RipplesVisual("sleep", criticality="activity")]
+    if args.compare_waves:
+        visuals.append(RipplesVisual("sleep", criticality="slow_waves"))
     for visual in visuals:
         visual.set_memory(snapshot)
-    movie = CompareMovie(visuals[0].waves.xyz)
+    movie = CompareMovie(visuals[0].waves.xyz, compare_waves=args.compare_waves)
     source = recorded_spikes()
     # Show one lap and 8 seconds with no new sensing to prove Activate fades.
     playback = [e for e in events if e["t"] < 59.3]
@@ -151,10 +161,11 @@ def main():
     movie.save(args.output)
     info.update(preview_seconds=68, preview_fps=5, render_fps=10,
                 activate_fully_dark_at_end=not bool(rendered[0].any()),
-                three_panels_render_ms_p95=float(np.percentile(timings, 95)*1000),
+                panels=len(visuals), panels_render_ms_p95=float(np.percentile(timings, 95)*1000),
                 cells_with_nonzero_std=sum(any(s > 0 for s in e["std"].values()) for e in snapshot),
                 synthetic_audio_seconds=240, neurons=8460, gain=9.5,
-                wave_time_scale=.30, noise_time_constant_s=1.8)
+                added_radial_waves=args.compare_waves, wave_time_scale=.30 if args.compare_waves else None,
+                noise_time_constant_s=1.8)
     (root/"comparison.json").write_text(json.dumps(info, indent=2), encoding="utf-8")
     print(json.dumps(info, indent=2), flush=True)
 

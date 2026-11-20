@@ -4,12 +4,13 @@
 누적된 공간 기억을 표현하는 프로젝트입니다.** 8,460개 spiking neuron의 실제 발화와
 센서의 공간 통계를 함께 사용합니다.
 
-![Activate / Sleep 실제 발화 / Sleep 느린 파동 비교](docs/media/dream_compare.gif)
+![추가 파동 없는 Activate / Sleep](docs/media/dream_activity.gif)
 
-위 GIF는 68초 비교입니다. **혈은 제공된 실제 기록, 맥과 비콘 위치는 합성 데이터**입니다.
-왼쪽은 Activate, 가운데는 Sleep의 평균·표준편차와 실제 발화, 오른쪽은 같은 데이터에
-느린 방사형 시각 효과를 추가한 모습입니다. 마지막 약 8초는 센싱 입력을 끊어
-Activate 흔적이 완전히 사라지는 구간입니다. 세 화면은 같은 스파이크 기록을 사용합니다.
+위 GIF는 **추가 방사형 파동을 끈** 68초 예시입니다. **혈은 제공된 실제 기록, 맥과 비콘
+위치는 합성 데이터**입니다. 왼쪽은 Activate, 오른쪽은 Sleep의 기존 평균·표준편차와 실제
+발화·잔광입니다. 마지막 약 8초에는 입력이 끊겨 Activate 흔적이 사라집니다.
+기존 데모 통계를 읽어서 만든 미리보기이며 현재 현장 데이터 누적을 켠 것이 아닙니다.
+이전 3화면 파동 비교는 [참고 GIF](docs/media/dream_compare.gif)로만 남겼습니다.
 
 ## 현재 구현 범위
 
@@ -17,8 +18,10 @@ Activate 흔적이 완전히 사라지는 구간입니다. 세 화면은 같은 
 - 센서 기록이 추가되면 `--watch`로 가져와 평균·분산을 갱신할 수 있습니다.
 - `ripples.live`는 실행 중인 센터의 실제 ToF·거리·맥·비콘 입력을 읽어 심 탑에서 처리합니다.
   Pi 원시 ToF/PCM을 직접 받을 TCP 경로도 제공합니다. [실시간 연결·규격](docs/realtime.md)
-- 비콘 설치 좌표가 미정이므로 기본 설정은 **수신 진단 모드**입니다. 임의 위치를 실측 DB에
-  넣지 않습니다. 좌표·기준 RSSI를 보정한 설정 파일로 실제 위치 표시와 누적을 켭니다.
+- M30의 **확정된 비콘 5개 좌표**를 기본 설정 `configs/live.m30.json`에 반영했습니다.
+  상대 RSSI 위치 추정은 준비됐으며 1m 기준 RSSI는 아직 미보정입니다.
+- **현재 운영 범위는 수신·연결성 점검만**입니다. `ripples.receive`는 DB·신경망·LED를 열지 않습니다.
+  [수신 전용 실행과 데이터 폼](docs/RECEIVE_ONLY.md)을 먼저 참고하세요. 누적은 기본으로 꺼져 있습니다.
 - `activity`는 실제 발화한 뉴런의 빛과 잔광입니다. `slow_waves`의 방사형 모양과
   std 기반 아른거림은 **추가 시각 효과**이며, 자연적인 공간 파동이나 임계성의 증명은 아닙니다.
 - 이 저장소 정리 과정에서 실제 LED에 새로 송출하거나 펌웨어를 갱신하지 않았습니다.
@@ -34,9 +37,10 @@ cd 2026_Ripples
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -e ".[test]"
 
-# LED 없이: 혈 + 합성 맥, 세 가지 화면 비교
+# LED 없이: 혈 + 합성 맥, 추가 파동 없는 Activate/Sleep 예시
 .\.venv\Scripts\python.exe -m ripples.demo
-# 생성 결과: outputs/dream_compare.gif
+# 생성 결과: outputs/dream_activity.gif (별도 합성 데모 통계)
+# 기존 데모만 읽기: python -m ripples.demo --read-only
 
 # 제공된 혈 기록만 60초 재생 / USB를 열지 않음
 .\.venv\Scripts\python.exe -m ripples --reservoir recorded --seconds 60 --preview outputs/hyeol.gif
@@ -58,28 +62,32 @@ macOS/Linux는 `.venv/bin/python`을 사용합니다. Windows에서는 설치 �
 사용합니다. 인터넷이 없어도 같은 LAN에서 연결할 수 있지만 공유기와 PC 전원은 필요합니다.
 
 ```powershell
-# 센터가 실행 중일 때, 실제 카메라 수신 + 기존 8,460 뉴런 계산을 30초 진단 (USB 없음)
-.\.venv\Scripts\python.exe -m ripples.live --seconds 30
-# 상태: runtime/live-status.json — 입력/좌표/오류/처리 속도
+# 현재 권장: 센터가 실행 중일 때 LAN 센서 데이터 수신을 30초 점검
+.\.venv\Scripts\python.exe -m ripples.receive --seconds 30
+# 상태: runtime/receiver-status.json (고정 파일 갱신, 데이터 이력/DB 누적 없음)
 
-# 실제 설치 좌표가 확정되면 설정을 복사해 수정
-Copy-Item configs/live.example.json runtime/live-site.json
-# anchors, reference_dbm, bounds_m을 현장에 맞추고 calibrated를 true로 변경
-.\.venv\Scripts\python.exe -m ripples.live --config runtime/live-site.json --seconds 0
+# 계속 수신만 / Ctrl+C로 종료 / 신경망 계산·LED 송출·DB 없음
+.\.venv\Scripts\python.exe -m ripples.receive --seconds 0
 
-# 실시간 LED 송출: 보드 확인 후 시작
-.\.venv\Scripts\python.exe -m ripples.live --config runtime/live-site.json --port COM3 --seconds 0
+# 추후 표시를 켤 때: 보드 확인 후 송출, 이 명령도 누적은 꺼져 있음
+.\.venv\Scripts\python.exe -m ripples.live --port COM3 --seconds 0
 ```
 
-`scripts/live-check.cmd`는 기본 수신 진단입니다. Activate/Sleep 전환은 기존
+`scripts/receive.cmd`와 `scripts/live-site.cmd`는 계속 수신만, `scripts/live-check.cmd`는 30초 점검입니다.
+표시 앱 `ripples.live`도 `--accumulate`를 명시한 경우에만 공간 DB를 엽니다. 추후 Activate/Sleep 전환은 기존
 `scripts/activate.cmd`, `scripts/sleep.cmd`를 공통으로 사용합니다. 실시간 입력에서도
-Activate는 새 관측에만 흔적을 찍고, Sleep은 계속 갱신되는 mean/std와 기존 criticality를 표시합니다.
+Activate는 새 관측에만 흔적을 찍고, 누적을 켠 경우 Sleep은 mean/std와 기존 criticality를 표시합니다.
 센터의 기구 부착 상태는 현재 모의 값이므로 자동 상태 전환 신호로 쓰지 않습니다.
 
 실제 센터 입력+live reservoir로 **PC 프레임 루프 약 9.90 FPS**를 확인했습니다.
 좌표 미보정 상태의 15초 진단이며, LED 보드 FPS 측정은 아닙니다.
+실행 스크립트와 기본 미리보기는 `activity`(추가 파동 없음)입니다.
 현재 맥 실시간 메시지의 3채널 정규화 음량은 낮은 층의 밝은 3점으로 표현합니다.
 원시 PCM을 받으면 기존 저·중·고음 표상을 사용합니다. 두 입력 단위를 혼동하지 않습니다.
+
+확정 좌표는 [M30 위치 설정](docs/realtime.md#확정된-m30-좌표와-대략적인-위치)에 있습니다.
+신선한 비콘이 3개 미만이면 좌표를 만들거나 기억을 갱신하지 않습니다. 2026-11-20 마지막
+점검 때는 일부 비콘만 켜져 있었고 맥 입력은 없었으므로, 모두 켠 뒤 두 기구의 동시 수신을 확인하면 됩니다.
 
 ## Activate와 Sleep
 
@@ -217,6 +225,7 @@ data_led_example/
   spikes/                  기존 모델의 실제 스파이크 NPZ
 docs/                      설명 및 공유 GIF
 configs/live.example.json 비콘 좌표·RSSI 보정·실시간 입력 설정 양식
+configs/live.m30.json     확정된 M30 비콘 5개 / 상대 RSSI 위치 / 별도 estimated 누적
 scripts/                   Windows 실행·상태 전환
 tests/                     reservoir·센서·USB 경계·패키지 테스트
 runtime/                   로컬 DB/생성 음성/상태 (Git 제외)
