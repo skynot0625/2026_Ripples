@@ -42,6 +42,7 @@
     <button type="button" id="send">지금 혈로 보내기</button></div>
   <p id="msg" class="note" aria-live="polite"></p>
   <h2>화면 고르기</h2>
+  <p class="note"><label><input type="checkbox" id="old"> 이전 화면도 보기</label></p>
   <div class="comps" id="comps"></div>
   <h2 id="edit-title">설정</h2>
   <div id="layers"></div>
@@ -74,7 +75,9 @@
       document.querySelectorAll('[data-comp]').forEach(b => b.classList.toggle('on-pi', b.dataset.comp === id)); }
     setInterval(pollPi, 1500); pollPi();
     function render() {
-      $('comps').replaceChildren(...vis.order.map(id => { const c = vis.compositions[id]; if (!c) return document.createTextNode('');
+      const NEW = id => /^혈 \d\d /.test((vis.compositions[id] || {}).name || '');   // the new 혈 set (2026-11-20); the rest behind 「이전 화면도 보기」
+      const ids = vis.order.filter(id => $('old').checked || NEW(id) || id === sel);
+      $('comps').replaceChildren(...ids.map(id => { const c = vis.compositions[id]; if (!c) return document.createTextNode('');
         const b = Object.assign(document.createElement('button'), {type: 'button', textContent: c.name});
         b.dataset.comp = id; b.setAttribute('aria-pressed', String(id === sel));
         b.addEventListener('click', () => { sel = id; render(); if ($('auto').checked) publish(); });
@@ -115,6 +118,7 @@
       } catch (e) { say(`보내기 실패: ${e.message}`, 'bad'); }
     }
     $('send').addEventListener('click', publish);
+    $('old').addEventListener('change', () => vis && render());
     function layerBox(c, L, i) {
       const spec = R.RENDERERS[L.renderer] || {label: L.renderer, params: []}, box = document.createElement('div'), key = `${sel}:${L.id || i}`;
       box.className = 'layer' + (L.visible === false ? ' hidden' : '');
