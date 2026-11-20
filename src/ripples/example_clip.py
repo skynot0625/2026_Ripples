@@ -1,4 +1,5 @@
 """Export logical RGB for venue3d; no USB color swaps or physical transmissions."""
+import base64
 import csv
 import gzip
 import hashlib
@@ -9,6 +10,27 @@ import numpy as np
 
 from ripples.hardware.transport import VALID_MASK
 from ripples.paths import LAYOUT_DIR
+
+
+def recorded_activity_clip(frames=680):
+    """Inline bounded, recorded firing-only layer for browser position simulation."""
+    from ripples.run import recorded_spikes
+    source = recorded_spikes()
+    activity = np.zeros((*VALID_MASK.shape,3), np.float32)
+    chunks = []
+    try:
+        for _ in range(frames):
+            raw, _ = next(source)
+            activity *= np.exp(-.1/.65)
+            activity = np.maximum(activity, raw.astype(np.float32))
+            chunks.append(activity[VALID_MASK].astype(np.uint8).tobytes())
+    finally:
+        source.close()
+    compressed = gzip.compress(b"".join(chunks), compresslevel=6, mtime=0)
+    return {"encoding":"gzip+base64", "frames":frames, "fps":10, "neurons":8460,
+            "channels":3, "source":"recorded reservoir gain9.5; firing + 0.65s afterglow only",
+            "sha256":hashlib.sha256(compressed).hexdigest(),
+            "data":base64.b64encode(compressed).decode("ascii")}
 
 
 class ExampleClip:
@@ -28,7 +50,7 @@ class ExampleClip:
             self.streams[state].write(frame[VALID_MASK].tobytes())
         self.frames += 1
 
-    def close(self, bounds):
+    def close(self, bounds, *, include_activity=False):
         for stream in self.streams.values():
             stream.close()
         offsets = np.cumsum(np.r_[0, VALID_MASK.sum(axis=2).ravel()[:-1]])
@@ -51,5 +73,7 @@ class ExampleClip:
                           "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                           "decoded_bytes": self.frames*int(VALID_MASK.sum())*3}
                          for state, path in self.files.items()}}
+        if include_activity:
+            doc["activity_clip"] = recorded_activity_clip(self.frames)
         (self.folder/"ripples-example.json").write_text(json.dumps(doc, indent=2)+"\n", encoding="utf-8")
         return doc

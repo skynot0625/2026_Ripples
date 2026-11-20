@@ -121,6 +121,13 @@
     <div class="row tour-keep"><button type="button" id="tour" aria-pressed="false">관람 시뮬 시작</button></div>
     <section class="sec" aria-label="심탑 센서 예시">
       <strong>심탑 · 센서 맵핑 예시</strong>
+      <div class="row" role="group" aria-label="심탑 위치 입력">
+        <button type="button" data-ripples-source="position" aria-pressed="true">3D 위치 연동</button>
+        <button type="button" data-ripples-source="recorded" aria-pressed="false">기록된 예시</button>
+      </div>
+      <p id="ripples-source-note" class="note">현재 3D 혈·맥 위치 + 합성 감각값</p>
+      <p id="ripples-position-status" class="note">위치 수신 대기</p>
+      <button type="button" id="ripples-memory-clear">이 탭의 예시 기억 지우기</button>
       <div class="row" role="group" aria-label="심탑 예시 상태">
         <button type="button" data-ripples-example="activate" aria-pressed="true">예시 Activate</button>
         <button type="button" data-ripples-example="sleep" aria-pressed="false">예시 Sleep</button>
@@ -136,7 +143,7 @@
       <p id="ripples-example-status" class="note">심탑 예시 불러오는 중…</p>
       <div class="row"><button type="button" id="ripples-example-pause" aria-pressed="false">예시 일시정지</button>
         <input id="ripples-example-time" aria-label="심탑 예시 재생 시점" type="range" min="0" max="67.9" step="0.1" value="0" disabled></div>
-      <p class="note">합성 센서 · 기록된 8,460 뉴런 · 추가 파동 없음<br>오른쪽 전시실을 LED 전체에 대응. 예시 경로는 아래 기구 조종과 독립입니다.</p>
+      <p class="note">합성 센서 · 기록된 8,460 뉴런 · 추가 파동 없음<br>오른쪽 전시실을 LED 전체에 대응. 3D 위치 연동은 아래 기구 조종을 따릅니다.</p>
     </section>
     <section class="sec tour-keep">
       <div class="row" role="group" aria-label="조명">
@@ -1914,6 +1921,7 @@
     }
     const sim = RipplesSim.connect(msg => {
       state = msg;
+      if(window.RipplesExample) window.RipplesExample.setSimulation(msg);
       if (layoutRev !== null && msg.layout_revision !== layoutRev && performance.now() - localAt > 600) { local = null; drawLayout(msg.layout); }   // changed elsewhere
       if (layoutRev === null && geo) drawLayout(msg.layout);   // first state: pieces + cable from the layout (+ parking tape)
       else if (geo && JSON.stringify(msg.start) !== startKey) drawLayout(lay());   // the parking boxes moved (a 시안, a wall moved): the tape at once (it took a second click)
@@ -1922,7 +1930,7 @@
       buildDevices(); showStatus(); syncLayout(); showRiders(); afterUnboard();
       RipplesSim.markBlocked(document.querySelectorAll('[data-drive]'), msg.motion && msg.motion[selected]);
     }, (kind, error) => {
-      if (kind === 'offline') { $('status').textContent = '서버 연결 끊김 · 다시 연결 중'; $('status').className = 'bad'; }
+      if (kind === 'offline') { if(window.RipplesExample)window.RipplesExample.offline(); $('status').textContent = '서버 연결 끊김 · 다시 연결 중'; $('status').className = 'bad'; }
       if (kind === 'error') { $('layout-msg').textContent = `바뀌지 않음: ${String(error).replace(/^layout: /, '')}`; $('layout-msg').className = ''; local = null; if (state) drawLayout(state.layout); syncLayout(); }
     });
 

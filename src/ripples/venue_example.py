@@ -338,7 +338,7 @@ def render(folder, scene, output):
                 if frame % 2 == 0:
                     movie.add_venue(images, t, count, places, latest)
             source.close()
-            clip_doc = clip.close(scene.led_bounds)
+            clip_doc = clip.close(scene.led_bounds, include_activity=True)
             movie.save(output)
             snapshot = memory.snapshot()
             report = {"example": True, "venue": "m30", "history_s": 180, "visible_input_s": 60, "fade_s": 8,

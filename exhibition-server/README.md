@@ -1,7 +1,7 @@
 # Ripples ToF Web Viewer
 
 심탑 센서 예시는 [공간 3D 확인](http://127.0.0.1:8000/venue3d?test)의 **심탑 · 센서 맵핑 예시**에서 볼 수 있습니다.
-Activate/Sleep·시간표·일시정지·시점 비교를 지원하며, 같은 Python 렌더 결과를 화면 전용으로 재생합니다.
+기본은 [3D 혈·맥 위치 연동](../docs/VENUE_POSITION_LINK.md)이며 감각값만 합성합니다. Activate/Sleep·시간표·일시정지를 지원합니다. 기록된 Python 예시도 별도로 선택할 수 있습니다.
 [감각별 맵핑과 3D 캡처](../docs/SENSOR_MAPPING.md), [전체 데이터 흐름](../docs/DATA_FLOW.md)을 참고하세요.
 
 

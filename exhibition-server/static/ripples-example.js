@@ -1,3 +1,167 @@
+/* Synthetic sensor values at actual simulator XY. Bounded, tab-local memory only. */
+class RipplesPositionSimulation {
+  constructor(bounds) {
+    this.bounds=bounds; this.time=0; this.poses={}; this.receivedAt=-Infinity; this.online=false;
+    this.trail=new Float32Array(32*32*24*3); this.mean=new Float32Array(this.trail.length);
+    this.spread=new Float32Array(this.trail.length); this.cells=new Map(); this.bucket=new Map();
+    this.second=0; this.memoryDirty=false; this.latest={}; this.revision=0; this.memoryRevision=0;
+    this.rng=20261120; this.noise=new Float32Array(8*8*6); this.lastNow=null;
+    for(let i=0;i<this.noise.length;i++) this.noise[i]=this.normal();
+  }
+  uniform() { this.rng=(Math.imul(1664525,this.rng)+1013904223)>>>0; return (this.rng+.5)/4294967296; }
+  normal() { return Math.sqrt(-2*Math.log(this.uniform()))*Math.cos(2*Math.PI*this.uniform()); }
+  setPositions(devices,venue,now) {
+    this.poses=venue==='m30' ? devices || {} : {}; this.receivedAt=now; this.online=true;
+  }
+  offline() { this.poses={}; this.receivedAt=-Infinity; this.online=false; }
+  position(p) {
+    if(!p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) return null;
+    const uv=[(p.x/1000-this.bounds[0][0])/(this.bounds[0][1]-this.bounds[0][0]),
+              (p.y/1000-this.bounds[1][0])/(this.bounds[1][1]-this.bounds[1][0])];
+    return uv.every(v=>v>=0 && v<=1) ? uv : null;
+  }
+  randomValue(seed,t) {
+    const n=Math.floor(t), hash=k=>{let x=Math.imul(k+seed,374761393);x=Math.imul(x^(x>>>13),1274126177);return ((x^(x>>>16))>>>0)/4294967296;};
+    const u=t-n, a=u*u*(3-2*u); return hash(n)*(1-a)+hash(n+1)*a;
+  }
+  features(role,t) {
+    const f={};
+    if(role==='hyeol') {
+      for(let i=0;i<9;i++){f['depth_'+i]=.3+3.4*this.randomValue(100+i,t/.9); f['coverage_'+i]=.72+.28*this.randomValue(200+i,t/1.7);}
+      f.ceiling_0=1.2+2.5*this.randomValue(300,t/2.2);
+    } else for(let i=0;i<3;i++) f['mic_level_'+i]=.08+.82*this.randomValue(400+i,t/.7);
+    return f;
+  }
+  static smooth(x){ x=Math.max(0,Math.min(1,x));return x*x*(3-2*x); }
+  static stamp(v,e) {
+    const xy=e.uv.map(x=>x*31), f=e.features, clamp=x=>Math.max(0,Math.min(1,x));
+    const dot=(dx,dy,z,color,strength)=>{
+      const x=Math.round(xy[0]+dx), y=Math.round(xy[1]+dy), k=Math.round(clamp(z)*23);
+      if(x<0||x>31||y<0||y>31) return;
+      const at=((x*32+y)*24+k)*3;
+      for(let c=0;c<3;c++)v[at+c]=Math.max(v[at+c],color[c]*strength);
+    };
+    const line=(a,b,color,level)=>{
+      const steps=Math.max(2,Math.floor(Math.max(Math.abs(a[0]-b[0]),Math.abs(a[1]-b[1]),Math.abs(a[2]-b[2])*23)*2)+1);
+      for(let i=0;i<steps;i++){const u=i/(steps-1);dot(a[0]*(1-u)+b[0]*u,a[1]*(1-u)+b[1]*u,a[2]*(1-u)+b[2]*u,color,level);}
+    };
+    if(e.source==='hyeol') {
+      const points={};
+      for(let i=0;i<9;i++) {
+        const cov=clamp(f['coverage_'+i]||0),d=Math.max(0,Math.min(4,f['depth_'+i]||0));
+        if(!cov||!d)continue;
+        const p=[(i%3-1)*1.7,(1-Math.floor(i/3))*1.7,.12+.46*Math.log1p(d/.35)/Math.log1p(4/.35)];
+        const level=Math.sqrt(cov)*(.4+.6*(1-d/4));points[i]=[p,level];dot(...p,[25,220,255],level);
+      }
+      for(const [key,[a,level]] of Object.entries(points)) {
+        const i=Number(key); for(const j of [i%3<2?i+1:-1,i+3]) if(points[j]) line(a,points[j][0],[25,220,255],.48*Math.min(level,points[j][1]));
+      }
+      if(f.ceiling_0>0){const z=.72+.22*clamp(f.ceiling_0/4);line([0,0,.64],[0,0,z],[165,95,255],.28);
+        line([-1.7,0,z],[1.7,0,z],[195,125,255],.95);line([0,-1.7,z],[0,1.7,z],[195,125,255],.95);}
+    } else {
+      const colors=[[255,155,55],[255,220,145],[255,125,100]];
+      for(let i=0;i<3;i++){const level=clamp(f['mic_level_'+i]||0);if(level){const x=(i-1)*1.7,z=.08+.38*level;
+        line([x,0,.06],[x,0,z],colors[i],.65*Math.sqrt(level));dot(x,0,z,colors[i],Math.sqrt(level));}}
+    }
+  }
+  static blur(input) {
+    let src=input; const dims=[32,32,24], strides=[32*24*3,24*3,3];
+    for(let axis=0;axis<3;axis++) {
+      const sigma=axis===2?.8:.9, radius=Math.floor(4*sigma+.5), kernel=[];let sum=0;
+      for(let k=-radius;k<=radius;k++){const q=Math.exp(-.5*(k/sigma)**2);kernel.push(q);sum+=q;}
+      for(let i=0;i<kernel.length;i++)kernel[i]/=sum;
+      const out=new Float32Array(input.length), stride=strides[axis],n=dims[axis];
+      for(let at=0;at<src.length;at++) {
+        const coord=Math.floor(at/stride)%n;let value=0;
+        for(let k=-radius;k<=radius;k++){let q=coord+k;if(q<0)q=-q-1;if(q>=n)q=2*n-q-1;value+=src[at+(q-coord)*stride]*kernel[k+radius];}
+        out[at]=value;
+      }
+      src=out;
+    }
+    for(let i=0;i<src.length;i++)src[i]=Math.min(255,src[i]*6.5);
+    return src;
+  }
+  static sample(v,x,y,z,c=0,dims=[32,32,24],channels=3) {
+    x=Math.max(0,Math.min(dims[0]-1,x));y=Math.max(0,Math.min(dims[1]-1,y));z=Math.max(0,Math.min(dims[2]-1,z));
+    const ix=Math.floor(x),iy=Math.floor(y),iz=Math.floor(z);let value=0;
+    for(let a=0;a<2;a++)for(let b=0;b<2;b++)for(let d=0;d<2;d++) {
+      const w=(a?x-ix:1-x+ix)*(b?y-iy:1-y+iy)*(d?z-iz:1-z+iz);
+      value+=w*v[((Math.min(ix+a,dims[0]-1)*dims[1]+Math.min(iy+b,dims[1]-1))*dims[2]+Math.min(iz+d,dims[2]-1))*channels+c];
+    }
+    return value;
+  }
+  observe(e) {
+    const x=Math.min(23,Math.floor(e.uv[0]*24)),y=Math.min(23,Math.floor(e.uv[1]*24)),key=e.source+':'+x+':'+y;
+    let b=this.bucket.get(key);if(!b){b={source:e.source,uv:[(x+.5)/24,(y+.5)/24],sum:{},n:0};this.bucket.set(key,b);}
+    b.n++;for(const [k,v] of Object.entries(e.features))b.sum[k]=(b.sum[k]||0)+v;
+  }
+  flush() {
+    for(const [key,b] of this.bucket) {
+      let cell=this.cells.get(key);if(!cell){cell={source:b.source,uv:b.uv,features:{},m2:{},count:0};this.cells.set(key,cell);}
+      cell.count++;
+      for(const [k,total] of Object.entries(b.sum)) {const value=total/b.n,delta=value-(cell.features[k]||0);cell.features[k]=(cell.features[k]||0)+delta/cell.count;cell.m2[k]=(cell.m2[k]||0)+delta*(value-cell.features[k]);}
+    }
+    if(this.bucket.size)this.memoryDirty=true;
+    this.bucket.clear();
+  }
+  rebuildMemory() {
+    const mean=new Float32Array(this.trail.length),hi=new Float32Array(mean.length),lo=new Float32Array(mean.length);
+    for(const cell of this.cells.values()) {
+      RipplesPositionSimulation.stamp(mean,cell);
+      const high={},low={};
+      for(const [k,v] of Object.entries(cell.features)) {
+        const sd=cell.count>1?Math.sqrt(Math.max(0,cell.m2[k]/(cell.count-1))):0;
+        const cap=k.startsWith('coverage_')?1:Infinity;high[k]=Math.min(cap,v+sd);low[k]=Math.max(0,v-sd);
+      }
+      RipplesPositionSimulation.stamp(hi,{...cell,features:high});RipplesPositionSimulation.stamp(lo,{...cell,features:low});
+    }
+    this.mean=RipplesPositionSimulation.blur(mean);const upper=RipplesPositionSimulation.blur(hi),lower=RipplesPositionSimulation.blur(lo);
+    for(let i=0;i<this.spread.length;i++)this.spread[i]=Math.min(90,Math.max(Math.abs(upper[i]-this.mean[i]),Math.abs(lower[i]-this.mean[i])));
+    this.memoryDirty=false;this.memoryRevision++;
+  }
+  tick(now,paused) {
+    if(this.lastNow===null)this.lastNow=now-100;
+    if(paused){this.lastNow=now;return false;}
+    if(now-this.lastNow<99)return false;
+    const dt=Math.min(.25,(now-this.lastNow)/1000);this.lastNow=now;this.time+=dt;this.revision++;
+    const second=Math.floor(this.time);if(second!==this.second){this.flush();this.second=second;}
+    const fade=Math.exp(-dt/.9);for(let i=0;i<this.trail.length;i++){this.trail[i]*=fade;if(this.trail[i]<.5)this.trail[i]=0;}
+    this.latest={};
+    if(this.online) for(const source of ['hyeol','maek']) {
+      const p=this.poses[source],uv=this.position(p);
+      if(!uv){this.latest[source]={status:p?'오른쪽 공간 밖':'위치 없음'};continue;}
+      const e={source,uv,features:this.features(source,this.time),world:[p.x/1000,p.y/1000]};
+      this.latest[source]=e;RipplesPositionSimulation.stamp(this.trail,e);this.observe(e);
+    }
+    const alpha=Math.exp(-dt/3.2),beta=Math.sqrt(1-alpha*alpha);
+    for(let i=0;i<this.noise.length;i++)this.noise[i]=alpha*this.noise[i]+beta*this.normal();
+    return true;
+  }
+  clear() {this.cells.clear();this.bucket.clear();this.mean.fill(0);this.spread.fill(0);this.memoryDirty=false;this.memoryRevision++;this.revision++;}
+  render(P,state) {
+    if(state==='sleep'&&this.memoryDirty)this.rebuildMemory();
+    const volume=state==='activate'?RipplesPositionSimulation.blur(this.trail):this.mean;
+    if(!P.ripplesGrid) {
+      const visible=Array.from(P.ripplesWeight,(_,i)=>i).filter(i=>P.ripplesWeight[i]>0);
+      const xs=visible.map(i=>P.loc[i*4]),ys=visible.map(i=>-P.loc[i*4+2]);
+      const x0=Math.min(...xs),y0=Math.min(...ys),dx=Math.max(...xs)-x0,dy=Math.max(...ys)-y0;
+      P.ripplesGrid=Array.from({length:P.count},(_,i)=>[(P.loc[i*4]-x0)/dx*31,(-P.loc[i*4+2]-y0)/dy*31,P.ripplesHeight[i]*23]);
+    }
+    const rgb=new Float64Array(P.count*3);
+    for(let i=0;i<P.count;i++) {
+      if(!P.ripplesWeight[i])continue;
+      const [x,y,z]=P.ripplesGrid[i];
+      const noise=state==='sleep'?Math.tanh(.8*RipplesPositionSimulation.sample(this.noise,x/31*7,y/31*7,z/23*5,0,[8,8,6],1)):0;
+      for(let c=0;c<3;c++) {
+        let v=RipplesPositionSimulation.sample(volume,x,y,z,c);
+        if(state==='sleep')v=.72*v+.45*noise*RipplesPositionSimulation.sample(this.spread,x,y,z,c);
+        rgb[i*3+c]=.85*Math.max(0,Math.min(255,v));
+      }
+    }
+    return rgb;
+  }
+}
+
 /* Same envelope/budgets as ripples.transition, tested against Python. */
 const RipplesTransition = {
   smooth(x) { x = Math.max(0, Math.min(1, x)); return x*x*(3-2*x); },
@@ -37,15 +201,18 @@ const RipplesTransition = {
     return this.limit(out, weights);
   }
 };
+RipplesTransition.PositionSimulation = RipplesPositionSimulation;
 if (typeof module !== 'undefined' && module.exports) module.exports = RipplesTransition;
 else /* Local example playback: no sensor POST, no USB, no simulator layout writes. */
 (() => {
   'use strict';
   const root = '/static/', $ = id => document.getElementById(id);
+  let input = 'position', positionEngine = null, pendingSimulation = null, activityClip = null;
   let direction = 'up', transitionStart = -Infinity, origin = null, shownState = null, reset = 0;
   let mode = 'activate', meta = null, clips = null, elapsed = 0, last = null, paused = false, error = '', uiAt = 0;
   const buttons = [...document.querySelectorAll('[data-ripples-example]')];
   const comparisons = [...document.querySelectorAll('[data-ripples-compare]')];
+  const sources = [...document.querySelectorAll('[data-ripples-source]')];
   const duration = () => mode === 'compare' ? 18 : (meta ? meta.duration_s : 68);
   function phase() {
     if (mode === 'compare') return elapsed >= 2 && elapsed < 10 ? 'sleep' : 'activate';
@@ -59,6 +226,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
     if (meta && elapsed >= duration()) { elapsed %= duration(); reset++; }
     if (now - uiAt < 200) return;
     uiAt = now;
+    sources.forEach(b => b.setAttribute('aria-pressed', String(input === b.dataset.ripplesSource)));
     comparisons.forEach(b => b.setAttribute('aria-pressed', String(mode === 'compare' && direction === b.dataset.ripplesCompare)));
     buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.ripplesExample === mode)));
     $('ripples-example-pause').setAttribute('aria-pressed', String(paused));
@@ -66,7 +234,14 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
     const state = phase();
     $('ripples-example-status').textContent = error ? '예시 오류: ' + error : mode === 'off' ? '예시 꺼짐 · 기존 시뮬레이션 표시' :
       !clips ? '심탑 예시 불러오는 중…' :
-      `${state === 'activate' ? 'Activate · 현재 감각' : 'Sleep · 공간 기억 + 발화'} · ${elapsed.toFixed(1)} / ${duration()}초 · ${direction === 'up' ? '중앙→위 · 확산 상승' : direction === 'up_flat' ? '기존 수평 상승' : '위→아래'}${mode === 'compare' ? ' · 2초 A→S / 10초 S→A' : ''}${mode === 'clock' ? ' · 한국 시각 20분/10분' : ''}`;
+      `${state === 'activate' ? 'Activate · 현재 감각' : 'Sleep · 공간 기억 + 발화'} · ${input === 'position' ? '3D 위치 연동' : elapsed.toFixed(1)+' / '+duration()+'초'} · ${direction === 'up' ? '중앙→위 · 확산 상승' : direction === 'up_flat' ? '기존 수평 상승' : '위→아래'}${mode === 'compare' ? ' · 2초 A→S / 10초 S→A' : ''}${mode === 'clock' ? ' · 한국 시각 20분/10분' : ''}`;
+    const live=input==='position';
+    $('ripples-example-time').disabled=live||!clips;
+    $('ripples-source-note').textContent=live ? '위치: 현재 3D 혈·맥 / 감각값: 합성 · 이 탭에만 임시 기억 · 새로고침 시 초기화' : '기록된 합성 경로 · 3D 기구 조종과 독립';
+    $('ripples-position-status').textContent=live && positionEngine ? ['hyeol','maek'].map(role=>{
+      const e=positionEngine.latest[role],name=role==='hyeol'?'혈':'맥';
+      return name+': '+(!e?'위치 수신 대기':e.status||`X ${e.world[0].toFixed(2)}, Y ${e.world[1].toFixed(2)}m → LED ${(e.uv[0]*100).toFixed(0)}%, ${(e.uv[1]*100).toFixed(0)}%`);
+    }).join(' / ')+` · 임시 기억 ${positionEngine.cells.size}셀` : '';
     $('ripples-example-time').max = duration()-.1;
     $('ripples-example-time').value = elapsed;
   }
@@ -74,18 +249,24 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
   const api = window.RipplesExample = {
     onUpdate: null,
     enabled: () => mode !== 'off',
+    setSimulation(msg) {
+      pendingSimulation={devices:msg.devices,venue:msg.venue&&msg.venue.id,now:performance.now()};
+      if(positionEngine)positionEngine.setPositions(pendingSimulation.devices,pendingSimulation.venue,pendingSimulation.now);
+    },
+    offline() { pendingSimulation=null;if(positionEngine)positionEngine.offline(); },
     apply(P, now) {
       update(now);
       if (mode === 'off') return null;
       if (!clips) { P.col.fill(0); P.on = true; return true; }
-      const frame = Math.min(meta.frames - 1, Math.floor((elapsed + (mode === 'compare' ? 18 : 0)) * meta.fps)), state = phase();
+      if(input === 'position' && positionEngine)positionEngine.tick(now,paused);
+      const frame = input==='position' ? Math.floor(positionEngine.time*10)%meta.frames : Math.min(meta.frames - 1, Math.floor((elapsed + (mode === 'compare' ? 18 : 0)) * meta.fps)), state = phase();
       if (P.ripplesReset !== reset) { shownState = null; origin = null; P.ripplesReset = reset; P.ripplesFrame = null; }
       if (shownState !== null && shownState !== state) {
         origin = Float64Array.from(P.col, x => x*255); transitionStart = elapsed;
       }
       shownState = state;
       let age = origin ? Math.max(0, elapsed-transitionStart) : 5;
-      const key = state + ':' + frame + ':' + Math.floor(age*10) + ':' + direction;
+      const key = input + ':' + (positionEngine ? positionEngine.revision : 0) + ':' + state + ':' + frame + ':' + Math.floor(age*10) + ':' + direction;
       if (P.ripplesFrame === key && P.on) return true;
       if (!P.ripplesOffsets) {
         if (!P.address || P.address.length !== P.count) throw Error('심탑 스트립 주소 없음');
@@ -112,12 +293,20 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
         const rmin=Math.min(...rs), rspan=Math.max(...rs)-rmin;
         visible.forEach((i,j)=>{ P.ripplesRadius[i]=(rs[j]-rmin)/Math.max(rspan,1e-9); });
       }
-      const rgb = clips[state], base = frame * meta.neurons * 3, target = new Float64Array(P.count*3);
+      const rgb = clips[state], base = frame * meta.neurons * 3;
+      let target = new Float64Array(P.count*3);
       for (let i = 0; i < P.count; i++) {
         const offset = P.ripplesOffsets[i];
         for (let c = 0; c < 3; c++) target[i * 3 + c] = offset < 0 ? 0 : rgb[base + offset + c];
       }
-      if (mode === 'compare') {
+      if(input === 'position' && positionEngine) {
+        target=positionEngine.render(P,state);
+        if(state==='sleep') for(let i=0;i<P.count;i++) {
+          const offset=P.ripplesOffsets[i]; if(offset<0)continue;
+          for(let c=0;c<3;c++){const k=i*3+c;target[k]+=(255-target[k])*activityClip[base+offset+c]/255;}
+        }
+      }
+      if (mode === 'compare' && input === 'recorded') {
         const start = elapsed >= 10 ? 10 : elapsed >= 2 ? 2 : null;
         age = start === null ? 5 : elapsed-start;
         if (start !== null && age < 5) {
@@ -140,9 +329,14 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
     mode = b.dataset.ripplesExample; last = performance.now(); changed();
   }));
   comparisons.forEach(b => b.addEventListener('click', () => {
-    direction=b.dataset.ripplesCompare; mode='compare'; elapsed=0; reset++; paused=false;
+    input='recorded'; direction=b.dataset.ripplesCompare; mode='compare'; elapsed=0; reset++; paused=false;
     last=performance.now(); changed();
   }));
+  sources.forEach(b=>b.addEventListener('click',()=>{
+    input=b.dataset.ripplesSource;reset++; if(mode==='compare'||mode==='off')mode='activate';
+    last=performance.now();if(positionEngine)positionEngine.lastNow=last;changed();
+  }));
+  $('ripples-memory-clear').addEventListener('click',()=>{if(positionEngine)positionEngine.clear();reset++;changed();});
   $('ripples-example-pause').addEventListener('click', () => { paused = !paused; last = performance.now(); changed(); });
   $('ripples-example-time').addEventListener('input', e => { elapsed = Number(e.target.value); reset++; last = performance.now(); changed(); });
   async function load() {
@@ -166,6 +360,15 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
         if (raw.byteLength !== meta.frames * meta.neurons * 3) throw Error('예시 프레임 길이 불일치');
         return [state, raw];
       }));
+      const a=meta.activity_clip;
+      if(!a||a.encoding!=='gzip+base64'||a.frames!==680||a.neurons!==8460||a.channels!==3||a.fps!==10)throw Error('위치연동 발화 기록 형식 불일치');
+      const packed=Uint8Array.from(atob(a.data),c=>c.charCodeAt(0));
+      const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',packed))].map(x=>x.toString(16).padStart(2,'0')).join('');
+      if(digest!==a.sha256)throw Error('위치연동 발화 기록 해시 불일치');
+      activityClip=new Uint8Array(await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+      if(activityClip.byteLength!==680*8460*3)throw Error('위치연동 발화 기록 길이 불일치');
+      positionEngine=new RipplesPositionSimulation(meta.led_bounds_m);
+      if(pendingSimulation)positionEngine.setPositions(pendingSimulation.devices,pendingSimulation.venue,pendingSimulation.now);
       clips = Object.fromEntries(entries); elapsed = 0; last = performance.now();
       $('ripples-example-time').disabled = false;
       changed();

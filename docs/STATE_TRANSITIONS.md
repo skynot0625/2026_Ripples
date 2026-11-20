@@ -31,7 +31,7 @@
 - 각 위치에서 밝기가 천천히 흐려지고 되살아나는 효과이며, 새 이동 흔적이나 주기적인 전체 파동을 만들지 않는다.
 - 기존 criticality의 발화·0.65초 잔광은 별도 층으로 유지한다. 저장된 mean/std 자체는 바꾸지 않는다.
 
-`ripples.live`와 `ripples.run`은 같은 `RipplesVisual`을 사용한다. 브라우저의 Sleep RGB 클립도 이 새 렌더러로
+`ripples.live`와 `ripples.run`은 같은 `RipplesVisual`을 사용한다. 기록된 예시 모드의 Sleep RGB 클립도 이 새 렌더러로
 680프레임을 다시 만들었으며, `sleep_style=dream-v2` 메타데이터와 SHA256으로 이전 클립과 혼용되지 않게 확인한다.
 실제 출력 코드와 3D가 모두 같은 기억 표현·전환식·출력 예산을 따른다. 3D 형상은 실물 스트립 길이에 대한 근사다.
 
@@ -71,3 +71,5 @@ GIF는 작은 점을 알아보기 쉽게 표시 감마를 적용하므로 실제
 [감각별 맵핑](SENSOR_MAPPING.md) · [검증 기록](validation.md)
 
 이전 [평면 상승/하강 GIF](media/state_transition_compare.gif)는 과거 비교 자료로 보존한다.
+
+기본 [3D 위치 연동](VENUE_POSITION_LINK.md)은 현재 기구 위치에서 브라우저가 감각 표상과 임시 기억을 만들며, 같은 전환·출력 상한을 적용한다.
