@@ -63,7 +63,7 @@
     <thead id="beacon-head"></thead>
     <tbody id="beacon-rows"></tbody>
   </table>
-  <p class="note">세기 = 최근 1.5초 중앙값 RSSI(dBm, 클수록 가까움). 거리는 세기에서 어림한 값(1 m 기준 −59 dBm · 감쇠 2.0 가정, 보정 전)이라 구역 판별용으로만 보세요. ● 정상 · 겹침 = 같은 번호에 다른 장치 · 끊김 = 3초 넘게 못 받음.</p>
+  <p class="note">세기 = 최근 1.5초 중앙값 RSSI(dBm, 클수록 가까움). 거리는 세기에서 어림한 값입니다. 11-20 작업실에서 혈로 잰 임시 보정(1 m 기준 −23 dBm · 감쇠 3.0)이고, 3 m 너머는 세기가 더 줄지 않아 「3 m 이상」으로만 나옵니다. 전시장에서 다시 맞출 예정입니다. ● 정상 · 겹침 = 같은 번호에 다른 장치 · 끊김 = 3초 넘게 못 받음.</p>
   <h2>출력 슬롯 (composition은 시각화 작업실에서 만들고 여기서도 배정)</h2>
   <table id="slot-table">
     <thead><tr><th>출력</th><th>composition</th><th>실제 출력</th><th>주소</th></tr></thead>
@@ -193,15 +193,16 @@
     setInterval(poll, 250);
 
     // BLE 비콘 (GET /api/beacon, 수신기별 마지막 1초 집계). 세기 → 거리 어림: d = 10^((ref − rssi) / (10·n))
-    const BEACON_NODES = [1, 2, 3, 4, 5], REF_DBM = -59, PATH_N = 2.0;
+    // 임시 보정 (2026-11-20 작업실, 혈 Pi · 노드 5 · 혈 후면, 비콘 +12 dBm): 1 m −23 dBm, 지수 3.0. 3 m 너머는 −41~−43 dBm 에서 더 안 떨어져 「3 m 이상」만 표시. 전시장에서 다시 잼
+    const BEACON_NODES = [1, 2, 3, 4, 5], REF_DBM = -23, PATH_N = 3.0, FAR_DBM = -40;
     const RECEIVER_NAME = id => /tof|hyeol|혈/i.test(id) ? '혈' : /mic|maek|맥/i.test(id) ? '맥' : id;
-    const estDist = (rssi, ref) => rssi == null ? null : Math.pow(10, ((ref ?? REF_DBM) - rssi) / (10 * PATH_N));
+    const estDist = (rssi, ref) => rssi == null ? null : Math.pow(10, (REF_DBM - rssi) / (10 * PATH_N));   // the beacon's own reference byte is uncalibrated (127) so not used
     function beaconCell(n) {
       if (!n) return '—';
       if (n.state === 'CONFLICT') return '겹침';
       if (n.state === 'STALE') return `끊김 (${(n.age_ms / 1000).toFixed(0)}s)`;
       const rssi = n.median_dbm ?? n.last_dbm, d = estDist(rssi, n.reference_rssi_dbm);
-      return `● ${Math.round(rssi)} dBm · 약 ${d.toFixed(1)} m`;
+      return rssi < FAR_DBM ? `● ${Math.round(rssi)} dBm · 3 m 이상` : `● ${Math.round(rssi)} dBm · 약 ${d.toFixed(1)} m`;
     }
     async function pollBeacon() {
       let d; try { d = await fetch('/api/beacon', {cache: 'no-store', signal: timeoutSignal(2000)}).then(r => r.json()); } catch { return; }
