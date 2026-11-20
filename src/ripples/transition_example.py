@@ -22,12 +22,12 @@ def main():
         t=frame/10; state="sleep" if 2<=t<10 else "activate"
         im=Image.new("RGB",(760,480),(6,9,16)); draw=ImageDraw.Draw(im)
         draw.text((18,12),"STATE TRANSITION / SAME SENSORS + 8,460 NEURONS / 10 FPS",fill=(225,232,244))
-        draw.text((18,32),"Center seed -> wider, brighter, faster upward | same RGB budgets: 96 / 18",fill=(155,171,192))
+        draw.text((18,32),"Broad lower center -> flare above halfway | same RGB budgets: 96 / 18",fill=(155,171,192))
         for panel,transition in enumerate(transitions):
             rgb=transition.render(clips[state][180+frame],state,.1)
             peaks.append(int(rgb.max())); mean=float(np.average(rgb.mean(axis=-1),weights=weights)); means.append(mean)
             offset=380*panel
-            draw.text((offset+20,65),"NEW: CENTER BLOOM UP" if panel==0 else "BEFORE: FLAT BOTTOM -> TOP",fill=(245,215,155))
+            draw.text((offset+20,65),"NEW: WIDE START + UPPER FLARE" if panel==0 else "BEFORE: FLAT BOTTOM -> TOP",fill=(245,215,155))
             draw.text((offset+20,85),f"{state.upper()} | {t:04.1f}s | mean {mean:.1f}/255",fill=(190,205,222))
             for i in order:
                 x,y=xy[i]; draw.point((int(x)+offset,int(y)),fill=(17,23,31))
@@ -36,11 +36,11 @@ def main():
                 draw.ellipse((int(x)+offset-1,int(y)-1,int(x)+offset+1,int(y)+1),fill=color)
         draw.text((18,445),"2s Activate -> Sleep | 10s Sleep -> Activate | display gain for preview only",fill=(165,185,205))
         images.append(im)
-    out=ROOT/"docs/media/state_transition_bloom.gif"
+    out=ROOT/"docs/media/state_transition_wide_start.gif"
     frames=[im.convert("P",palette=Image.Palette.ADAPTIVE,colors=128) for im in images]
     frames[0].save(out,save_all=True,append_images=frames[1:],duration=100,loop=0,optimize=False)
-    images[30].save(out.with_suffix(".png"))
-    report={"example":True,"duration_s":18,"fps":10,"switches_s":[2,10],"directions":["up","up_flat"],"style":"center_bloom_up","peak_limit":PEAK,"mean_limit":MEAN,"observed_max_channel":max(peaks),"observed_max_weighted_mean":max(means),"physical_leds":10260,"hardware_transmission":False,"current_measured":False}
+    images[24].save(out.with_suffix(".png"))
+    report={"example":True,"duration_s":18,"fps":10,"switches_s":[2,10],"directions":["up","up_flat"],"style":"wide_start_mid_flare","peak_limit":PEAK,"mean_limit":MEAN,"observed_max_channel":max(peaks),"observed_max_weighted_mean":max(means),"physical_leds":10260,"hardware_transmission":False,"current_measured":False}
     out.with_suffix(".json").write_text(json.dumps(report,indent=2)+"\n",encoding="utf-8")
     print(json.dumps(report),flush=True)
 

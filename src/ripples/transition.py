@@ -33,9 +33,10 @@ def pulse_field(height, age, direction="up", radius=None):
     h = np.clip(np.asarray(height), 0, 1)
     r = np.zeros_like(h) if radius is None else np.clip(np.asarray(radius), 0, 1)
     if direction == "up":
-        # Concave arrival time accelerates upward; an opening cone grows brighter.
+        # Start at the previous mid-height width, then flare above halfway.
         local = age-(SWEEP*np.sqrt(h)+.20*r)
-        width = .12+1.02*h**.8
+        start_width = .12+1.02*.5**.8
+        width = start_width+(1.14-start_width)*smooth((h-.5)/.35)
         aperture = smooth((width-r)/.16)
         gain = .12+.88*h**1.4
         return (aperture*gain*smooth(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)

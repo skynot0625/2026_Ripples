@@ -15,7 +15,8 @@ const RipplesTransition = {
   base(rgb, weights) { return this.limit(Float64Array.from(rgb, x => x*96/255), weights); },
   pulse(h, r, age, direction) {
     if (direction === 'up') {
-      const local=age-(1.4*Math.sqrt(h)+.20*r), width=.12+1.02*Math.pow(h,.8);
+      const local=age-(1.4*Math.sqrt(h)+.20*r), startWidth=.12+1.02*Math.pow(.5,.8);
+      const width=startWidth+(1.14-startWidth)*this.smooth((h-.5)/.35);
       const aperture=this.smooth((width-r)/.16), gain=.12+.88*Math.pow(h,1.4);
       return aperture*gain*this.smooth(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.2)/1.2));
     }

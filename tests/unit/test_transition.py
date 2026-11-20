@@ -78,3 +78,14 @@ def test_bloom_starts_central_widens_and_strengthens_upward():
     arrival=1.4*np.sqrt(np.array([0.,.25,.5,.75,1.]))
     assert np.all(np.diff(np.diff(arrival)) < 0)
     assert not pulse_field(h,5.,"up",r).any()
+
+
+def test_broad_start_keeps_width_until_midpoint_then_flares():
+    h=np.array([0.,.25,.5,.7,1.])
+    r=np.full_like(h,.45)
+    peak=pulse_field(h,1.4*np.sqrt(h)+.2*r+.2,"up",r)
+    assert peak[0] > .1  # wide lower region is visible, not only the innermost strip
+    r[:]=.82
+    outside=pulse_field(h,1.4*np.sqrt(h)+.2*r+.2,"up",r)
+    assert not outside[:3].any()
+    assert outside[3] > 0 and outside[4] > outside[3]
