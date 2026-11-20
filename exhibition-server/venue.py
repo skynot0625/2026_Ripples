@@ -205,6 +205,9 @@ class Venue:
         # the one marked "default" is the default layout and gives the 혈 / 맥 start poses ("시안 1을 기본으로")
         pf = path.parent / "layout_presets.json" if path else None
         self.layout_presets = json.loads(pf.read_text(encoding="utf-8")).get("presets", []) if pf and pf.exists() else []
+        # default BLE beacon positions (user 2026-11-20, "지금 비콘 배치 기본으로"): venues/<id>/beacons.json
+        bf = path.parent / "beacons.json" if path else None
+        self.default_beacons = json.loads(bf.read_text(encoding="utf-8")).get("beacons", {}) if bf and bf.exists() else {}
         dp = next((q for q in self.layout_presets if q.get("default")), None) if USE_DEFAULT_PRESET else None
         if dp:
             for d, v in (dp.get("devices") or {}).items():
@@ -225,7 +228,10 @@ class Venue:
     def default_layout(self) -> dict:
         dp = next((q for q in getattr(self, "layout_presets", []) if q.get("default")), None) if USE_DEFAULT_PRESET else None
         if dp:
-            return json.loads(json.dumps(dp["layout"]))
+            out = json.loads(json.dumps(dp["layout"]))
+            if self.default_beacons and "beacons" not in out:
+                out["beacons"] = json.loads(json.dumps(self.default_beacons))
+            return out
         sp = self.layout_spec
         out = {"big_walls": {w["id"]: float(w.get("default_deg", 0)) for w in sp.get("big_walls", [])},
                 "small_walls": [dict(w) for w in sp.get("small_walls", {}).get("default", [])],
@@ -233,6 +239,8 @@ class Venue:
         out["sim"] = {"x": self.mock_center[0], "y": self.mock_center[1], "heading": 0.0}
         if sp.get("pc"):
             out["pc"] = dict(sp["pc"]["default"])
+        if self.default_beacons:
+            out["beacons"] = json.loads(json.dumps(self.default_beacons))
         return out
 
     def _layout_solids(self, state: dict) -> list[dict]:
@@ -370,13 +378,12 @@ class Venue:
             out["parking"] = {d: {"x": round(float(q["x"]), 1), "y": round(float(q["y"]), 1), "heading": round(float(q["heading"]) % 360, 1)} for d, q in pk.items()}
         # BLE beacons (user 2026-11-20): where nodes 1–5 (group_id) hang, {"1": {"x", "y", "z"}, …}. Display only (no
         # solid), the key the beacon receivers report (work/2026-11-18_ble_beacon). Not sent = kept as it is
-        bc = value["beacons"] if "beacons" in value else cur.get("beacons", {})
+        bc = value["beacons"] if "beacons" in value else cur.get("beacons", getattr(self, "default_beacons", {}))   # a state saved before beacons: the defaults
         if not isinstance(bc, dict) or not all(isinstance(k, str) and k.isdigit() and 1 <= int(k) <= 32 for k in bc) or not all(
                 isinstance(q, dict) and set(q) == {"x", "y", "z"} and all(num(q[k]) for k in q) for q in bc.values()):
             raise ValueError('beacons: {"<node 1–32>": {"x", "y", "z"}}')
-        if bc:
-            out["beacons"] = {str(int(k)): {"x": round(float(q["x"]), 1), "y": round(float(q["y"]), 1), "z": round(min(max(float(q["z"]), 0.0), 6000.0), 1)}
-                              for k, q in sorted(bc.items(), key=lambda kv: int(kv[0]))}
+        out["beacons"] = {str(int(k)): {"x": round(float(q["x"]), 1), "y": round(float(q["y"]), 1), "z": round(min(max(float(q["z"]), 0.0), 6000.0), 1)}
+                          for k, q in sorted(bc.items(), key=lambda kv: int(kv[0]))}   # {} kept: all removed on purpose
         self._layout_solids(out)   # builds (catches malformed values); no overlap check (user 2026-11-06)
         return out
 
