@@ -1,0 +1,59 @@
+# Example / Demonstration Configuration
+# Not a Preregistered Scientific Protocol
+#
+# Schema: sweep manifest read by snnrc.sweep.manifest / snnrc.sweep.runner / snnrc.sweep.worker.
+# Purpose: show the manifest format and let collaborators smoke-test the parallel sweep
+# runner in about a minute.  Network size, duration, grid, seeds and fit thresholds are
+# reduced for speed; every other value is the code default of the base preset.  Nothing
+# here was tuned or selected, and no grid point carries a regime label.
+#
+# Run with --mode preflight (or --mode test).  The runner's default --mode full refuses
+# any manifest whose status is not APPROVED_PREREGISTERED, and --mode pilot requires
+# APPROVED_EXPLORATORY_PILOT; this example deliberately has neither status.
+status: EXAMPLE_NOT_PREREGISTERED
+manifest_version: 1
+sweep_id: example_small_global_gain
+
+reservoir:
+  base_preset: nprc_historical_dt01   # the only base preset accepted by build_run_config
+  N_E: 80
+  N_I: 20
+  dt_ms: 0.1
+  noise: {sigma: 0.05, scaling: per_step, mode: shared_stream}
+  semantics: corrected                # must be 'corrected' (no legacy flags)
+  adaptation: historical_b020         # must match the preset's adaptation
+  scaling: {mode: global, parameter: g_global}
+  families: [B0, B1]
+
+grid:                                 # union of coarse and fine ranges -> g_global in {6.0, 7.0}
+  coarse: {start: 6.0, stop: 7.0, step: 1.0}
+  fine: {start: 6.0, stop: 6.0, step: 0.1}
+  decimals: 1
+
+seeds:
+  master_seeds: [0]
+
+run:
+  duration_ms: 1500
+  burn_in_ms: 500
+  kick: {amplitude: 1.5, target: E, quiet_population: E, quiet_before_kick_ms: 100, cooldown_ms: 100,
+         require_no_active_tracker_avalanche: true, require_no_pending: true, on_refractory_target: log_failed}
+  safety: {max_size_E_spikes: 16000, max_duration_ms: 20000, action: terminate_run}
+
+fitting:                              # small thresholds/bootstraps for speed only
+  min_tail: 5
+  min_distinct: 3
+  min_decades: 1.0
+  max_candidates: 5
+  bootstrap_ci: 4
+  bootstrap_gof: 3
+  bootstrap_seed: 0
+
+# load_manifest() requires this key to be present; the runner and worker never read it.
+# snnrc.sweep.candidates.select_candidate implements its scoring rule in code; it is not
+# applied by this example and no criterion is defined here.
+critical_like_candidate_rule: not_defined_for_this_example
+
+execution:
+  order_seed: 0
+  default_max_workers: 2

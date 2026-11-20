@@ -1,0 +1,94 @@
+{
+  "firmware_reference/central_usb_basic.ino": {
+    "bytes": 18536,
+    "sha256": "29a5309316b446e192485c1161668569f9ddeea74aca1b937316c2419b2bbe1e"
+  },
+  "firmware_reference/central_usb_rgb565_plus10.bin": {
+    "bytes": 487840,
+    "sha256": "109888d137722422f0f7c636ab05f82d8d1fd05b1698cd17c8774ea1ce4fd12f"
+  },
+  "firmware_reference/fastled-3.10.5-wave8-transpose.patch": {
+    "bytes": 6415,
+    "sha256": "b09c0b6324850b677c91d7871d1309320032ea180e0fdf7ddb40c4c7b85b26a6"
+  },
+  "firmware_reference/FastLED_LICENSE": {
+    "bytes": 1074,
+    "sha256": "4358d4c37f1305b43a3117a6a12780f666bf285538de0b28991613c0ccacecd8"
+  },
+  "firmware_reference/lighting_build_plus10.json": {
+    "bytes": 740,
+    "sha256": "d773d0dcc06d16d466997a22b718abb7e68a1aa3283618fa1cfd56fdaeb4d639"
+  },
+  "hardware_reference/CURRENT_INSTALLATION.md": {
+    "bytes": 2432,
+    "sha256": "5d07a87f559a3e5204f47e6d75ffe77a9ae9e1c26c2836f7b6bd70f14417f9b0"
+  },
+  "hardware_reference/HARDWARE_CURRENT.md": {
+    "bytes": 4053,
+    "sha256": "65d439635516498c48525244423bf648881c69dec02c53295a6850fca4d50a50"
+  },
+  "layout/color_corrections_plus10.json": {
+    "bytes": 539,
+    "sha256": "955f766877bcad341c92214b3872014af95a812a963f80078bb9cfb2f349cfdc"
+  },
+  "layout/installation_summary.json": {
+    "bytes": 1784,
+    "sha256": "2d71fddbb69b895d10a1efd6b8968900109b6f4525d868793f9931cb7a0ef1f8"
+  },
+  "layout/layout.json": {
+    "bytes": 32094,
+    "sha256": "a71403e7f15d6a6ee4c24821a667a805bcaf5981d565d8d6384d7fb16f9403b4"
+  },
+  "layout/layout.png": {
+    "bytes": 1086664,
+    "sha256": "f74952a8a9b9f7032fdade67b626a8f79eab271d15ac7c2983bc5340b36f8738"
+  },
+  "layout/mapping_plus10.csv": {
+    "bytes": 18510,
+    "sha256": "cda2324b3b618dceb518d94b70c67947a57b0af3b54c8adc1522a08bbe51685f"
+  },
+  "layout/modules.csv": {
+    "bytes": 1568,
+    "sha256": "0fbe77d1b768475c4f379d13dc289b420beb78591827c17185aac3c222091b11"
+  },
+  "layout/ports.csv": {
+    "bytes": 16270,
+    "sha256": "e2e44dd11435f543fa62e22b98341d6472204418c2f394e574e4fd6a23eeda8f"
+  },
+  "layout/strip_configuration.csv": {
+    "bytes": 7724,
+    "sha256": "ec05aa93abc6275b0a1d778b818a8bd803aa23d553e16e8d9be563f3cfaf2dbb"
+  },
+  "layout/wiring.png": {
+    "bytes": 1932245,
+    "sha256": "a808eda0985a31406e80c6446a077efa1c1c418fa22a0d5da9f27e29c87a649c"
+  },
+  "sensors/ripples-hyeol-send-sample_20261116.zip": {
+    "bytes": 32604430,
+    "sha256": "4dafe2f4c9b0ba2ac1bae6b0d141b6a94676369ce2078551121b3ec9a4ba050d"
+  },
+  "spikes/example_spikes.npz": {
+    "bytes": 263971,
+    "sha256": "49148b888222c5f9bcc739caae0ad52d25fc977276295a7214c57308a5d649d4"
+  },
+  "audio_synthetic_sample/0000/audio.wav": {
+    "bytes": 264644,
+    "sha256": "81add2e859a5fda7daf640ce1ccdf4a040376791a4f03bbb66a59e8be134baf4"
+  },
+  "audio_synthetic_sample/0000/metadata.json": {
+    "bytes": 238,
+    "sha256": "287a07ee31f6ffc9f6863e419691e3ae1db46f93bac1f07010b9e215234882d6"
+  },
+  "sensors/protocols/beacon_rssi_example.png": {
+    "bytes": 638686,
+    "sha256": "9f4b373f1223cbd5e8587609416b28ead17232be50479f761f858dd5e1772369"
+  },
+  "sensors/protocols/RASPBERRY_PI_HANDOFF.md": {
+    "bytes": 7232,
+    "sha256": "161c3b8d151ba183e053a779fbc4a48216537182f886bb1832fcf2b332f5dcad"
+  },
+  "sensors/protocols/sound.md": {
+    "bytes": 3603,
+    "sha256": "bded5454ccfb81fba50d69086acb45d2fe0c88a88b29afb4b7c9f4a264a5881e"
+  }
+}

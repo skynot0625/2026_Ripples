@@ -1,0 +1,1762 @@
+{
+  "side_count": 9,
+  "description": "One point per strip. Rings 0-2 and exact horizontal/vertical centerline positions are missing. Other positions remain unconfirmed.",
+  "positions": {
+    "A1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "A2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "A3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "A4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "A5": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "A6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "A7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "A8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "A9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "B1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "B2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "B3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "B4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "B5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "B6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "B7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "B8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "B9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "B10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "C1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "C2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "C3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "C4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "C5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "C6": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "C7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "C8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "C9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "C10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "C11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "D1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "D2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "D3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "D4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "D5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "D6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 8
+    },
+    "D7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "D8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 1
+    },
+    "D9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "D10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "D11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "D12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "E1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "E2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "E3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "E4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "E5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "E6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "E7": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "E8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "E9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "E10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "E11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "E12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "E13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "F1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "F2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "F3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "F4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "F5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "F6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "F7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "F8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "F9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "F10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "F11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "F12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "F13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "F14": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "G1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "G2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "G3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "G4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "G5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "G6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "G7": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "G8": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "G9": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "G10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "G11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "G12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "G13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "G14": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "G15": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "H1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "H2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "H3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "H4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 7
+    },
+    "H5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "H6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 12
+    },
+    "H7": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "H8": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "H9": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "H10": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "H11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "H12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 9
+    },
+    "H13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "H14": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "H15": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "H16": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 2
+    },
+    "I1": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I2": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I3": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I4": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I5": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I6": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I7": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I8": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I9": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I10": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I11": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I12": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I13": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I14": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I15": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I16": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "I17": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "J1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "J2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "J3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "J4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "J5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "J6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "J7": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "J8": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "J9": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "J10": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "J11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "J12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "J13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "J14": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "J15": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "J16": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "K1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "K2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "K3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "K4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "K5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "K6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "K7": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "K8": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "K9": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "K10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "K11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "K12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "K13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "K14": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "K15": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "L1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "L2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "L3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "L4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "L5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "L6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "L7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "L8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "L9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "L10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "L11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "L12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "L13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "L14": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "M1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "M2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "M3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "M4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "M5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "M6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "M7": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "M8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "M9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "M10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "M11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "M12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "M13": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "N1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "N2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "N3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 6
+    },
+    "N4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 11
+    },
+    "N5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "N6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "N7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "N8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "N9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 10
+    },
+    "N10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "N11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "N12": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 3
+    },
+    "O1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "O2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "O3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "O4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "O5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "O6": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "O7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "O8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "O9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "O10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "O11": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "P1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "P2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "P3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "P4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "P5": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "P6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "P7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "P8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "P9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "P10": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "Q1": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "Q2": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "Q3": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "Q4": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 5
+    },
+    "Q5": {
+      "present": false,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": null
+    },
+    "Q6": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "Q7": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "Q8": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    },
+    "Q9": {
+      "present": null,
+      "groups": [],
+      "unit": null,
+      "channel": null,
+      "reverse": null,
+      "zone": 4
+    }
+  },
+  "row_led_counts": {
+    "A": 66,
+    "B": 65,
+    "C": 64,
+    "D": 63,
+    "E": 62,
+    "F": 61,
+    "G": 60,
+    "H": 59,
+    "I": null,
+    "J": 57,
+    "K": 56,
+    "L": 55,
+    "M": 54,
+    "N": 53,
+    "O": 52,
+    "P": 51,
+    "Q": 50
+  },
+  "zone_naming": "Outer zones 1..8 clockwise from A6; inner zones 9..12 clockwise from upper right. D8->1, D5->8, N8->4, N5->5 applied symmetrically."
+}

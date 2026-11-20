@@ -1,0 +1,148 @@
+--- a/src/platforms/esp/32/drivers/i2s/channel_driver_i2s.cpp.hpp
++++ b/src/platforms/esp/32/drivers/i2s/channel_driver_i2s.cpp.hpp
+@@ -28,9 +28,15 @@
+ // Include ESP implementation only on real hardware
+ #if defined(FL_IS_ESP_32S3)
+ #include "platforms/esp/32/drivers/i2s/i2s_lcd_cam_peripheral_esp.h"
++#include <esp_timer.h>
+ #endif
+ 
+ namespace fl {
++#if defined(FL_IS_ESP_32S3)
++static u64 lightingEncodeUs = 0, lightingEncodeCalls = 0;
++extern "C" uint64_t lighting_encode_us() { return lightingEncodeUs; }
++extern "C" uint64_t lighting_encode_calls() { return lightingEncodeCalls; }
++#endif
+ 
+ // Use wave8 encoding by default
+ #ifndef FASTLED_I2S_USE_WAVE8
+@@ -500,10 +506,52 @@
+ }
+ 
+ void ChannelEngineI2S::encodeFrame() FL_NOEXCEPT {
++#if defined(FL_IS_ESP_32S3)
++    const int64_t lightingStart = esp_timer_get_time();
++#endif
+     int backBuffer = 1 - mFrontBuffer;
+     u16* output = mBuffers[backBuffer];
+ 
+ #if FASTLED_I2S_USE_WAVE8
++#ifndef FASTLED_LIGHTING_FAST_WAVE8
++#define FASTLED_LIGHTING_FAST_WAVE8 1
++#endif
++#if FASTLED_LIGHTING_FAST_WAVE8
++    // Project patch: transpose input bits ONCE, then reuse the original W0/W1
++    // pulse symbols. Same 8 samples/bit, lane order, buffer size and reset tail.
++    // This is lossless waveform construction, not RGB quantization.
++    const u16 active = static_cast<u16>((1u << mConfig.num_lanes) - 1u);
++    const u8 w0 = mWave8Lut.lut[0][0].data;
++    const u8 w1 = mWave8Lut.lut[15][0].data;
++    u16 base[8], difference[8];
++    for (int p = 0; p < 8; ++p) {
++        base[p] = ((w0 >> (7-p)) & 1u) ? active : 0;
++        difference[p] = (((w0 ^ w1) >> (7-p)) & 1u) ? active : 0;
++    }
++    for (int led = 0; led < mNumLeds; ++led) {
++        for (int component = 0; component < mNumComponents; ++component) {
++            u8 bytes[16] = {};
++            for (int lane = 0; lane < mConfig.num_lanes; ++lane)
++                if (mStrips[lane]) bytes[lane] = mStrips[lane][led].raw[component];
++            u8 columns[16];
++            detail::spread_transpose16_symbol(bytes, columns);
++            for (int bit = 0; bit < 8; ++bit) {
++                const u16 planes = static_cast<u16>(columns[2*bit] |
++                                                    (u16(columns[2*bit+1]) << 8));
++                // Fixed eight stores let the compiler schedule contiguous output.
++                output[0] = base[0] ^ (planes & difference[0]);
++                output[1] = base[1] ^ (planes & difference[1]);
++                output[2] = base[2] ^ (planes & difference[2]);
++                output[3] = base[3] ^ (planes & difference[3]);
++                output[4] = base[4] ^ (planes & difference[4]);
++                output[5] = base[5] ^ (planes & difference[5]);
++                output[6] = base[6] ^ (planes & difference[6]);
++                output[7] = base[7] ^ (planes & difference[7]);
++                output += 8;
++            }
++        }
++    }
++#else
+     // Wave8 encoding: Convert each LED byte to 64 output bits
+     // For single lane: output bits go on D0
+     // For multi-lane: output bits interleaved across D0-D15
+@@ -552,6 +600,7 @@
+     }
+ 
+     // Rest of buffer is already zeros (reset signal)
++#endif
+ #else
+     // Legacy transpose encoding
+     // The initialization already set output[0,3,6,...] to 0xFFFF
+@@ -583,6 +632,10 @@
+         }
+     }
+ #endif
++#if defined(FL_IS_ESP_32S3)
++    lightingEncodeUs += esp_timer_get_time() - lightingStart;
++    ++lightingEncodeCalls;
++#endif
+ }
+ 
+ //=============================================================================
+--- a/src/fl/channels/channel.cpp.hpp
++++ b/src/fl/channels/channel.cpp.hpp
+@@ -26,6 +26,9 @@
+ #include "fl/stl/noexcept.h"
+ 
+ namespace fl {
++static u32 lightingPixelChecks = 0;
++extern "C" uint32_t lighting_pixel_checks() { return lightingPixelChecks; }
++
+ 
+ namespace {
+ 
+@@ -525,7 +528,45 @@
+         const ClocklessChipset* clockless = mChipset.ptr<ClocklessChipset>();
+         switch (clockless->encoder) {
+             case ClocklessEncoder::CLOCKLESS_ENCODER_WS2812:
++#ifndef FASTLED_LIGHTING_BULK_RGB
++#define FASTLED_LIGHTING_BULK_RGB 1
++#endif
++#if FASTLED_LIGHTING_BULK_RGB
++                if (!pixelIterator.get_rgbw().active() && !pixelIterator.get_rgbww().active()) {
++                    // Preserve FastLED's existing scale/order/dither iterator.
++                    // Change only the destination: one resize, then contiguous stores.
++                    data.resize(static_cast<size_t>(pixelIterator.size()) * 3);
++                    if (mRgbOrder == GRB && !mScreenMap.getXYMap()) {
++                        // Same PixelController scale/dither functions, statically bound.
++                        // Copying to GRB matches PixelIteratorAny's original GRB variant.
++                        PixelController<GRB> direct(pixels);
++                        u8* destination = data.data();
++                        while (direct.has(1)) {
++                            direct.loadAndScaleRGB(destination, destination+1, destination+2);
++                            destination += 3;
++                            direct.stepDithering();
++                            direct.advanceData();
++                        }
++                        // Compare against the actual old type-erased path on startup
++                        // and warm-up random frames. The timed benchmark starts later.
++                        if (lightingPixelChecks < 512) {
++                            fl::vector_psram<u8> reference;
++                            pixelIterator.writeWS2812(&reference);
++                            if (reference.size() != data.size()) __builtin_trap();
++                            for (size_t i=0;i<data.size();++i)
++                                if (reference[i] != data[i]) __builtin_trap();
++                            ++lightingPixelChecks;
++                        }
++                    } else {
++                        auto range = makeScaledPixelRangeRGB(&pixelIterator);
++                        encodeWS2812_RGB(range.first, range.second, data.data());
++                    }
++                } else {
++                    pixelIterator.writeWS2812(&data);
++                }
++#else
+                 pixelIterator.writeWS2812(&data);
++#endif
+                 break;
+ #if !defined(FASTLED_DISABLE_UCS7604) || !FASTLED_DISABLE_UCS7604
+             // Gated by FASTLED_DISABLE_UCS7604 (#2920). For WS2812-only

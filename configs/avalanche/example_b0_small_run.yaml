@@ -1,0 +1,134 @@
+# Example / Demonstration Configuration
+# Not a Preregistered Scientific Protocol
+#
+# Schema: snnrc.config.AvalancheRunConfig  (python -m snnrc.cli.run_avalanche --config ...).
+# Generated from the package presets (snnrc.presets.avalanche_historical_pilot('B0', g_global=7.0, master_seed=0)) with all scientific
+# parameters left at their code defaults; only the network size and run duration (duration_ms) were
+# reduced so the example runs in seconds on a laptop CPU.  The values are NOT
+# tuned, NOT selected by any criticality analysis, and carry NO regime label.
+# A 200-neuron network does not reproduce the dynamics of the N = 1000 model.
+reservoir:
+  family: B0
+  name: example_b0_small
+  N_E: 160
+  N_I: 40
+  dt_ms: 0.1
+  dtype: float64
+  excitatory:
+    tau_m_ms: 20.0
+    threshold: 1.0
+    v_reset: 0.0
+    reset_mode: hard
+    refractory_ms: 1.0
+    current_integration: additive
+  inhibitory:
+    tau_m_ms: 5.0
+    threshold: 1.0
+    v_reset: 0.0
+    reset_mode: hard
+    refractory_ms: 1.0
+    current_integration: additive
+  adaptation:
+    name: historical_b020
+    weak_fraction: 0.6
+    split_mode: exact
+    weak:
+      tau_w_mode_ms: 100.0
+      tau_w_log_sigma: 0.3
+      tau_w_clip_ms:
+      - 50.0
+      - 1000.0
+      b: 0.05
+    strong:
+      tau_w_mode_ms: 300.0
+      tau_w_log_sigma: 0.3
+      tau_w_clip_ms:
+      - 100.0
+      - 2000.0
+      b: 0.2
+    inhibitory_b: 0.0
+    inhibitory_tau_w_ms: 250.0
+  connectivity:
+    generator: fitness_spatial
+    lambda_E: 0.25
+    lambda_I: 0.2
+    pareto_alpha: 3.0
+    p_scale: 0.2
+    use_fitness: true
+    inh_to_exc_magnitude_ratio: 4.0
+    ii_attenuation: 0.75
+    uniform_density: 0.04
+  scaling:
+    mode: global
+    g_global: 7.0
+    J_E_exc: 1.0
+    J_I: 4.0
+  delay:
+    mode: none
+    mean_ms: 2.0
+    log_sigma: 0.5
+    clip_ms:
+    - 0.5
+    - 8.0
+    rounding: round
+    min_delay_steps: 1
+  noise:
+    sigma: 0.05
+    scaling: per_step
+    mode: shared_stream
+  input:
+    n_inputs: 0
+    target: E
+    weight_low: -1.5
+    weight_high: 1.5
+  legacy:
+    double_negative_inhibition: false
+    ee_transposed: false
+    refractory_off_by_one: false
+    zero_delay_full_ring: false
+    kick_before_leak: false
+  seeds:
+    master: 0
+    topology: null
+    neuron_params: null
+    delays: null
+    input_weights: null
+    noise: null
+    kick: null
+    data: null
+    readout: null
+duration_ms: 2000.0
+burn_in_ms: 1000.0
+kick:
+  amplitude: 1.5
+  target_population: E
+  application: voltage_increment
+  quiet_population: E
+  quiet_before_kick_ms: 100.0
+  cooldown_ms: 100.0
+  require_no_active_avalanche: true
+  require_no_pending_spikes: true
+  on_refractory_target: log_failed
+primary_segmentation:
+  name: primary_E_seg_E_size
+  boundary_population: E
+  size_population: E
+  close_silence_ms: 5.0
+  require_no_pending: true
+secondary_segmentations:
+- name: A_total_seg_E_size
+  boundary_population: total
+  size_population: E
+  close_silence_ms: 5.0
+  require_no_pending: true
+- name: B_total_seg_total_size
+  boundary_population: total
+  size_population: total
+  close_silence_ms: 5.0
+  require_no_pending: true
+safety:
+  max_size_spikes: 16000
+  max_duration_ms: 20000.0
+  action: reset_state
+protocol_label: example_demonstration
+device: cpu

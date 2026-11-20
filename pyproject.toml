@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ripples-led"
+version = "0.1.0"
+description = "Spatial sensing, spiking-reservoir visualization and Sim LED tower control"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2,<3",
+    "scipy>=1.10",
+    "torch>=2.0",
+    "pandas>=2.0",
+    "matplotlib>=3.7",
+    "pyyaml>=6",
+    "pyserial>=3.5,<4",
+    "Pillow>=10",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+ripples = "ripples.run:main"
+ripples-demo = "ripples.demo:main"
+ripples-reservoir = "ripples.reservoir:main"
+ripples-spikes = "ripples.spikes:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+    "legacy: characterisation tests for documented historical behavior",
+    "slow: tests that take more than a few seconds",
+]

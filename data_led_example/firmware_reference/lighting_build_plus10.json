@@ -1,0 +1,15 @@
+{
+  "variant": "rgb565",
+  "encoder": "transpose",
+  "flags": "-DLED_PATCH_PROFILE=1 -DFASTLED_LIGHTING_FAST_WAVE8=1 -DFASTLED_LIGHTING_BULK_RGB=1",
+  "source_sha256": "29a5309316b446e192485c1161668569f9ddeea74aca1b937316c2419b2bbe1e",
+  "driver_sha256": "35ec9af7a0d55375dc6eca8cefd1625bf4e30b1e1ccc466d618c5fe009e777cb",
+  "pixel_stage_sha256": "24e98b3f8bb1e38f5ec5c5cdbafcad7ab1c32037a29919e8f47efb045f8aa8e4",
+  "binary_sha256": "109888d137722422f0f7c636ab05f82d8d1fd05b1698cd17c8774ea1ce4fd12f",
+  "binary": "central_usb_basic/firmware/central_usb_rgb565_plus10.bin",
+  "build_environment": {
+    "arduino_esp32_core": "3.3.12",
+    "FastLED": "3.10.5",
+    "fqbn": "esp32:esp32:nano_nora:PinNumbers=byGPIONumber,USBMode=hwcdc"
+  }
+}

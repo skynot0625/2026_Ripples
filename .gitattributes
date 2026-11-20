@@ -1,0 +1,15 @@
+* text=auto eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.cmd text eol=crlf
+*.gif binary
+*.png binary
+*.wav binary
+*.zip binary
+*.npz binary
+*.bin binary
+# Preserve supplied reference bytes so the SHA256 manifest is platform independent.
+data_led_example/** -text -whitespace
+data_led_example/firmware_reference/*.patch -diff
