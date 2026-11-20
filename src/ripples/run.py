@@ -13,7 +13,7 @@ from ripples.hardware.rgb565 import InstallationEncoder
 from ripples.hardware.transport import LEDUSB, VALID_MASK
 from ripples.sensors import load_recordings
 from ripples.memory import SpatialMemory
-from ripples.visualization import RipplesVisual
+from ripples.visualization import RipplesVisual, SLEEP_MEMORY_GAIN, DREAM_TAU_S
 from ripples.spikes import send_frames, spike_frame
 
 from ripples.paths import ROOT, DATA_DIR, RUNTIME_DIR
@@ -110,7 +110,7 @@ def main():
     p.add_argument("--seconds", type=float, default=60., help="0 = continuous USB")
     p.add_argument("--port", help="requires interactive board confirmation")
     p.add_argument("--reservoir", choices=("live", "recorded"), default="live")
-    p.add_argument("--transition-direction", choices=("up", "down"), default="up", help="state-change sweep direction; RGB output budgets always enabled")
+    p.add_argument("--transition-direction", choices=("up", "down", "up_flat"), default="up", help="state-change sweep direction; RGB output budgets always enabled")
     p.add_argument("--criticality", choices=("activity", "slow_waves", "legacy_waves"), default="activity")
     p.add_argument("--dream-strength", type=float, default=.45)
     p.add_argument("--preview", type=Path)
@@ -158,6 +158,7 @@ def main():
     info.update(reservoir=args.reservoir, neurons=8460, gain=9.5, dt_ms=.1,
                 steps_per_frame=40, requested_fps=args.fps, usb_verified=False,
                 criticality_display=args.criticality, dream_strength=args.dream_strength,
+                sleep_style="dream-v2", sleep_memory_gain=SLEEP_MEMORY_GAIN, dream_tau_s=DREAM_TAU_S,
                 transition_direction=args.transition_direction, output_limits={"channel_max": 96, "physical_weighted_rgb_mean": 18},
                 replay_does_not_add_observations=True)
     pool = ThreadPoolExecutor(max_workers=1) if args.watch else None

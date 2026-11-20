@@ -21,25 +21,48 @@ def limit_rgb(rgb, weights=None):
     return out
 
 
-def composite(old, target, height, age, direction="up", weights=None):
-    if direction not in ("up", "down"):
-        raise ValueError("direction must be up or down")
+def radial_coordinates(xy):
+    """Zero is the innermost visible strip; the empty central shaft has no pixels."""
+    xy = np.asarray(xy)
+    center = (xy.min(axis=0)+xy.max(axis=0))/2
+    r = np.linalg.norm(xy-center, axis=-1)
+    return (r-r.min())/max(float(np.ptp(r)), 1e-9)
+
+
+def pulse_field(height, age, direction="up", radius=None):
+    h = np.clip(np.asarray(height), 0, 1)
+    r = np.zeros_like(h) if radius is None else np.clip(np.asarray(radius), 0, 1)
+    if direction == "up":
+        # Concave arrival time accelerates upward; an opening cone grows brighter.
+        local = age-(SWEEP*np.sqrt(h)+.20*r)
+        width = .12+1.02*h**.8
+        aperture = smooth((width-r)/.16)
+        gain = .12+.88*h**1.4
+        return (aperture*gain*smooth(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)
+                *(1-smooth((local-2.2)/1.2)))
+    delay = h if direction == "up_flat" else 1-h
+    local = age-SWEEP*delay
+    return smooth(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)*(1-smooth((local-2.4)/1.2))
+
+
+def composite(old, target, height, age, direction="up", weights=None, radius=None):
+    if direction not in ("up", "down", "up_flat"):
+        raise ValueError("direction must be up, down or up_flat")
     target = limit_rgb(np.asarray(target)*PEAK/255., weights)
     if age >= DURATION:
         return target
-    delay = np.asarray(height) if direction == "up" else 1-np.asarray(height)
-    local = age-SWEEP*delay
-    pulse = smooth(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)*(1-smooth((local-2.4)/1.2))
+    pulse = pulse_field(height, age, direction, radius)
     mix = smooth(age/2.6)
     base = np.asarray(old)*(1-mix)+target*mix
     return limit_rgb(base*(1-.45*pulse[..., None])+TINT*pulse[..., None], weights)
 
 
 class StateTransition:
-    def __init__(self, height, weights=None, direction="up"):
-        if direction not in ("up", "down"):
-            raise ValueError("direction must be up or down")
+    def __init__(self, height, weights=None, direction="up", radius=None):
+        if direction not in ("up", "down", "up_flat"):
+            raise ValueError("direction must be up, down or up_flat")
         self.height, self.weights, self.direction = np.asarray(height), weights, direction
+        self.radius = radius
         self.state = None
         self.age = DURATION
         self.previous = None
@@ -53,7 +76,7 @@ class StateTransition:
             self.age = 0.0
         self.state = state
         if self.age < DURATION:
-            result = composite(self.origin, rgb, self.height, self.age, self.direction, self.weights)
+            result = composite(self.origin, rgb, self.height, self.age, self.direction, self.weights, self.radius)
             self.age += dt
         else:
             result = limit_rgb(np.asarray(rgb)*PEAK/255., self.weights)

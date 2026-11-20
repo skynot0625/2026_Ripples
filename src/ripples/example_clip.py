@@ -41,7 +41,8 @@ class ExampleClip:
                 strips[row["position_id"]] = {"offset": int(offsets[z*16+p]),
                     "count": int(VALID_MASK[z,p].sum()), "physical_visible_count": int(row["led_count"])-1}
         doc = {"schema": "ripples.venue-example/1", "example": True,
-               "mapping": "sensory-v2", "fps": 10, "frames": self.frames,
+               "mapping": "sensory-v2", "sleep_style": "dream-v2",
+               "sleep_memory_gain": .72, "dream_tau_s": 3.2, "fps": 10, "frames": self.frames,
                "neurons": int(VALID_MASK.sum()), "channels": 3, "duration_s": self.frames/10,
                "history_s": 180, "input_end_s": 60, "led_bounds_m": np.asarray(bounds).tolist(),
                "added_radial_waves": False, "logical_rgb": True, "strips": strips,

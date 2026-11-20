@@ -136,14 +136,15 @@ def test_audio_gap_cannot_discard_late_chunk(tmp_path):
     {"source": "hyeol", "xy": (2, 1), "features": {"depth_4": 1.2, "coverage_4": .8, "ceiling_0": 2.1}},
     {"source": "maek", "xy": (-2, 1), "features": {"band_low": .01, "band_mid": .002, "band_high": .0001}},
 ])
-def test_same_values_same_encoding_in_both_states_without_wave(observation):
+def test_same_values_same_spatial_encoding_with_softer_sleep(observation):
     raw = np.zeros((*VALID_MASK.shape, 3), np.uint8)
     active, sleep = RipplesVisual("activate"), RipplesVisual("sleep")
     sleep.set_memory([{**observation, "counts": {key: 10000 for key in observation["features"]}}])
     a = active.render(raw, 0, events=[observation])
     b = sleep.render(raw, 0)
     assert a.any()
-    np.testing.assert_array_equal(a, b)
+    np.testing.assert_allclose(b, a.astype(float)*.72, atol=1.)
+    assert np.all(b <= a)
     # Incoming moving measurements cannot draw trails over Sleep's fixed mean.
     for _ in range(10):
         np.testing.assert_array_equal(sleep.render(raw, 0, events=[event(0, 3, xy=(-3, -2))]), b)
@@ -227,3 +228,30 @@ def test_activity_never_invents_radial_firing_and_slow_wave_requires_burst():
         for _ in range(8):
             v.render(np.zeros_like(raw), 0, dt=.1)
     assert slow.fronts[0]["age"] == pytest.approx(fast.fronts[0]["age"]*.3)
+
+
+def test_sleep_memory_is_soft_and_single_observation_does_not_shimmer():
+    raw = np.zeros((*VALID_MASK.shape,3),np.uint8)
+    observation={**event(0,2.), "counts":{"ceiling_0":1}, "std":{"ceiling_0":.4}}
+    a=RipplesVisual("sleep",seed=7)
+    a.set_memory([observation])
+    assert not a.memory_spread.any()
+    first=a.render(raw,0,dt=.1)
+    for _ in range(20): last=a.render(raw,0,dt=.1)
+    np.testing.assert_array_equal(first,last)
+    # Mean storage is untouched; softness only affects the display.
+    assert a.memory.max() > first.max() > 0
+
+
+def test_sleep_std_survives_rgb565_and_board_brightness():
+    from ripples.hardware.rgb565 import InstallationEncoder
+    raw=np.zeros((*VALID_MASK.shape,3),np.uint8)
+    visual=RipplesVisual("sleep")
+    visual.set_memory([{"source":"hyeol", "xy":[2,1], "features":{"ceiling_0":2.},
+                        "counts":{"ceiling_0":20}, "std":{"ceiling_0":.4}}])
+    encoder=InstallationEncoder()
+    frames=[visual.render(raw,0,dt=.1) for _ in range(120)]
+    physical=np.array([encoder.preview_frame(f)[encoder.mask] for f in frames])
+    assert physical.astype(float).std(axis=0).max() > .2
+    assert physical.max() <= 12
+    assert all(encoder.prepare(f)[encoder.mask].mean() <= 18 for f in frames)

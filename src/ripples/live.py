@@ -12,7 +12,7 @@ import numpy as np
 from ripples.paths import ROOT, RUNTIME_DIR
 from ripples.realtime import LiveMemory, LiveSensors, validate_config, position_enabled, memory_namespace
 from ripples.run import live_spikes, recorded_spikes, Preview
-from ripples.visualization import RipplesVisual
+from ripples.visualization import RipplesVisual, SLEEP_MEMORY_GAIN, DREAM_TAU_S
 from ripples.hardware.rgb565 import InstallationEncoder
 from ripples.schedule import ExhibitionSchedule, StateController
 
@@ -35,7 +35,7 @@ def main():
     p.add_argument("--seconds", type=float, default=0, help="wall time; default 0=continuous")
     p.add_argument("--port", help="optional LED USB port; board confirmation required")
     p.add_argument("--reservoir", choices=("live", "recorded"), default="live")
-    p.add_argument("--transition-direction", choices=("up", "down"), default="up", help="state-change sweep direction; RGB output budgets always enabled")
+    p.add_argument("--transition-direction", choices=("up", "down", "up_flat"), default="up", help="state-change sweep direction; RGB output budgets always enabled")
     p.add_argument("--criticality", choices=("activity", "slow_waves"), default="activity")
     p.add_argument("--preview", type=Path, help="optional finite Activate/Sleep GIF, <=120 seconds")
     p.add_argument("--report", type=Path, default=RUNTIME_DIR/"live-status.json")
@@ -94,6 +94,7 @@ def main():
                       config_file=str(a.config), memory_db=str(a.db) if memory else None,
                       accumulation_enabled=bool(memory),
                       display_state=state_status, transition_direction=a.transition_direction,
+                      sleep_style="dream-v2", sleep_memory_gain=SLEEP_MEMORY_GAIN, dream_tau_s=DREAM_TAU_S,
                       output_limits={"channel_max": 96, "physical_weighted_rgb_mean": 18},
                       steps_per_frame=40, criticality=a.criticality, frames=frames_done,
                       wall_seconds=time.monotonic()-started, usb_requested=bool(a.port),

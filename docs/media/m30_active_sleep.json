@@ -11,6 +11,9 @@
   "position_mode": "simulation_truth",
   "added_radial_waves": false,
   "sensor_mapping": "sensory-v2",
+  "sleep_style": "dream-v2",
+  "sleep_memory_gain": 0.72,
+  "dream_tau_s": 3.2,
   "venue3d_clip_frames": 680,
   "led_mapping_bounds_m": [
     [
@@ -26,7 +29,7 @@
   "active_dark_at_end": true,
   "spatial_cells": 124,
   "cells_with_std": 124,
-  "render_p95_ms": 4.574844998933258,
+  "render_p95_ms": 8.359300001757216,
   "operational_db_accessed": false,
   "temporary_example_db_removed": true,
   "route_length_m": 46.200000000000244,

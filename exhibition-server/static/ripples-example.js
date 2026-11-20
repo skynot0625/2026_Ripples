@@ -13,13 +13,21 @@ const RipplesTransition = {
     return out;
   },
   base(rgb, weights) { return this.limit(Float64Array.from(rgb, x => x*96/255), weights); },
-  composite(old, target, height, age, direction, weights) {
+  pulse(h, r, age, direction) {
+    if (direction === 'up') {
+      const local=age-(1.4*Math.sqrt(h)+.20*r), width=.12+1.02*Math.pow(h,.8);
+      const aperture=this.smooth((width-r)/.16), gain=.12+.88*Math.pow(h,1.4);
+      return aperture*gain*this.smooth(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.2)/1.2));
+    }
+    const local=age-1.4*(direction === 'up_flat' ? h : 1-h);
+    return this.smooth(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.4)/1.2));
+  },
+  composite(old, target, height, age, direction, weights, radius) {
     const out = this.base(target, weights);
     if (age >= 5) return out;
     const mix = this.smooth(age/2.6), tint = [96,84,64];
     for (let i=0; i<height.length; i++) {
-      const local = age-1.4*(direction === 'up' ? height[i] : 1-height[i]);
-      const pulse = this.smooth(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.4)/1.2));
+      const pulse = this.pulse(height[i],radius ? radius[i] : 0,age,direction);
       for (let c=0; c<3; c++) {
         const k=i*3+c;
         out[k]=(old[k]*(1-mix)+out[k]*mix)*(1-.45*pulse)+tint[c]*pulse;
@@ -57,7 +65,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
     const state = phase();
     $('ripples-example-status').textContent = error ? '예시 오류: ' + error : mode === 'off' ? '예시 꺼짐 · 기존 시뮬레이션 표시' :
       !clips ? '심탑 예시 불러오는 중…' :
-      `${state === 'activate' ? 'Activate · 현재 감각' : 'Sleep · 공간 기억 + 발화'} · ${elapsed.toFixed(1)} / ${duration()}초 · ${direction === 'up' ? '아래→위' : '위→아래'}${mode === 'compare' ? ' · 2초 A→S / 10초 S→A' : ''}${mode === 'clock' ? ' · 한국 시각 20분/10분' : ''}`;
+      `${state === 'activate' ? 'Activate · 현재 감각' : 'Sleep · 공간 기억 + 발화'} · ${elapsed.toFixed(1)} / ${duration()}초 · ${direction === 'up' ? '중앙→위 · 확산 상승' : direction === 'up_flat' ? '기존 수평 상승' : '위→아래'}${mode === 'compare' ? ' · 2초 A→S / 10초 S→A' : ''}${mode === 'clock' ? ' · 한국 시각 20분/10분' : ''}`;
     $('ripples-example-time').max = duration()-.1;
     $('ripples-example-time').value = elapsed;
   }
@@ -83,6 +91,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
         P.ripplesOffsets = new Int32Array(P.count).fill(-1);
         P.ripplesHeight = new Float64Array(P.count);
         P.ripplesWeight = new Float64Array(P.count);
+        P.ripplesRadius = new Float64Array(P.count);
         P.address.forEach(([name, j, n], i) => {
           const s = meta.strips[name];
           if (!s) throw Error('알 수 없는 스트립: ' + name);
@@ -95,6 +104,12 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
         const h = Array.from(P.ripplesHeight).filter((_,i) => P.ripplesWeight[i]>0);
         const lo=Math.min(...h), span=Math.max(...h)-lo;
         P.ripplesHeight = P.ripplesHeight.map(x => Math.max(0,Math.min(1,(x-lo)/span)));
+        const visible=Array.from(P.ripplesWeight,(_,i)=>i).filter(i=>P.ripplesWeight[i]>0);
+        const xs=visible.map(i=>P.loc[i*4]), ys=visible.map(i=>P.loc[i*4+2]);
+        const cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2;
+        const rs=visible.map(i=>Math.hypot(P.loc[i*4]-cx,P.loc[i*4+2]-cy));
+        const rmin=Math.min(...rs), rspan=Math.max(...rs)-rmin;
+        visible.forEach((i,j)=>{ P.ripplesRadius[i]=(rs[j]-rmin)/Math.max(rspan,1e-9); });
       }
       const rgb = clips[state], base = frame * meta.neurons * 3, target = new Float64Array(P.count*3);
       for (let i = 0; i < P.count; i++) {
@@ -113,7 +128,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
           origin=RipplesTransition.base(from,P.ripplesWeight);
         } else origin=null;
       }
-      const out = origin ? RipplesTransition.composite(origin, target, P.ripplesHeight, age, direction, P.ripplesWeight) : RipplesTransition.base(target, P.ripplesWeight);
+      const out = origin ? RipplesTransition.composite(origin, target, P.ripplesHeight, age, direction, P.ripplesWeight, P.ripplesRadius) : RipplesTransition.base(target, P.ripplesWeight);
       for (let i=0; i<P.count; i++) for (let c=0; c<3; c++) P.col[i*3+c] = P.ripplesWeight[i] ? Math.floor(out[i*3+c])/255 : 0;
       P.on = true; P.ripplesFrame = key;
       return true;
@@ -135,7 +150,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
       if (!response.ok) throw Error('예시 메타데이터 HTTP ' + response.status);
       meta = await response.json();
       if (meta.schema !== 'ripples.venue-example/1' || !meta.example || meta.neurons !== 8460 ||
-          meta.frames !== 680 || meta.fps !== 10 || meta.channels !== 3 || meta.duration_s !== 68)
+          meta.frames !== 680 || meta.fps !== 10 || meta.channels !== 3 || meta.duration_s !== 68 || meta.sleep_style !== 'dream-v2')
         throw Error('예시 형식 불일치');
       const entries = await Promise.all(['activate', 'sleep'].map(async state => {
         const f = meta.files[state];

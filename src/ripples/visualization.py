@@ -10,11 +10,13 @@ from scipy.ndimage import gaussian_filter, map_coordinates
 
 from ripples.hardware.transport import VALID_MASK
 from ripples.waves import SpikeWaves
-from ripples.transition import StateTransition
+from ripples.transition import StateTransition, radial_coordinates
 from ripples.paths import LAYOUT_DIR
 
 SIZE = 32
 HEIGHT = 24
+SLEEP_MEMORY_GAIN = .72
+DREAM_TAU_S = 3.2
 DISTANCE_RANGE_M = 4.
 BANDS = (("low", .18, (255, 140, 35)),
          ("mid", .46, (255, 70, 60)),
@@ -48,7 +50,7 @@ class RipplesVisual:
                     old = int(VALID_MASK[z,p].sum())
                     source = np.rint(np.linspace(0, old-1, int(row["led_count"])-1)).astype(int)
                     weights[z,p,:old] = np.bincount(source, minlength=old)
-        self.transition = StateTransition(self.coords[2]/(HEIGHT-1), weights[VALID_MASK], transition_direction)
+        self.transition = StateTransition(self.coords[2]/(HEIGHT-1), weights[VALID_MASK], transition_direction, radial_coordinates(xyz[:, :2]))
         self.output_limits = output_limits
         self.set_state(state)
 
@@ -165,11 +167,11 @@ class RipplesVisual:
             wave = self.activity+(255-self.activity)*(radial/255.)
         else:
             wave = self.waves.render(raw, spike_count=spike_count, dt=dt)
-        alpha = np.exp(-dt/1.8)
+        alpha = np.exp(-dt/DREAM_TAU_S)
         self.dream_noise = alpha*self.dream_noise + np.sqrt(1-alpha*alpha)*self.rng.standard_normal(self.dream_noise.shape)
-        noise = np.tanh(3*gaussian_filter(self.dream_noise, sigma=.75))[..., None]
+        noise = np.tanh(3.8*gaussian_filter(self.dream_noise, sigma=1.1))[..., None]
         volume = (self._smooth(self.trail) if self.state == "activate" else
-                  np.clip(self.memory+self.dream_strength*self.memory_spread*noise, 0, 255))
+                  np.clip(SLEEP_MEMORY_GAIN*self.memory+self.dream_strength*self.memory_spread*noise, 0, 255))
         colors = .85*np.stack([map_coordinates(volume[..., i], self.coords, order=1, mode="nearest")
                                for i in range(3)], axis=-1)
         result = np.zeros((*VALID_MASK.shape, 3), np.uint8)

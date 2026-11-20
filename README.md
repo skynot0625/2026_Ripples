@@ -94,7 +94,9 @@ Sleep은 앞서 관측한 3바퀴의 평균·표준편차에 8,460 뉴런의 실
 
 ### 상태가 바뀔 때의 빛
 
-[전환 방향 비교와 밝기 제한](docs/STATE_TRANSITIONS.md): 아래→위 / 위→아래를 같은 센서 구간에서 비교합니다.
-[3D 심탑](http://127.0.0.1:8000/venue3d?test)의 **비교 아래→위 / 비교 위→아래** 버튼으로 18초 예시를 재생합니다.
+[전환 방향 비교와 밝기 제한](docs/STATE_TRANSITIONS.md): 중앙에서 위로 넓고 강해지는 새 효과와 기존 수평 상승을 같은 센서 구간에서 비교합니다.
+[3D 심탑](http://127.0.0.1:8000/venue3d?test)의 **중앙에서 위로 확산 / 기존 수평 상승 비교** 버튼으로 18초 예시를 재생합니다.
 
-![Activate와 Sleep 전환 비교](docs/media/state_transition_compare.gif)
+![Activate와 Sleep 전환 비교](docs/media/state_transition_bloom.gif)
+
+Sleep은 공간 기억 밝기 72%·std 기반 3.2초 국소 아른거림으로 갱신했습니다. 3D 예시와 실제 LED live/run 코드에 함께 적용됩니다.

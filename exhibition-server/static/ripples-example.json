@@ -2,6 +2,9 @@
   "schema": "ripples.venue-example/1",
   "example": true,
   "mapping": "sensory-v2",
+  "sleep_style": "dream-v2",
+  "sleep_memory_gain": 0.72,
+  "dream_tau_s": 3.2,
   "fps": 10,
   "frames": 680,
   "neurons": 8460,
@@ -928,13 +931,13 @@
     "activate": {
       "name": "ripples-activate.rgb.gz",
       "bytes": 880610,
-      "sha256": "f9b29ab826f621bf3b3b49e8f4742b632c90a6ffb7c1d7a15ad273211ccba150",
+      "sha256": "678f4aef0556e756b0a43a052a78d49183186b1743ccf133c3a1c4275695bb42",
       "decoded_bytes": 17258400
     },
     "sleep": {
       "name": "ripples-sleep.rgb.gz",
-      "bytes": 6657567,
-      "sha256": "f5af4a53c4599b0282950e0fe10f13fd64b4a48a16428ff9b5b749301e8d3d87",
+      "bytes": 6137005,
+      "sha256": "30bd72816163d589fd9e4e10b5b30df7ccc22b17e6b89ef1a98f01cc3d2886ed",
       "decoded_bytes": 17258400
     }
   }
