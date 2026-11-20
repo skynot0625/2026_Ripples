@@ -1,0 +1,47 @@
+{
+  "schema": "ripples.example-event/1",
+  "example": true,
+  "session_id": "m30-example-v1",
+  "source": "hyeol",
+  "seq": 0,
+  "t_ms": 0,
+  "position": {
+    "frame": "m30",
+    "method": "simulation_truth",
+    "xy_m": [
+      3.03,
+      3.0
+    ],
+    "relative_xy_m": [
+      4.16935,
+      5.30732
+    ],
+    "beacon_seq": 0,
+    "beacon_age_ms": 0
+  },
+  "measurement": {
+    "depth_m": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      2.961,
+      2.936,
+      2.922
+    ],
+    "coverage": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.9191666666666667,
+      0.8222916666666666,
+      0.88875
+    ],
+    "upward_m": 2.2
+  }
+}

@@ -17,6 +17,7 @@ import numpy as np
 from ripples.memory import SpatialMemory, cell_xy
 from ripples.sensors import depth_features, depth_grid_features, estimate_position, pcm_features
 from ripples.visualization import RipplesVisual
+from ripples.normalization import normalize_features
 
 TOF_HEADER = struct.Struct("<4sBBHHIdfHHBBHHBBH")
 
@@ -325,13 +326,12 @@ class LiveSensors:
         self.last_poll = None
 
     def emit(self, role, channel, features):
+        features = normalize_features(role, features)
         self.counts[channel+"_features"] += 1
         xy = self.positions.get(role)
         if xy is None:
             self.counts["unpositioned"] += 1
             return
-        if not features or not all(np.isfinite(x) for x in features.values()):
-            raise ValueError("nonfinite/empty sensor features")
         event = {"source": role, "xy": xy, "features": features, "t": time.time()}
         with self.lock:
             if channel in self.latest:
@@ -468,7 +468,9 @@ class LiveSensors:
                                 continue
                             if (kind == "audio") != (role == "maek"):
                                 raise ValueError("sensor/role mismatch")
-                            seq = int(h["seq"])
+                            seq = h["seq"]
+                            if type(seq) is not int or seq < 0:
+                                raise ValueError("raw seq must be a nonnegative integer")
                             if seq <= last.get(kind, -1):
                                 self.counts["duplicate_raw"] += 1
                                 continue

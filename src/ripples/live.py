@@ -14,6 +14,7 @@ from ripples.realtime import LiveMemory, LiveSensors, validate_config, position_
 from ripples.run import live_spikes, recorded_spikes, Preview
 from ripples.visualization import RipplesVisual
 from ripples.hardware.rgb565 import InstallationEncoder
+from ripples.schedule import ExhibitionSchedule, StateController
 
 
 def main():
@@ -26,9 +27,12 @@ def main():
     p.add_argument("--db", type=Path, help="default: estimated or measured DB according to position mode")
     p.add_argument("--accumulate", action="store_true", help="opt in to persistent spatial statistics; off by default")
     p.add_argument("--state", choices=("activate", "sleep"))
+    p.add_argument("--state-mode", choices=("scheduled", "manual"),
+                   help="default scheduled; --state implies manual unless a mode is explicit")
+    p.add_argument("--schedule", type=Path, default=ROOT/"configs/schedule.m30.json")
     p.add_argument("--state-file", type=Path, default=RUNTIME_DIR/"state.txt")
     p.add_argument("--fps", type=float, default=10)
-    p.add_argument("--seconds", type=float, default=30, help="wall time; 0=continuous")
+    p.add_argument("--seconds", type=float, default=0, help="wall time; default 0=continuous")
     p.add_argument("--port", help="optional LED USB port; board confirmation required")
     p.add_argument("--reservoir", choices=("live", "recorded"), default="live")
     p.add_argument("--criticality", choices=("activity", "slow_waves"), default="activity")
@@ -44,16 +48,22 @@ def main():
     if a.collector_port and a.collector_port == a.audio_port:
         p.error("collector and audio need separate ports")
     config = validate_config(json.loads(a.config.read_text(encoding="utf-8-sig")))
+    try:
+        schedule = ExhibitionSchedule(json.loads(a.schedule.read_text(encoding="utf-8-sig")))
+        state_control = StateController(schedule, mode=a.state_mode or ("manual" if a.state else "scheduled"),
+                                        state_file=a.state_file, initial_state=a.state)
+    except (OSError, ValueError) as exc:
+        p.error(str(exc))
     # A different source/threshold is a different measurement calibration.
     config["input_modes"] = ["raw" if a.collector_port else "monitor", "pcm" if a.audio_port else "levels"]
     if a.db is None:
-        a.db = RUNTIME_DIR/("m30-relative.sqlite3" if memory_namespace(config) == "estimated" else "measured.sqlite3")
+        name = "m30-relative.sqlite3" if memory_namespace(config) == "estimated" else "measured.sqlite3"
+        if config.get("site", {}).get("led_mapping", {}).get("id") == "m30-right-room":
+            name = "m30-right-room-"+memory_namespace(config)+".sqlite3"
+        a.db = RUNTIME_DIR/name
     if a.port:
         from ripples.hardware.board import confirm_board
         confirm_board(a.port, "rgb565")
-    a.state_file.parent.mkdir(parents=True, exist_ok=True)
-    if a.state or not a.state_file.exists():
-        a.state_file.write_text(a.state or "activate", encoding="utf-8")
     visual = RipplesVisual(criticality=a.criticality)
     other = RipplesVisual("sleep", criticality=a.criticality) if a.preview else None
     active = RipplesVisual("activate") if a.preview else None
@@ -75,12 +85,14 @@ def main():
     encoder = InstallationEncoder()
     frames_done, started, last_report = 0, time.monotonic(), -10.
     report = {}
+    state_status = state_control.at()
 
     def write_report():
         nonlocal last_report
         report.update(sensors.report(), reservoir=a.reservoir, neurons=8460, gain=9.5, dt_ms=.1,
                       config_file=str(a.config), memory_db=str(a.db) if memory else None,
                       accumulation_enabled=bool(memory),
+                      display_state=state_status,
                       steps_per_frame=40, criticality=a.criticality, frames=frames_done,
                       wall_seconds=time.monotonic()-started, usb_requested=bool(a.port),
                       loop_fps=1/float(np.mean(intervals)) if intervals else 0,
@@ -93,7 +105,7 @@ def main():
         last_report = time.monotonic()
 
     def frames():
-        nonlocal frames_done
+        nonlocal frames_done, state_status
         last, due, snapshot = None, time.monotonic(), None
         for raw, count in itertools.chain([first], source):
             if not a.port:
@@ -114,10 +126,12 @@ def main():
                 if other:
                     other.memory, other.memory_spread = current
                 snapshot = current
-            try:
-                visual.set_state(a.state_file.read_text(encoding="utf-8-sig").strip())
-            except (OSError, ValueError):
-                pass
+            # Switch only the renderer. Input threads, model and memory stay alive.
+            previous_state = state_status["state"]
+            state_status = state_control.at()
+            visual.set_state(state_status["state"])
+            if state_status["state"] != previous_state:
+                print(json.dumps({"state_transition": state_status}, ensure_ascii=False), flush=True)
             batch = sensors.drain()
             tick = time.perf_counter()
             frame = visual.render(raw, count, events=batch, dt=dt)

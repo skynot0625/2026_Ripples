@@ -2,11 +2,11 @@
   "calibrated": false,
   "bounds_m": [
     [
-      -10.77,
+      -0.462,
       11.149
     ],
     [
-      -0.1,
+      0.09,
       19.851
     ]
   ],
@@ -100,6 +100,22 @@
       }
     },
     "rf_reference_status": "unmeasured; -59 is unused placeholder in relative_rssi mode",
-    "z_status": "not used for XY; zero in center layout is not a surveyed mounting height"
+    "z_status": "not used for XY; zero in center layout is not a surveyed mounting height",
+    "led_mapping": {
+      "id": "m30-right-room",
+      "bounds_m": [
+        [
+          -0.462,
+          11.149
+        ],
+        [
+          0.09,
+          19.851
+        ]
+      ],
+      "source": "right rectangular exhibition room in M30 walkable polygon; user selected, lobby excluded",
+      "axes": "+LED X/Y = +M30 X/Y",
+      "confirmed_on": "2026-11-20"
+    }
   }
 }

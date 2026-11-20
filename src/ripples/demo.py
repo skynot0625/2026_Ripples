@@ -59,8 +59,10 @@ def prepare_demo(root):
 
 
 class CompareMovie:
-    def __init__(self, xyz, *, compare_waves=False):
+    def __init__(self, xyz, *, compare_waves=False, subtitle=None, input_end_s=59.3):
         self.compare_waves = compare_waves
+        self.subtitle = subtitle or "Real Hyeol + SYNTHETIC 3-channel Maek + synthetic positions. Sleep statistics: 4 audio laps."
+        self.input_end_s = input_end_s
         xyz = xyz[VALID_MASK]
         xyz = (xyz-xyz.min(axis=0))/(xyz.max(axis=0)-xyz.min(axis=0))
         self.points = np.column_stack((22+xyz[:, 0]*285+xyz[:, 1]*48,
@@ -73,7 +75,7 @@ class CompareMovie:
         image = Image.new("RGB", (1140 if self.compare_waves else 760, 590), (7, 11, 20))
         draw = ImageDraw.Draw(image)
         draw.text((20, 12), "RIPPLES / same recorded reservoir spikes in every panel / 8,460 neurons unchanged", fill=(230, 235, 245))
-        draw.text((20, 33), "Real Hyeol + SYNTHETIC 3-channel Maek + synthetic positions. Sleep statistics: 4 audio laps.", fill=(145, 165, 185))
+        draw.text((20, 33), self.subtitle, fill=(145, 165, 185))
         labels = ("ACTIVATE: two fading traces", "SLEEP: mean + std + firing", "SLEEP: mean + std + slow waves")
         details = ("Cyan / purple = Hyeol; warm = Maek", "Actual firing pixels, 0.65s light decay", "Added geometry, triggered by SAME bursts")
         for panel, frame in enumerate(frames):
@@ -95,7 +97,7 @@ class CompareMovie:
             tint = (50, 210, 255) if source == "hyeol" else (255, 150, 60)
             draw.ellipse((x-4, y-4, x+4, y+4), fill=tint)
             draw.text((x+5, y-4), "H" if source == "hyeol" else "M", fill=tint)
-        draw.text((160, 450), f"{t:05.1f}s | {'inputs off: Activate traces fade' if t >= 59.3 else 'both instruments moving'}", fill=(200, 215, 230))
+        draw.text((160, 450), f"{t:05.1f}s | {'inputs off: Activate traces fade' if t >= self.input_end_s else 'both instruments moving'}", fill=(200, 215, 230))
         draw.text((160, 472), "Actual population spike count / 4 ms model window (fixed scale: 0..3000)", fill=(150, 170, 190))
         recent = self.counts[-600:]
         scale = 1.5 if self.compare_waves else .95

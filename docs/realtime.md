@@ -25,7 +25,9 @@ collector의 5초 무응답 복구 수정은 로컬 파일에도 백업 후 반�
 `?test`는 편집/진단 UI 표시이며 mock 모드가 아니다. 실제 여부는 `/status.mock`과
 `/inputs.mock`으로 확인한다. 브리지는 mock 센터 데이터를 실측 DB에 넣지 않는다.
 센터 `/inputs.hyeol`의 부착 상태는 현재 `simulated:true, applied:false`일 수 있다.
-이 값을 근거로 심 탑의 Activate/Sleep을 자동 전환하지 않고 state 파일을 사용한다.
+이 값을 근거로 심 탑의 Activate/Sleep을 전환하지 않는다. 기본은 한국 시각 11시 기준
+20분 Activate / 10분 Sleep 시간표이며, 명시적 수동 모드에서만 state 파일을 사용한다.
+설명은 [심탑 README](../src/ripples/README.md)에 있다.
 
 ```mermaid
 flowchart LR
@@ -145,9 +147,10 @@ raw 수신은 연결별 `t_mono_ns`의 진행 간격과 PC 수신 단조 시각�
 | 4 | 1.525 | 6.472 |
 | 5 | 6.511 | 1.020 |
 
-원점은 X3·Y7 교점, +X는 X3→X5, +Y는 Y7→Y3. 전체 M30(로비 포함)의
-X `[-10.770,11.149]`, Y `[-0.100,19.851]`m를 LED XY 범위로 대응한다.
-현재 비콘은 주 전시실에 모여 있으며, 관측되지 않은 로비를 채우지 않는다.
+원점은 X3·Y7 교점, +X는 X3→X5, +Y는 Y7→Y3. 사용자 선택에 따라 **오른쪽 전시실만**
+X `[-0.462,11.149]`, Y `[0.090,19.851]`m를 LED XY 전체 범위로 대응한다.
+전체 지도는 유지하고 LED 정규화 범위에서 로비를 제외한다. 범위 밖 위치는 가장자리로
+강제 이동시키지 않고 제외한다. 기존 전체 지도 통계와 섞이지 않도록 기본 DB 이름도 분리했다.
 센터의 z=0은 실제 설치 높이를 측량했다는 뜻이 아니므로 XY 추정에 사용하지 않는다.
 
 사용자 선택에 따라 **RF 미보정 상대 RSSI 위치**를 먼저 사용한다. 감쇠 지수 n=4,
@@ -157,8 +160,9 @@ X `[-10.770,11.149]`, Y `[-0.100,19.851]`m를 LED XY 범위로 대응한다.
 `reference_dbm:-59`는 이 모드에서는 쓰지 않는 보정용 자리값이다.
 
 `position_mode=relative_rssi`, `coordinates_confirmed=true`, `calibrated=false`를 구분한다.
-향후 `--accumulate`를 켠 경우에만 추정 위치 통계를 `runtime/m30-relative.sqlite3`,
+향후 `--accumulate`를 켠 경우에만 추정 위치 통계를 `runtime/m30-right-room-estimated.sqlite3`,
 namespace **estimated**에 저장한다. 현재 수신 전용 실행에서는 이 DB를 열지 않는다.
+`ripples.site`는 검토된 오른쪽 전시실 viewport를 유지하며 비콘 좌표를 내보낸다.
 새 비콘/공간 설정을 화면에서 바꿔도 운전 중 DB의 좌표 기준은 자동으로 바꾸지 않는다.
 검토한 새 설정은 아래로 내보낼 수 있다(기존 파일 덮어쓰기 금지).
 

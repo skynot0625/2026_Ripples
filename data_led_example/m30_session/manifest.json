@@ -1,0 +1,72 @@
+{
+  "schema": "ripples.example-session/1",
+  "example": true,
+  "seed": 20261120,
+  "venue": "actual M30 scene snapshot; all movements and sensor signals are synthetic",
+  "position_for_led": "simulation_truth",
+  "relative_rssi_position": "diagnostic only, not mapped into LED",
+  "duration_s": 240,
+  "rate_hz_per_source": 10,
+  "events": 4800,
+  "mapping": {
+    "bounds_m": [
+      [
+        -0.462,
+        11.149
+      ],
+      [
+        0.09,
+        19.851
+      ]
+    ],
+    "region": "M30 right exhibition room, lobby excluded",
+    "axis_rule": "+LED X/Y = +M30 X/Y",
+    "tower_heading_applied": false,
+    "position_truth_used_only_for_example": true
+  },
+  "units": {
+    "position": "m",
+    "depth": "m",
+    "rssi": "dBm",
+    "time": "session-relative ms",
+    "rms": "digital full scale"
+  },
+  "files": {
+    "venue.json": {
+      "bytes": 103266,
+      "sha256": "113f903631afe768fd23638a7931906c75f300d12add264e3593c1902bc72fd3"
+    },
+    "events.jsonl": {
+      "bytes": 1956550,
+      "sha256": "f1696847637bb3c3c1c92d46dcabcff1fac36f63d7830c86ff4d50ee3987a23d"
+    },
+    "beacon_wire.jsonl": {
+      "bytes": 359584,
+      "sha256": "f7ca8e89fb03f2e6817d19e6005edced8fc05483ef3f43b3ea391d8fd90ede3c"
+    },
+    "maek_wire.jsonl": {
+      "bytes": 426873,
+      "sha256": "552779ffc6dcb0b19f549a796e18f373f24bf823c42e35b03f0195a4e9059760"
+    },
+    "hyeol_sample.bin": {
+      "bytes": 173228,
+      "sha256": "12965fe4d4226e957312158b4892e23ce0b55d6061b338510929768b35c11b65"
+    },
+    "sample_hyeol.json": {
+      "bytes": 744,
+      "sha256": "eb39b015ef4af0c9dbbb440a80b6f1fef2f48d977e72bc81b831f0e586528e9e"
+    },
+    "sample_maek.json": {
+      "bytes": 549,
+      "sha256": "9b3bbfd131cedf002f78b28c9fd89c9cbbc413eaccba57a48898c756be5c69e4"
+    },
+    "event.schema.json": {
+      "bytes": 4202,
+      "sha256": "4cb4e2f1cd14e2247cb09a34a856e146e0efdf388ea4b852ec06a462b72f90e0"
+    },
+    "route.json": {
+      "bytes": 27413,
+      "sha256": "0dfd9b82784770a2347d240c70f393a08eb29b0ca6cdc2cab6681491a02604bd"
+    }
+  }
+}

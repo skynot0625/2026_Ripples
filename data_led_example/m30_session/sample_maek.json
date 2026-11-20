@@ -1,0 +1,34 @@
+{
+  "schema": "ripples.example-event/1",
+  "example": true,
+  "session_id": "m30-example-v1",
+  "source": "maek",
+  "seq": 0,
+  "t_ms": 0,
+  "position": {
+    "frame": "m30",
+    "method": "simulation_truth",
+    "xy_m": [
+      6.73,
+      17.0
+    ],
+    "relative_xy_m": [
+      7.65131,
+      15.78747
+    ],
+    "beacon_seq": 0,
+    "beacon_age_ms": 0
+  },
+  "measurement": {
+    "rms": [
+      0.015203,
+      0.016893,
+      0.015203
+    ],
+    "mics": [
+      0.6728,
+      0.6911,
+      0.6728
+    ]
+  }
+}

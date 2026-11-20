@@ -1,0 +1,32 @@
+{
+  "example": true,
+  "venue": "m30",
+  "history_s": 180,
+  "visible_input_s": 60,
+  "fade_s": 8,
+  "gif_fps": 5,
+  "led_render_fps": 10,
+  "neurons": 8460,
+  "gain": 9.5,
+  "position_mode": "simulation_truth",
+  "added_radial_waves": false,
+  "led_mapping_bounds_m": [
+    [
+      -0.462,
+      11.149
+    ],
+    [
+      0.09,
+      19.851
+    ]
+  ],
+  "lobby_mapped": false,
+  "active_dark_at_end": true,
+  "spatial_cells": 124,
+  "cells_with_std": 124,
+  "render_p95_ms": 4.283780000059778,
+  "operational_db_accessed": false,
+  "temporary_example_db_removed": true,
+  "route_length_m": 46.200000000000244,
+  "route_speed_m_s": 0.7700000000000041
+}

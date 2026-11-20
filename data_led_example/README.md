@@ -5,6 +5,7 @@
 
 | 폴더 | 내용·출처 |
 |---|---|
+| [m30_session](m30_session/README.md) | 실제 M30 배치·오른쪽 전시실 맵핑 + 명시적인 합성 혈/맥/RSSI 폼 4,800개, schema·raw 샘플·해시 |
 | layout | 2026-11-12 LED 인계본의 배치/포트/길이/34개 색 보정, 배치·배선 PNG |
 | hardware_reference | 제공받은 하드웨어·설치 문서 원문. 문서 내 옛 경로는 원래 인계본 구조 |
 | firmware_reference | 설치된 LED2 65슬롯 펌웨어 소스·바이너리·빌드 기록·FastLED 패치/라이선스 |

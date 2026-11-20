@@ -1,245 +1,142 @@
-# 감각기구 데이터 흐름
+# 전체 데이터 흐름과 전시장 네트워크
 
-2026년 11월 20일 기준, 갤러리 M30 설치 상태입니다. 혈, 맥, 비콘 수신기가 각자 센서를 읽고 처리한 뒤 공유기를 거쳐 전시컴(Windows, 심 옆)으로 보냅니다. 심 LED 탑을 움직이는 프로그램은 이 레포의 `src/ripples`이고, 탑의 중앙 보드는 USB로 LED2 프레임을 받습니다. 아래는 각 기구가 받는 형식, 처리, 공유기로 보내는 형식, 그리고 심탑이 전시컴에서 읽는 형식과 남은 일입니다.
+[전체 소개](../README.md) · [혈](../sensors/hyeol-pi/README.md) · [맥](../sensors/maek-pi/README.md) · [심탑](../src/ripples/README.md)
 
-## 전체 구성
+## 지금 연결되는 경로
 
-```
- [혈 기구]  Raspberry Pi 4 (192.168.0.4)
-   ToF 카메라 240×180 ~30 fps ─┐
-   천장 거리 센서 ~50 Hz ──────┼─ collector.py ── 저장(SD) + 실시간 소켓
-                               └─ sender.py ──────── TCP 9500 ─────────┐
-   BLE 스캐너 (ripples-beacon) ─────────────── HTTP POST /api/beacon ─┤
-                                                                      │
- [맥 기구]  Raspberry Pi 3B (192.168.0.3)                             │   공유기 ripplespc
-   Teensy 4.0 마이크 3채널 44.1 kHz ── USB 시리얼 ── run.py            │   192.168.0.x
-     ├─ 스피커 2개 (I2S, MAX98357A)                                    │
-     ├─ 진동모터 2개 (PWM 20 kHz)                                      │
-     └─ 레벨 요약 10 Hz ─────────────────────── HTTP POST /api/maek ──┤
-   BLE 스캐너 (ripples-beacon) ─────────────── HTTP POST /api/beacon ─┤
-                                                                      ▼
- [전시컴]  Windows (192.168.0.2, 유선)  exhibition-server: server.py :8000, :9500
-   입력 채널 → 혈·맥 기구 화면, 블라인드 프로젝터, 연결 관리 화면
-        │ /ws/monitor (깊이), /status, /inputs, /api/beacon  (docs/realtime.md)
- [심탑 프로그램]  src/ripples  센서 특징 → 공간 통계 → reservoir → RGB565
-        └─ USB 시리얼 LED2 프레임 24,980 B ── Nano ESP32 중앙 보드 ── LED 10,440개
-```
-
-| 장치 | 주소 | 보내는 것 | 받는 곳 |
-|---|---|---|---|
-| 혈 Pi | 192.168.0.4 | ToF 깊이 프레임, 천장 거리 | `tcp://192.168.0.2:9500` |
-| 혈 Pi | 192.168.0.4 | 비콘 1초 집계 | `http://192.168.0.2:8000/api/beacon` |
-| 맥 Pi | 192.168.0.3 | 마이크 레벨과 진동 세기 10 Hz | `http://192.168.0.2:8000/api/maek` |
-| 맥 Pi | 192.168.0.3 | 비콘 1초 집계 | `http://192.168.0.2:8000/api/beacon` |
-| 심탑 프로그램 | 전시컴 USB | LED2 프레임 | 심 중앙 보드 (COM 포트) |
-
-시각은 장치마다 따로입니다. Pi 시계는 인터넷이 없으면 틀릴 수 있어서, 순서와 간격은 `seq`와 단조 시계(`t_mono_ns`)로 맞추고 실제 시각(`t_wall_ns`, `t`)은 참고로만 씁니다.
-
-## 혈
-
-폴더 `sensors/hyeol-pi` (혈 Pi의 `~/ripples-hyeol-pi`에서 그대로 가져옴, 저장 데이터 제외)
-
-### 센서
-
-| 센서 | 연결 | 주기 | 값 |
-|---|---|---|---|
-| Arducam ToF 카메라 | CSI | 약 30 fps | 240×180 깊이 mm (`uint16`, 0은 측정 없음), confidence |
-| TOFSense 거리 센서 (천장) | UART `/dev/ttyAMA0`, 921600 baud | 약 50 Hz | 거리 mm, status, 신호 세기, 센서 내부 ms |
-
-### 처리 (`collector/collector.py`, 서비스 `ripples-collector`)
-
-센서를 여는 프로그램은 수집단 하나뿐입니다. 수집단은 두 일을 같이 합니다.
-
-1. 저장: `~/ripples-data/<날짜>/`에 ToF 원본(npz, 10초 묶음), ToF 요약 CSV, 거리 CSV(원 프레임 16바이트 포함)를 씁니다. 용량 한도를 넘으면 오래된 ToF 프레임부터 지웁니다. 자세한 형식은 `collector/DATA_FORMAT.md`에 있습니다.
-2. 실시간 전달: Unix 소켓 `run/collector.sock`으로 아래 메시지를 내보냅니다. 기구 화면을 그리는 Pi 안의 `app/server.py`와 전시컴으로 보내는 `app/sender.py`가 이 소켓을 읽습니다. 느린 수신자에게는 ToF 최신 한 장만 보내서 센서 쪽은 멈추지 않습니다.
-
-두 센서는 `t_mono_ns`로 맞춥니다. ToF 프레임마다 시각이 가장 가까운 거리 값을 고르면 차이는 최대 약 10 ms입니다.
-
-### 메시지 형식 (`app/collector_protocol.py`)
-
-소켓과 TCP 9500이 같은 형식입니다.
-
-```
-[header 길이 u32 LE][payload 길이 u32 LE][header: UTF-8 JSON][payload: 바이너리]
+```mermaid
+flowchart TB
+  subgraph H["감각기구 혈 / Pi 4"]
+    HT["카메라 depth·confidence / 위쪽 거리 1개"] --> HC["collector → sender"]
+    HB["비콘 scanner / ripples-tof"]
+  end
+  subgraph M["감각기구 맥 / Pi 3B"]
+    MT["Teensy PCM 3ch"] --> MP["Pi 음향 처리 / RMS·음량"]
+    MP --> MO["기구 스피커·진동"]
+    MB["비콘 scanner / mic"]
+  end
+  HC -->|"TCP 9500 / 원시 ToF·거리"| LAN["공유기 / 전시장 LAN"]
+  HB -->|"POST /api/beacon / 1Hz"| LAN
+  MP -->|"POST /api/maek / 약 10Hz"| LAN
+  MB -->|"POST /api/beacon / 1Hz"| LAN
+  subgraph PC["전시컴 / 센터와 심탑 프로그램"]
+    C["센터 서버 / TCP 9500 + HTTP·WS 8000"]
+    C --> V["기구·블라인드 화면 / 진단·M30 시뮬레이터"]
+    C -->|"WS /ws/monitor / 회전·마스킹된 깊이"| T["심탑 / 특징 추출·단위 검증·RSSI 위치"]
+    C -->|"GET /status · /inputs · /api/beacon"| T
+    T --> Q["화면용 최신값 / 채널별 한 칸"]
+    T -->|"누적 ON"| D["1초 공간 셀 집계 / SQLite mean·M2·n"]
+    Q --> A["Activate / 현재 흔적"]
+    D --> S["Sleep / 평균·std"]
+    N["기존 reservoir / 8460 뉴런"] --> S
+    A --> F["한국 시각에 맞는 상태 렌더 / 목표 10Hz"]
+    S --> F
+  end
+  LAN --> C
+  F -->|"USB RGB565 LED2 / ACK"| L["ESP32 → 180 스트립"]
 ```
 
-| type | header 키 | payload |
+공유기는 데이터를 해석하지 않고 전달합니다. 센터와 심탑 프로그램은 **별도 프로세스**이며 현재 같은 전시컴에서 실행할 수 있습니다. 센터가 카메라의 기본 회전·confidence 마스킹을, 심탑이 3×3 특징 축약·통계·LED 표상을 수행합니다. 이 연산은 모두 PC 쪽입니다.
+
+## 주소, 방향, 빈도
+
+아래 IP는 저장소에 기록된 M30 설정입니다. 실제 할당이 달라지면 해당 설정을 맞춰야 하며 인터넷 공인 주소가 아닙니다.
+
+| 발신 → 수신 | 네트워크 / 데이터 | 빈도 |
 |---|---|---|
-| `hello` | `version`, `tof: {width, height, intrinsics: {fx, fy, cx, cy}, range_mm}`, `lidar: {model}`, `rotate` | 없음 |
-| `tof` | `seq`, `t_wall_ns`, `t_mono_ns`, `width`, `height`, `depth_dtype: "<u2"`, `conf_dtype: "<u2"` | depth (height×width, mm) 바이트 다음에 confidence (같은 크기) 바이트. 240×180이면 172,800 B |
-| `lidar` | `seq`, `t_wall_ns`, `t_mono_ns`, `sensor_ms`, `distance_mm`, `status`, `strength`, `id`, `valid` | 없음 |
-| `status` | `t_wall_ns`, `tof`, `lidar`, `disk` (1초마다) | 없음 |
+| 혈 Pi `192.168.0.4` → 전시컴 `192.168.0.2` | TCP 9500, hello 후 raw ToF/거리 | ToF 약 10Hz, 거리 약 50Hz |
+| 혈 Pi → 전시컴 | HTTP 8000 `POST /api/beacon`, receiver `ripples-tof` | 약 1Hz |
+| 맥 Pi `192.168.0.3` → 전시컴 | HTTP 8000 `POST /api/maek`, device `mic` | 약 10Hz |
+| 맥 Pi → 전시컴 | HTTP 8000 `POST /api/beacon`, receiver `mic` | 약 1Hz |
+| 심탑 → 센터 | `GET /status`, `/inputs`, `/api/beacon` | 한 묶음씩 목표 10Hz, 느리면 겹쳐 요청하지 않음 |
+| 센터 → 심탑 | WS `/ws/monitor`, `next` 요청에 최신 TOF3 프레임 | 카메라 프레임에 맞춤 |
+| 심탑 → LED 보드 | USB, RGB565 LED2 24,980B + ACK | 목표 8–10FPS |
 
-`valid`는 status가 255가 아니고 0 < 거리 < 60,000 mm일 때 참입니다. `rotate`는 카메라를 거꾸로 달았을 때 180이며, 원본은 돌리지 않고 받는 쪽이 화면용으로만 돌립니다.
+같은 PC의 센터에는 `127.0.0.1:8000`, 별도 PC이면 센터의 LAN IP를 사용합니다. 인터넷 연결이 끊겨도 LAN은 동작할 수 있습니다. 심탑은 센터가 쓰는 TCP9500을 중복으로 열지 않습니다.
 
-### 공유기로 보내는 것 (`app/sender.py`)
+[작업실](http://127.0.0.1:8000/?test), [연결 관리](http://127.0.0.1:8000/operator?test)의 `?test`는 편집·진단 UI 옵션입니다. 실제/모의 입력 구분은 서버의 `mock` 값으로 확인하며 모의 센터 입력은 현장 통계로 받지 않습니다. 기구 부착 모의 상태를 심탑 시간표로 사용하지 않습니다.
 
-설정 `run/send.json`: `{"host": "192.168.0.2", "port": 9500, "tof_hz": 10, "lidar_hz": 50}` (1초마다 다시 읽음)
+## 원시 데이터 전처리 위치
 
-* 접속하면 `hello` 한 번, 이후 `tof`를 초당 10장(그 순간 최신 것만), `lidar`를 초당 50개 보냅니다.
-* ToF 10 fps 기준 약 1.7 MB/s입니다.
-* 끊기면 2초 뒤 다시 붙습니다. 전시컴은 한 번에 한 연결만 받습니다.
-* 받는 쪽 예시는 `tools/receive_example.py`입니다.
-
-## 맥
-
-폴더 `sensors/maek-pi` (`run.py`가 맥 Pi의 사용자 서비스 `maek-audio`로 돕니다)
-
-### 센서와 입력 형식
-
-Teensy 4.0이 마이크 3개(왼쪽, 가운데, 오른쪽)를 44,100 Hz, 16비트로 받아 USB 시리얼로 Pi에 보냅니다. 패킷 형식은 `maek_runtime/protocol.py`입니다.
-
-| 부분 | 크기 | 내용 |
-|---|---|---|
-| header | 24 B | `<8sIIHBBI`: magic `MIC3PCM\n`, seq u32, rate u32 (44100), frames u16 (128), channels u8 (3), bits u8 (16), dropped u32 |
-| payload | 768 B | 128 프레임 × 3채널 × int16 LE (채널이 번갈아 놓임) |
-| crc | 4 B | header와 payload의 CRC32 |
-
-패킷 하나는 796 B, 초당 약 345개로 약 275 KB/s입니다. Teensy 펌웨어(`mic3_teensy.ino`)는 이 레포에 아직 없습니다.
-
-### 처리
-
-`maek_audio/processor.py`가 대역 통과 후 채널별 RMS를 구합니다. 그 결과로 세 곳에 씁니다.
-
-* 스피커 2개: Pi I2S, MAX98357A 앰프 두 개, ALSA 재생
-* 진동모터 2개: PWM 20 kHz, 레벨을 진동 곡선과 감도에 맞춰 0에서 1 사이 세기로 바꿈
-* 전시컴 요약: 아래 JSON, 초당 10번
-
-설정은 `config/device.json`(`sim_url`, `sim_hz`, `sim_level_db`, 모터, 버퍼)과 `config/audio.ini`입니다.
-
-### 공유기로 보내는 것 (`maek_runtime/simlink.py`, 형식 `docs/SIM_FORMAT.md`)
-
-`POST http://192.168.0.2:8000/api/maek`, `Content-Type: application/json`, 4 KB 이하. 성공은 204, 형식 오류는 400입니다. 실패한 값은 다시 보내지 않습니다.
-
-```json
-{"v": 1, "device": "mic", "seq": 1203, "t": 1794990142.31,
- "mics": [0.42, 0.18, 0.37], "rms": [0.0041, 0.0013, 0.0044],
- "haptic": [0.35, 0.30], "level_bias": 0.05, "direction_deg": null}
+```mermaid
+flowchart LR
+  RAW["Pi raw depth + confidence"] --> CENTER["현재 경로 / 센터 PC 회전·마스킹"]
+  CENTER --> WS["TOF3 depth / 이미 보정됨"]
+  WS --> FEAT["심탑 / 영역 중앙값·coverage"]
+  RAW -.-> DIRECT["선택 경로 / 심탑 TCP 9501"]
+  DIRECT --> PRE["심탑 / 회전·마스킹"]
+  PRE --> FEAT
+  PCM["원시 PCM sender / 별도 필요"] -.-> AUDIO["심탑 TCP 9502 / DC·전력·FFT"]
+  FEAT --> N["단위·범위 검증 → 위치 결합"]
+  AUDIO --> N
 ```
 
-| 키 | 뜻 |
+점선은 **선택 경로**입니다. 코드가 수신 기능을 지원한다는 뜻이며 현재 Pi가 그쪽으로 보내고 있다는 뜻은 아닙니다. 혈 raw 경로 선택 시 센터 ToF/거리 읽기를 끄고, PCM 경로 선택 시 센터 맥 음량 읽기를 꺼서 중복 집계를 막습니다. 비콘은 계속 센터에서 읽습니다.
+
+원시 패킷은 JSON 헤더 길이와 바이너리 길이를 앞에 둔 TCP 메시지입니다. 심탑은 부분 수신을 합쳐 읽고 헤더 64KiB, payload 2MiB 상한을 검사합니다. source/type별 seq, timestamp와 데이터 길이·dtype를 확인한 뒤 최신 패킷만 전처리합니다. [세부 계약](realtime.md)에 필드와 바이너리 배열 순서가 있습니다.
+
+## 정규화와 결측 원칙
+
+| 신호 | 받은 값 → 내부 값 | 표시 변환 / 결측 |
+|---|---|---|
+| 위치 | RSSI dBm → 상대 가중 XY(m) → 오른쪽 전시실 bounds를 `[-5,5]²` 전체로 선형 대응 | 신선한 비콘 3개 미만이면 XY 없음 |
+| ToF | mm→m, 영역 median + coverage 0–1 | 거리/4m를 높이에 사용, 유효 화소 없음은 거리 key 없음 |
+| 위쪽 거리 | mm→m, 0<d<60m, id=0·valid 검사 | 4m까지 높이 대응 후 포화, 결측을 0m로 만들지 않음 |
+| 현재 맥 | Pi가 고정 dBFS 범위로 만든 mics 0–1 | 수신 값 검증 후 그대로 밝기, 주파수로 해석하지 않음 |
+| PCM 선택 경로 | int16/32768 → DC 제거 → 선형 전력·주파수 특징 | 전력은 선형 단위로 평균, dB 변환은 화면에서만 |
+
+`normalization.py`에서 역할별 허용 특징·단위 범위·유한수 여부를 검사합니다. bool·NaN·Infinity·다른 기구의 필드·잘못된 단위는 거부합니다. 프레임별 min/max 또는 임의 자동 gain은 적용하지 않아 같은 값이 날짜에 따라 다른 밝기가 되지 않게 합니다. 물리 단위의 전처리와 표시용 0–1 변환은 구분합니다.
+
+보정 좌표, 입력 모드, confidence 등 심탑 설정은 DB fingerprint로 분리합니다. Pi에서 변경한 마이크 gain·필터·레벨 범위는 자동 전달되지 않으므로 운영 중 고정하고, 바꾸면 새 통계로 시작해야 합니다.
+
+## 시간·지연·끊김
+
+- **표시 상태**: PC 한국 시각으로 결정합니다. 11:00 기준 Activate 20분/Sleep 10분, 재시작 시 현재 구간으로 복귀합니다. PC 시계를 정확히 맞춰야 합니다.
+- **렌더 감쇠·속도**: PC 단조 시각으로 계산합니다. 시계 보정이 흔적 수명을 바꾸지 않습니다.
+- **raw Pi 순서/지연**: seq와 `t_mono_ns` 간격을 사용합니다. Pi wall clock과 PC wall clock을 직접 빼지 않습니다. 첫 패킷의 절대 지연은 동기화 없이 알 수 없습니다.
+- **센터 bridge**: ToF capture 시각은 PC 시각, 센터 JSON은 수신 age를 사용합니다. 센터와 심탑이 다른 PC이면 시각 동기화가 필요합니다. 거리·음량은 새 seq이고 age<0.5초일 때만 채택합니다.
+- **비콘**: node age + 센터 received age <3초, state OK, n>0인 비공선 노드 최소 3개가 필요합니다.
+- **재연결**: 센터 HTTP 실패 후 재시도, WS 재접속, raw TCP 재수락을 수행합니다. raw backlog는 최신값으로 합치고 0.5초 넘게 묵은 전처리 대기는 버립니다. 중복·드롭·오류는 상태 보고서에 드러납니다.
+
+수신 중단은 0값 관측이 아닙니다. Activate는 새 흔적이 없어서 감쇠하고, Sleep은 기존 통계와 신경망을 유지합니다. 입력이 돌아오면 다음 유효 값부터 이어갑니다. 지연된 원본을 모두 보존하는 녹화 시스템은 아닙니다.
+
+## 표시 상태와 누적은 독립
+
+```mermaid
+sequenceDiagram
+  participant Sensor as 혈·맥
+  participant RX as 심탑 수신·전처리
+  participant DB as 공간 통계 (ON일 때)
+  participant LED as 심탑 표시
+  loop 전시 중 계속
+    Sensor->>RX: 원시 신호/현재 음량 + 비콘
+    RX->>RX: 검증·정규화·유효 위치 결합
+    RX->>DB: 상태와 무관하게 관측 전달
+    alt 11:00–11:20 / 이후 30분 주기
+      RX->>LED: Activate / 최신 감각과 감쇠
+    else 11:20–11:30 / 이후 30분 주기
+      DB->>LED: Sleep / mean·std + 기존 reservoir 발화
+    end
+  end
+```
+
+수신·메모리·모델은 전환 때 그대로 둡니다. 매 프레임 시간표를 재평가해 표시만 선택합니다. USB에 이미 전송 중인 프레임은 취소하지 않으므로 물리 LED는 전송 지연만큼 뒤따릅니다. 하드 실시간 스위치가 아닙니다.
+
+누적은 기본 OFF이고 현재 수신 점검도 OFF입니다. 전시 누적 ON에서는 공간 셀/특징별 1초 평균을 먼저 만든 다음 Welford mean/M2/n을 갱신합니다. 50Hz 거리 신호가 10Hz 영상보다 단순히 5배 가중되는 것을 막습니다. std는 **1초 평균들의 표본 표준편차**입니다. 결측 특징은 해당 분모에도 넣지 않습니다.
+
+심탑은 원시 영상·음성을 자동 저장하지 않습니다. 24×24 공간 셀의 요약, 최근 30일 및 평생 통계를 저장합니다. DB 본체 256MiB, WAL·원본은 별도이며 저장 공간 부족/기억 처리 실패는 보고하고 표시 앱을 오류 종료합니다. 입력 큐 포화 시 통계 드롭 수를 보고합니다. Pi 자체 SD 기록 정책은 별도입니다.
+
+## 코드에서 찾기
+
+| 책임 | 코드 |
 |---|---|
-| `mics` | 마이크 레벨 0에서 1. 대역 통과 RMS를 dBFS로 바꿔 −70 dBFS를 0, −20 dBFS를 1로 둔 값. 음압 보정 아님 |
-| `rms` | 위 값의 원래 RMS (디지털 풀스케일 1 기준) |
-| `haptic` | 지금 진동모터 목표 세기 [왼쪽, 오른쪽] |
-| `level_bias` | 좌우 레벨 차, −1 왼쪽에서 +1 오른쪽. 각도가 아님 |
-| `direction_deg` | 소리 방향. 마이크 배치와 동기화가 확인되기 전에는 늘 null |
+| 혈 획득·포장·송신 | `sensors/hyeol-pi/collector`, `sensors/hyeol-pi/app/sender.py` |
+| 맥 획득·로컬 처리·HTTP 요약 | `sensors/maek-pi/maek_runtime`, `sensors/maek-pi/maek_audio` |
+| 비콘 RSSI 집계 | `sensors/beacon/beacon_scanner.py` |
+| 센터 입력·화면·API | `exhibition-server/server.py`, `collector_client.py` |
+| 심탑 수신·중복/신선도·위치 | `src/ripples/realtime.py` |
+| 전처리·내부 단위 검증 | `src/ripples/sensors.py`, `normalization.py` |
+| 공간 기억·표상·시간표 | `src/ripples/memory.py`, `visualization.py`, `schedule.py` |
+| live 조립·렌더·USB | `src/ripples/live.py`, `hardware/` |
 
-마이크 원음은 지금 공유기로 보내지 않습니다.
-
-## 비콘
-
-폴더 `sensors/beacon` (혈 Pi와 맥 Pi에 같은 프로그램, 서비스 `ripples-beacon`)
-
-### 송신기
-
-ESP32-C3 비콘 5개(노드 1에서 5)가 BLE 광고 채널 37, 38, 39로 약 100 ms마다 광고합니다. 연결이나 페어링은 없습니다. 노드는 MAC이 아니라 Service Data 안의 번호로 구분합니다.
-
-* Service Data UUID `bf46fcd8-bd8d-5695-a08b-a7c1d419be4e`
-* 10바이트 `<BH6sb`: 버전 1, group_id (노드 번호) u16, 장치 ID 6 B, 기준 RSSI int8 (127은 미보정)
-
-### 처리 (`beacon_scanner.py`)
-
-BlueZ와 Bleak로 스캔을 계속 켜 둡니다(`DuplicateData=True`). 1초마다 노드별로 상태를 매깁니다.
-
-| 상태 | 조건 | 내는 값 |
-|---|---|---|
-| `OK` | 최근 3초 안에 받음 | 마지막 RSSI, 최근 1.5초 중앙값, 개수, age |
-| `CONFLICT` | 같은 번호에 다른 장치 ID가 3초 안에 보임 | 값 없음 (두 장치를 섞지 않음) |
-| `STALE` | 3초 넘게 못 받음 | 값 없음 (0 dBm으로 채우지 않음) |
-
-원시 수신 기록과 1초 집계는 `~/ripples-data/beacon/<날짜>/`에 CSV로 남깁니다.
-
-### 공유기로 보내는 것
-
-`POST http://192.168.0.2:8000/api/beacon`, 1초마다. 설정은 `run/beacon.json`의 `post_url`, `receiver_id`입니다.
-
-```json
-{"v": 1, "type": "beacon", "receiver": "mic", "seq": 21, "t_wall_ns": 1794990142323320788, "window_s": 1.5,
- "nodes": {"1": {"state": "OK", "last_dbm": -78, "median_dbm": -79.0, "n": 2, "age_ms": 461,
-                 "hardware_id": "80F1B261750E", "reference_rssi_dbm": null}},
- "nearest": {"node": 3, "zone": null, "median_dbm": -79, "margin_db": 0.0}}
-```
-
-`nearest`는 가장 센 노드와 2등과의 차입니다. 거리 값이 아니라 가까운 구역을 고르는 용도입니다. 관리 화면은 1 m 기준 −59 dBm, 감쇠 2.0을 가정해 거리를 어림하며, 현장 보정 전입니다.
-
-## 전시컴
-
-폴더 `exhibition-server` (전시컴 `C:\Users\Admin\tof-web-viewer`의 코드 전체. 가상환경, 저장 데이터, 백업, 파워플랜트 원본 도면은 뺌). 실행: `python exhibition.py start` (`.venv`에 `requirements.txt` 설치 후)
-
-| 입구 | 형식 | 처리 |
-|---|---|---|
-| TCP 9500 | 혈 메시지 (위 형식) | `collector_client.py`가 읽어 ToF 최신 프레임과 거리 채널을 채움. 5초 무응답 복구 수정을 로컬 파일에 반영하고 사용자 권한 승인 후 서버 재시작까지 완료 |
-| `POST /api/maek` | 맥 JSON | 입력 채널 `maek_mic` (= `mics`)와 `maek_features` (방향, 진동, RMS)를 채움. 3초 안에 진짜 값이 오는 동안 가짜 입력은 멈춤 |
-| `POST /api/beacon` | 비콘 JSON | 수신기별 마지막 집계를 보관. `GET /api/beacon`이 받은 지 몇 ms인지와 함께 돌려줌 |
-
-받은 값의 지금 상태는 `GET /inputs`, `GET /api/beacon`, 연결 관리 화면 `/operator`에서 봅니다. 전시 실행 설정은 `exhibition.json`(`COLLECTOR_LISTEN=9500`, `--source collector`)입니다.
-
-### 갤러리 3D 시뮬레이터
-
-| 파일 | 내용 |
-|---|---|
-| `venues/m30/geometry.json` | 갤러리 M30 공간 (형식 `ripples-venue/1`, mm): 바닥과 천장 높이, 벽, 기둥, 유리, 단차, 움직이는 벽과 창의 규격 |
-| `venues/m30/layout_presets.json` | 배치 시안 |
-| `venues/m30/mockup.json` | 심 구조물 목업 |
-| `venues/m30/source/` | 원본 도면 PDF |
-| `venue.py`, `simulator_store.py`, `venue3d.html` | 공간 읽기와 배치 검사, 혈과 맥 위치와 배치 상태 저장, 3D 화면 |
-
-지금 배치 상태는 전시컴의 `data\m30\simulator.json`에 저장되고 `GET /api/simulator`의 `layout`으로 읽습니다. 비콘 노드 위치는 그 안의 `layout.beacons`에 `{"1": {"x", "y", "z"}, …}` (mm, 공간 좌표)로 들어갑니다. 공간 전체는 `GET /api/venue`, 화면은 `/venue3d?test`의 「전시 배치」 칸입니다.
-
-전시컴에는 심 LED를 화면으로 미리 보는 시뮬레이터 `/sim`도 있습니다. 이 시뮬레이터는 `uint8 (12, 16, 64, 3)` 프레임(36,864 B)을 `POST /api/sim/frame`으로 받습니다(`sim_feed.py`, `sim_send.py`, 포트 표 `sim_mapping.csv`). 실제 탑의 LED2 형식과 크기가 달라서 탑으로 바로 보낼 수는 없습니다.
-
-## 심탑
-
-심탑 프로그램(`src/ripples`)과 하드웨어 문서(`docs/tower.md`, `docs/sensing.md`)는 이 레포에 먼저 있던 것입니다. 여기서는 감각기구 쪽과 맞닿는 부분만 정리합니다.
-
-### 심탑이 받는 센서 형식 (`src/ripples/sensors.py`)
-
-| 입력 | 심탑이 읽는 형식 | 지금 쓰는 자료 |
-|---|---|---|
-| 혈 | 혈 메시지와 같은 바이트열을 이어 붙인 `stream.bin`. `tof`에서 회전 보정 후 confidence 60 이상, 0 < depth ≤ 4 m인 화소로 3×3 영역 중앙값을 만들고, `lidar`는 valid와 status를 검사 | 녹화 파일 (`data_led_example/sensors/ripples-hyeol-send-sample_20261116.zip`) |
-| 맥 | 1초짜리 WAV (3채널, 44,100 Hz, 16비트) + `metadata.json` (`device_id`, `session_id`, `chunk_id`, `start_frame`, `frames`, `sha256`). 형식은 `data_led_example/sensors/protocols/sound.md` | 합성 음 |
-| 비콘 (파일 데모) | 합성 RSSI로 거리·최소제곱 XY | 가상 방 10 m × 10 m, 모서리 4개 |
-| 비콘 (기본 live) | 확정 M30 노드 5개와 실제 상대 RSSI로 대략적인 XY | `configs/live.m30.json`. 현재 누적 OFF. 추후 opt-in 시 별도 estimated DB, RF 보정 후 range_fit으로 전환 |
-
-### 심탑이 보내는 LED2 프레임 (`src/ripples/hardware`)
-
-전시컴 USB 시리얼로 중앙 보드(Arduino Nano ESP32)에 보냅니다.
-
-| 부분 | 크기 | 내용 |
-|---|---|---|
-| header | 20 B | `<4sIHHII`: magic `LED2`, sequence u32, N u16 (65), flags u16 (6), payload_bytes u32 (24,960), payload CRC32 |
-| payload | 24,960 B | `[DD 12][MUX 16][가시 슬롯 65]` 순서의 RGB565 (uint16 LE) |
-
-* 합계 24,980 B입니다. 보드는 표시를 마치면 `OK seq rx_us scan_us start_us end_us rx_end_us crc_hex`로 답합니다.
-* 프로그램 안의 RGB 배열은 `(12, 16, 65, 3)` uint8이고, `rgb565.InstallationEncoder`가 위 바이트로 바꿉니다. 34개 스트립의 R과 G 교환과 Zone에서 DD로의 매핑은 PC가, 밝기 32는 보드가 맡습니다.
-* 각 스트립의 첫 물리 LED는 보드가 검정으로 넣으므로 PC 입력의 슬롯 0은 물리 LED 2번입니다.
-
-### 전시컴에서 심탑으로
-
-심탑 프로그램의 실시간 브리지(`src/ripples/realtime.py`, 설명 `docs/realtime.md`, 기본 설정 `configs/live.m30.json`)가 전시컴을 읽습니다. 혈 Pi는 받는 곳이 하나라서, 심탑은 TCP 9500을 다시 열지 않고 전시컴을 거칩니다. `live.example.json`은 위치를 만들지 않는 수신 진단용입니다.
-
-| 신호 | 심탑이 읽는 곳 | 남은 것 |
-|---|---|---|
-| 혈 깊이 | `ws /ws/monitor`: 전시컴이 confidence로 거르고 방향을 맞춘 깊이 (`TOF3` 헤더 + uint16). 원시 confidence는 들어 있지 않음 | 심탑 설정의 `monitor_confidence`가 전시컴 `/status.confidence`와 같아야 실측 통계에 넣음 |
-| 혈 천장 거리 | `/inputs`의 거리 채널 | 없음 |
-| 맥 | `/inputs`의 `maek_mic` (레벨 3개, 0에서 1) | 저음, 중음, 고음 대역은 원음이 있어야 계산됨. 맥 Pi에는 원음 송신이 아직 없음 |
-| 비콘 | `/api/beacon`의 수신기별 노드 RSSI | 확정된 `layout.beacons` 5개를 mm→m 변환해 반영 완료. 상대 RSSI 위치 추정 준비. 현재는 수신만 하고 누적하지 않음 |
-| 전시컴 수신 | | 복구 수정 파일 백업·반영 및 관리자 권한 서버 재시작 완료. 카메라 재연결·비콘 좌표 유지 확인 |
-
-2026-11-20 마지막 실입력 점검은 비콘 일부만 켠 상태(사용자 확인)였다. 신선한 노드가
-3개 미만이면 새 위치/공간 통계를 만들지 않는다. 맥 입력도 없었으므로 동시 기구 실측은
-모두 켠 뒤 확인한다. 같은 수신 계약의 합성 HTTP 입력으로 두 기구·누적·입력 소멸을 검증했다.
-
-현재 요청 범위는 [수신 전용 실행과 데이터 폼](RECEIVE_ONLY.md)이다. `python -m ripples.receive`는
-DB·reservoir·LED를 시작하지 않는다. 앞으로 표시를 켤 때는 추가 방사형 파동 없는 activity를
-기본으로 사용한다. 공간 기억은 별도의 `--accumulate` opt-in이 필요하다.
-
-## 폴더
-
-| 폴더 | 내용 |
-|---|---|
-| `sensors/hyeol-pi` | 혈 Pi 전체: 수집단, 송신, Pi 안 기구 화면 서버, 설치 스크립트 |
-| `sensors/maek-pi` | 맥 Pi: Teensy 수신, 소리 처리, 스피커와 모터, 심 송신 |
-| `sensors/beacon` | 비콘 수신기 (오프라인 설치용 wheel 파일은 용량 때문에 빼서, 설치 전에 `wheels/`에 bleak 1.1.1과 dbus-fast를 받아 넣어야 함) |
-| `exhibition-server` | 전시컴 서버 전체: 혈 TCP와 맥, 비콘 HTTP 수신, 기구 화면과 블라인드 출력, 갤러리 3D 시뮬레이터(`venues/m30`), 심 LED 시뮬레이터, 연결 관리 화면 |
+[예시 데이터 폼](../data_led_example/m30_session/README.md)은 네트워크 입력을 설명하는 별도 fixture입니다. 그 JSONL의 `simulation_truth`와 `example:true`를 live 측정값으로 가져오지 않습니다.

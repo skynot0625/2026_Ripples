@@ -1,0 +1,183 @@
+{
+  "type": "object",
+  "properties": {
+    "schema": {
+      "const": "ripples.example-event/1"
+    },
+    "example": {
+      "const": true
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "source": {
+      "enum": [
+        "hyeol",
+        "maek"
+      ]
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "t_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "position": {
+      "type": "object",
+      "properties": {
+        "frame": {
+          "const": "m30"
+        },
+        "method": {
+          "const": "simulation_truth"
+        },
+        "xy_m": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "relative_xy_m": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "number"
+          }
+        },
+        "beacon_seq": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "beacon_age_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "frame",
+        "method",
+        "xy_m",
+        "relative_xy_m",
+        "beacon_seq",
+        "beacon_age_ms"
+      ],
+      "additionalProperties": false
+    },
+    "measurement": {}
+  },
+  "required": [
+    "schema",
+    "example",
+    "session_id",
+    "source",
+    "seq",
+    "t_ms",
+    "position",
+    "measurement"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ripples explicit example event v1",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "source": {
+            "const": "hyeol"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "measurement": {
+            "type": "object",
+            "properties": {
+              "depth_m": {
+                "type": "array",
+                "minItems": 9,
+                "maxItems": 9,
+                "items": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "exclusiveMinimum": 0,
+                  "maximum": 4
+                }
+              },
+              "coverage": {
+                "type": "array",
+                "minItems": 9,
+                "maxItems": 9,
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "upward_m": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0,
+                "exclusiveMaximum": 60
+              }
+            },
+            "required": [
+              "depth_m",
+              "coverage",
+              "upward_m"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "measurement": {
+            "type": "object",
+            "properties": {
+              "mics": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "rms": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "required": [
+              "mics",
+              "rms"
+            ],
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  ]
+}
