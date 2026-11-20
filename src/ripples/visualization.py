@@ -77,6 +77,12 @@ class RipplesVisual:
                     dot(0, 0, stem_z, (155, 110, 255), .18)
                 dot(0, 0, z, (190, 140, 255), .95)
         elif event["source"] == "maek":
+            # Center /api/maek reports normalized levels, not a spectrum or dBFS.
+            # Keep their units and identity separate from PCM frequency bands.
+            for i in range(3):
+                key = f"mic_level_{i}"
+                if key in f:
+                    dot((i-1)*1.3, 0, .10, (240, 225, 180), np.clip(f[key], 0, 1))
             for name, z, color in BANDS:
                 key = f"band_{name}"
                 if key not in f:

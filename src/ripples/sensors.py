@@ -18,7 +18,8 @@ FEATURES = tuple([f"depth_{i}" for i in range(9)] +
                  ["ceiling_0", "ceiling_1"] +
                  [f"power_{i}" for i in range(3)] +
                  [f"centroid_{i}" for i in range(3)] +
-                 ["band_low", "band_mid", "band_high"])
+                 ["band_low", "band_mid", "band_high"] +
+                 [f"mic_level_{i}" for i in range(3)])
 DEFAULT_ANCHORS = np.array([[-5., -5.], [5., -5.], [5., 5.], [-5., 5.]])
 
 
@@ -84,6 +85,11 @@ def depth_features(h, payload, rotate=180, confidence=60):
     data = np.frombuffer(payload, "<u2").reshape(2, height, w)
     depth, conf = [np.rot90(a, -(rotate//90)) for a in data]
     valid = (conf >= confidence) & (depth > 0) & (depth <= 4000)
+    return depth_grid_features(depth, valid)
+
+
+def depth_grid_features(depth, valid):
+    """Reduce an already oriented depth image on the tower; no temporal fill."""
     features = {}
     for row, ys in enumerate(np.array_split(np.arange(depth.shape[0]), 3)):
         for col, xs in enumerate(np.array_split(np.arange(depth.shape[1]), 3)):
@@ -106,6 +112,14 @@ def wav_features(path):
         raw = wav.readframes(n)
         if len(raw) != n*6:
             raise ValueError("truncated WAV")
+    return pcm_features(raw), n/44100.
+
+
+def pcm_features(raw):
+    """Three interleaved signed PCM16 LE channels at 44.1 kHz, at most 10 s."""
+    if not 12 <= len(raw) <= 44100*10*6 or len(raw) % 6:
+        raise ValueError("invalid PCM size")
+    n = len(raw)//6
     pcm = np.frombuffer(raw, "<i2").reshape(-1, 3).astype(np.float64)/32768.
     pcm -= pcm.mean(axis=0)  # microphone DC is not acoustic energy
     power = np.mean(pcm**2, axis=0)
@@ -125,7 +139,7 @@ def wav_features(path):
         fraction = np.divide(spectrum[mask].sum(axis=0), total,
                              out=np.zeros(3), where=total > 1e-12)
         features[f"band_{name}"] = float(np.mean(power*fraction))
-    return features, n/44100.
+    return features
 
 
 def _read_hyeol(stream):

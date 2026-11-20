@@ -17,6 +17,7 @@ dependencies = [
     "pyyaml>=6",
     "pyserial>=3.5,<4",
     "Pillow>=10",
+    "websocket-client>=1.8,<2",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +28,7 @@ ripples = "ripples.run:main"
 ripples-demo = "ripples.demo:main"
 ripples-reservoir = "ripples.reservoir:main"
 ripples-spikes = "ripples.spikes:main"
+ripples-live = "ripples.live:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

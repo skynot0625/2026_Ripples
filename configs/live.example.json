@@ -1,0 +1,18 @@
+{
+  "calibrated": false,
+  "bounds_m": [[-5, 5], [-5, 5]],
+  "anchors": {
+    "1": {"xy_m": [-5, -5], "reference_dbm": -59},
+    "2": {"xy_m": [5, -5], "reference_dbm": -59},
+    "3": {"xy_m": [5, 5], "reference_dbm": -59},
+    "4": {"xy_m": [-5, 5], "reference_dbm": -59}
+  },
+  "receivers": {"hyeol": "ripples-tof", "maek": "mic"},
+  "exponent": 4.0,
+  "stale_s": 3.0,
+  "max_sensor_age_s": 0.5,
+  "max_residual_m": 2.0,
+  "rotate": 180,
+  "confidence": 60,
+  "monitor_confidence": 30
+}

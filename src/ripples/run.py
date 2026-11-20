@@ -57,7 +57,7 @@ def live_spikes():
 
 
 class Preview:
-    def __init__(self, xyz, *, audio_status="absent", criticality="activity"):
+    def __init__(self, xyz, *, audio_status="absent", criticality="activity", live=False):
         from PIL import Image, ImageDraw
         self.Image, self.Draw = Image, ImageDraw
         xyz = xyz[VALID_MASK]
@@ -68,11 +68,13 @@ class Preview:
         self.frames = []
         self.audio_status = audio_status
         self.criticality = criticality
+        self.live = live
 
     def add(self, active, sleep, seconds):
         im = self.Image.new("RGB", (1020, 570), (7, 11, 20))
         draw = self.Draw.Draw(im)
-        draw.text((24, 15), "RIPPLES | real Hyeol recording + synthetic circular RSSI", fill=(220, 230, 245))
+        title = "RIPPLES LIVE | calibrated RSSI required; no synthetic fallback" if self.live else "RIPPLES | real Hyeol recording + synthetic circular RSSI"
+        draw.text((24, 15), title, fill=(220, 230, 245))
         draw.text((24, 36), "Height = sensor distance/features, not reconstructed world height. Digital preview exposure.", fill=(145, 160, 180))
         for offset, label, frame in ((0, "ACTIVATE | transient observation traces", active),
                                       (510, f"SLEEP | mean + std + {self.criticality}", sleep)):
