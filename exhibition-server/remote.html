@@ -100,7 +100,8 @@
     function edit(fn, final) {   // change the selected composition (a copy), send it; final = saved and then sent to 혈
       const c = JSON.parse(JSON.stringify(vis.compositions[sel])); fn(c);
       vis.compositions[sel] = c;
-      sync.send({op: 'set', id: sel, composition: c}, final);
+      const {id: _id, builtin: _b, ...body} = c;   // the snapshot adds id / builtin; the store takes name, canvas, layers only
+      sync.send({op: 'set', id: sel, composition: body}, final);
       if (final && $('auto').checked) { pending = {id: sel, at: Date.now()}; say('저장 중…', 'wait'); }
     }
     function tryPublish() {
