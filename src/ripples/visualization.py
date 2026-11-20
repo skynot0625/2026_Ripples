@@ -55,42 +55,57 @@ class RipplesVisual:
             if 0 <= x < SIZE and 0 <= y < SIZE:
                 volume[x, y, zi] = np.maximum(volume[x, y, zi], np.asarray(color)*strength)
 
+        def segment(a, b, color, strength):
+            # Sample a short feature line on the display grid, not a travelling wave.
+            steps = max(2, int(max(abs(a[0]-b[0]), abs(a[1]-b[1]), abs(a[2]-b[2])*(HEIGHT-1))*2)+1)
+            for u in np.linspace(0, 1, steps):
+                dot(*(a*(1-u)+b*u), color, strength)
+
         if event["source"] == "hyeol":
+            points = {}
             for i in range(9):
                 key = f"depth_{i}"
-                if key in f:
-                    coverage = np.clip(f.get(f"coverage_{i}", 0.), 0., 1.)
-                    if coverage <= 0 or f[key] <= 0:
-                        continue
-                    # Cyan distance relief; 3x3 sectors stay around the receiver.
-                    z = .12+.70*np.clip(f[key]/DISTANCE_RANGE_M, 0, 1)
-                    dx, dy = (i%3-1)*1.3, (1-i//3)*1.3
-                    level = .22+.78*np.sqrt(coverage)
-                    # Dim stems with bright tops read as a local depth relief.
-                    for stem_z in np.arange(.08, z, 1/(HEIGHT-1)):
-                        dot(dx, dy, stem_z, (35, 210, 255), .12*level)
-                    dot(dx, dy, z, (35, 210, 255), level)
-            # One upward-facing point, exactly on the instrument XY axis.
-            if "ceiling_0" in f and f["ceiling_0"] > 0:
-                z = .12+.70*np.clip(f["ceiling_0"]/DISTANCE_RANGE_M, 0, 1)
-                for stem_z in np.arange(.08, z, 1/(HEIGHT-1)):
-                    dot(0, 0, stem_z, (155, 110, 255), .18)
-                dot(0, 0, z, (190, 140, 255), .95)
+                coverage = float(np.clip(f.get(f"coverage_{i}", 0.), 0, 1))
+                if key not in f or f[key] <= 0 or coverage <= 0:
+                    continue
+                d = float(np.clip(f[key], 0, DISTANCE_RANGE_M))
+                # Fixed logarithmic distance axis gives near obstacles more resolution.
+                u = np.log1p(d/.35)/np.log1p(DISTANCE_RANGE_M/.35)
+                point = np.array([(i%3-1)*1.7, (1-i//3)*1.7, .12+.46*u])
+                level = np.sqrt(coverage)*(.40+.60*(1-d/DISTANCE_RANGE_M))
+                points[i] = (point, level)
+                dot(*point, (25, 220, 255), level)
+            # A coherent 3x3 wire surface; don't bridge across a missing sector.
+            for i, (point, level) in points.items():
+                for j in ((i+1 if i%3 < 2 else -1), i+3):
+                    if j in points:
+                        other, other_level = points[j]
+                        segment(point, other, (25, 220, 255), .48*min(level, other_level))
+            # An upper purple cap separates the one upward sensor from the camera.
+            if f.get("ceiling_0", 0) > 0:
+                z = .72+.22*float(np.clip(f["ceiling_0"]/DISTANCE_RANGE_M, 0, 1))
+                segment(np.array([0., 0., .64]), np.array([0., 0., z]), (165, 95, 255), .28)
+                for a, b in (((-1.7, 0, z), (1.7, 0, z)), ((0, -1.7, z), (0, 1.7, z))):
+                    segment(np.array(a), np.array(b), (195, 125, 255), .95)
         elif event["source"] == "maek":
-            # Center /api/maek reports normalized levels, not a spectrum or dBFS.
-            # Keep their units and identity separate from PCM frequency bands.
+            # L/C/R levels remain channel identities, never invented spectral bands.
+            palette = ((255, 155, 55), (255, 220, 145), (255, 125, 100))
             for i in range(3):
-                key = f"mic_level_{i}"
-                if key in f:
-                    dot((i-1)*1.3, 0, .10, (240, 225, 180), np.clip(f[key], 0, 1))
+                level = float(np.clip(f.get(f"mic_level_{i}", 0), 0, 1))
+                if level > 0:
+                    x, top = (i-1)*1.7, .08+.38*level
+                    segment(np.array([x, 0., .06]), np.array([x, 0., top]), palette[i], .65*np.sqrt(level))
+                    dot(x, 0, top, palette[i], np.sqrt(level))
             for name, z, color in BANDS:
                 key = f"band_{name}"
                 if key not in f:
                     continue
-                # Power is averaged in linear units; dBFS is only a display transfer.
+                # PCM band powers stay linear in memory; fixed dBFS for display only.
                 dbfs = 10*np.log10(max(f[key], 1e-12))
-                level = np.clip((dbfs+60)/54, 0, 1)
-                dot(0, 0, z, color, level)
+                level = float(np.clip((dbfs+60)/54, 0, 1))
+                if level > 0:
+                    half_width = .5+1.8*level
+                    segment(np.array([-half_width, 0., z]), np.array([half_width, 0., z]), color, level)
 
     def set_memory(self, observations):
         self.memory.fill(0)

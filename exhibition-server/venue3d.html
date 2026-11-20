@@ -119,6 +119,20 @@
     <button type="button" id="menubtn" aria-label="설정 · 관람 시뮬 끝">☰</button><canvas id="gl" aria-label="공간 geometry 3D 보기 (끌어서 회전, 두 손가락 또는 휠로 확대·이동)"></canvas></div>
   <div id="bar">
     <div class="row tour-keep"><button type="button" id="tour" aria-pressed="false">관람 시뮬 시작</button></div>
+    <section class="sec" aria-label="심탑 센서 예시">
+      <strong>심탑 · 센서 맵핑 예시</strong>
+      <div class="row" role="group" aria-label="심탑 예시 상태">
+        <button type="button" data-ripples-example="activate" aria-pressed="true">예시 Activate</button>
+        <button type="button" data-ripples-example="sleep" aria-pressed="false">예시 Sleep</button>
+        <button type="button" data-ripples-example="clock" aria-pressed="false">전시 시간표</button>
+        <button type="button" data-ripples-example="off" aria-pressed="false">예시 끄기</button>
+      </div>
+      <p class="note">청록 거리 면 · 보라 천장 표시 · 따뜻한 음량 기둥</p>
+      <p id="ripples-example-status" class="note">심탑 예시 불러오는 중…</p>
+      <div class="row"><button type="button" id="ripples-example-pause" aria-pressed="false">예시 일시정지</button>
+        <input id="ripples-example-time" aria-label="심탑 예시 재생 시점" type="range" min="0" max="67.9" step="0.1" value="0" disabled></div>
+      <p class="note">합성 센서 · 기록된 8,460 뉴런 · 추가 파동 없음<br>오른쪽 전시실을 LED 전체에 대응. 예시 경로는 아래 기구 조종과 독립입니다.</p>
+    </section>
     <section class="sec tour-keep">
       <div class="row" role="group" aria-label="조명">
         <span class="note rl">조명</span>
@@ -210,6 +224,7 @@
     </section>
   </div>
   <script src="/simulator.js"></script>
+  <script src="/static/ripples-example.js"></script>
   <script>
     // 공간 3D 확인 (read-only geometry; since 2026-11-06 the exhibition layout — big wall angles, lobby windows, small
     // walls — is edited here through the simulator state, venue.py checks every change). Draws whatever /api/venue returns (venues/<id>/geometry.json through venue.py): floor,
@@ -1112,7 +1127,7 @@
       m.tri = scene.dyn; m.lines = scene.dynLines; m.glass = scene.dynGlass;
       if (name === 'hyeol' || name === 'maek') { m.shadow = deviceShadow(m.tri); upload(m.shadow); }
       for (const b of [m.tri, m.lines, m.glass]) upload(b);
-      if (m.ledPos) { m.pts = {buf: gl.createBuffer(), cbuf: gl.createBuffer(), count: m.ledPos.length / 3, col: new Float32Array(m.ledPos.length), loc: m.ledLocal};
+      if (m.ledPos) { m.pts = {buf: gl.createBuffer(), cbuf: gl.createBuffer(), count: m.ledPos.length / 3, col: new Float32Array(m.ledPos.length), loc: m.ledLocal, address: m.ledAddress};
         gl.bindBuffer(gl.ARRAY_BUFFER, m.pts.buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(m.ledPos), gl.STATIC_DRAW);
         gl.bindBuffer(gl.ARRAY_BUFFER, m.pts.cbuf); gl.bufferData(gl.ARRAY_BUFFER, m.pts.col, gl.DYNAMIC_DRAW); }
       [scene.dyn, scene.dynLines, scene.dynGlass] = keep;
@@ -1154,6 +1169,9 @@
       const g = CABLE_BOX; return [((x - g.x0) / (g.x1 - g.x0) * 2 - 1) * 1000, -((y - g.y0) / (g.y1 - g.y0) * 2 - 1) * 860];
     }
     function ledPattern(P, now) {
+      const example = window.RipplesExample && window.RipplesExample.apply(P, now);
+      if (example !== null && example !== undefined) return example;
+      P.ripplesFrame = null;
       const mode = state && state.mode, col = P.col, L = P.loc, n = P.count;
       if (!mode) { if (P.on) { col.fill(0); P.on = false; return true; } return false; }
       const dt = Math.min(0.1, (now - (ledLast || now)) / 1000); ledLast = now; ledClock += dt; const t = ledClock;
@@ -1289,7 +1307,7 @@
       const PITCH = 2120 / 17, ROWSTEP = PITCH * Math.sqrt(3) / 2, D = 50, T = 24, BEAM_W = 60, RIM_H = 50, RIM_T = 12, TOP_MAX = 3000, MIN_END = 50;
       const strips = [];
       for (let r = 0; r < 17; r++) { const n = 9 + Math.min(r, 16 - r), z = (r - 8) * ROWSTEP;
-        for (let k = 0; k < n; k++) { const nm = `${ROWS[r]}${k + 1}`; if (!EMPTY.has(nm) && LEDS[ROWS[r]]) strips.push({x: (k - (n - 1) / 2) * PITCH, z, n: LEDS[ROWS[r]]}); } }
+        for (let k = 0; k < n; k++) { const nm = `${ROWS[r]}${k + 1}`; if (!EMPTY.has(nm) && LEDS[ROWS[r]]) strips.push({name: nm, x: (k - (n - 1) / 2) * PITCH, z, n: LEDS[ROWS[r]]}); } }
       const plate0 = z => -(z / ROWSTEP) * (15 / 16) * D, HC = TOP_MAX - Math.max(...strips.map(t => plate0(t.z))) - T / 2;
       const bottomY = z => HC + plate0(z) - T / 2, topY = t => HC + plate0(t.z), fz = geo.floor.z;
       const Q = (x, y, z) => [x, -z, fz + y];   // /sim (x right, y up, z toward row Q) → plan mm (row A toward +y)
@@ -1316,11 +1334,11 @@
       for (let q = 0; q <= 6; q++) { const y = q * top / 6, c = corner(at(y), y); for (let i = 0; i < 4; i++) bar(scene.dyn, c[i], c[(i + 1) % 4], 25, TW); }
       for (let q = 0; q < 6; q++) { const y0 = q * top / 6, y1 = (q + 1) * top / 6, c0 = corner(at(y0), y0), c1 = corner(at(y1), y1);
         for (let i = 0; i < 4; i++) { bar(scene.dyn, c0[i], c1[(i + 1) % 4], 18, TW); bar(scene.dyn, c0[(i + 1) % 4], c1[i], 18, TW); } }
-      m.ledPos = []; m.ledLocal = [];   // ledLocal: x, height, z (mm, /sim frame) and 1 for LED 1 (in the hole, never lit)
+      m.ledPos = []; m.ledLocal = []; m.ledAddress = [];   // ledLocal: x, height, z (mm, /sim frame) and 1 for LED 1 (in the hole, never lit)
       for (const t of strips) {
         const y0 = topY(t), n = Math.min(t.n, Math.floor((y0 - MIN_END) / D) + 1), bottom = y0 - (n - 1) * D;
         bar(scene.dyn, Q(t.x, y0, t.z), Q(t.x, Math.max(bottom - 30, 20), t.z), 7, CAB);
-        for (let j = 0; j < n; j++) { m.ledPos.push(...W(...Q(t.x, y0 - j * D, t.z))); m.ledLocal.push(t.x, y0 - j * D, t.z, j === 0 ? 1 : 0); }
+        for (let j = 0; j < n; j++) { m.ledPos.push(...W(...Q(t.x, y0 - j * D, t.z))); m.ledLocal.push(t.x, y0 - j * D, t.z, j === 0 ? 1 : 0); m.ledAddress.push([t.name, j, n]); }
       }
     }
     function buildDevices() {
@@ -1728,7 +1746,7 @@
     function render(now) {
       requestAnimationFrame(render);
       smoothStep(now || performance.now()); recordHistory(now || performance.now()); boardHint();
-      if (state && state.mode) dirty = true;
+      if ((state && state.mode) || (window.RipplesExample && window.RipplesExample.enabled())) dirty = true;
       if (ride && eye.on && state) {   // on the device / through the visitor: its position, its heading + where the rider looks
         const d = subject === 'viewer' ? {x: vis.x, y: vis.y, heading: vis.yaw * 180 / Math.PI} : devPose(selected), hd = d.heading * Math.PI / 180;
         const off = subject === 'viewer' ? 0 : RIDER_OFF[selected] || 0, ex = d.x + Math.sin(hd) * off, ey = d.y + Math.cos(hd) * off;   // the rider's eyes (맥: behind it, user)
@@ -2617,6 +2635,7 @@ M1-30은 인간처럼 공간을 이해하거나 스스로 판단하는 독립적
     });
 
     loadVenue(true).catch(() => { $('status').textContent = 'geometry를 불러오지 못함'; $('status').className = 'bad'; });
+    if (window.RipplesExample) window.RipplesExample.onUpdate = () => { dirty = true; };
     requestAnimationFrame(render);
 
     // test hook (automatic checks): what was built from the geometry, the device poses drawn, the camera

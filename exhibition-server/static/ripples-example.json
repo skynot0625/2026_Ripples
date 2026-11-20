@@ -1,0 +1,941 @@
+{
+  "schema": "ripples.venue-example/1",
+  "example": true,
+  "mapping": "sensory-v2",
+  "fps": 10,
+  "frames": 680,
+  "neurons": 8460,
+  "channels": 3,
+  "duration_s": 68.0,
+  "history_s": 180,
+  "input_end_s": 60,
+  "led_bounds_m": [
+    [
+      -0.462,
+      11.149
+    ],
+    [
+      0.09,
+      19.851
+    ]
+  ],
+  "added_radial_waves": false,
+  "logical_rgb": true,
+  "strips": {
+    "A1": {
+      "offset": 5961,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "A2": {
+      "offset": 5852,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "A3": {
+      "offset": 5157,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "A4": {
+      "offset": 5266,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "A6": {
+      "offset": 750,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "A7": {
+      "offset": 641,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "A8": {
+      "offset": 54,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "A9": {
+      "offset": 163,
+      "count": 55,
+      "physical_visible_count": 65
+    },
+    "B1": {
+      "offset": 5691,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B2": {
+      "offset": 5907,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B3": {
+      "offset": 5798,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B4": {
+      "offset": 5212,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B5": {
+      "offset": 5321,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B6": {
+      "offset": 805,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B7": {
+      "offset": 696,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B8": {
+      "offset": 0,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B9": {
+      "offset": 109,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "B10": {
+      "offset": 324,
+      "count": 54,
+      "physical_visible_count": 64
+    },
+    "C1": {
+      "offset": 5745,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C2": {
+      "offset": 5638,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C3": {
+      "offset": 5585,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C4": {
+      "offset": 5375,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C5": {
+      "offset": 5480,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C7": {
+      "offset": 536,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C8": {
+      "offset": 431,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C9": {
+      "offset": 218,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C10": {
+      "offset": 271,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "C11": {
+      "offset": 378,
+      "count": 53,
+      "physical_visible_count": 63
+    },
+    "D1": {
+      "offset": 4461,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D2": {
+      "offset": 4513,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D3": {
+      "offset": 4715,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D4": {
+      "offset": 7914,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D5": {
+      "offset": 5428,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D6": {
+      "offset": 5533,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D7": {
+      "offset": 589,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D8": {
+      "offset": 484,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D9": {
+      "offset": 6612,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D10": {
+      "offset": 1399,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D11": {
+      "offset": 1605,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "D12": {
+      "offset": 1553,
+      "count": 52,
+      "physical_visible_count": 62
+    },
+    "E1": {
+      "offset": 4359,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E2": {
+      "offset": 4410,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E3": {
+      "offset": 4664,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E4": {
+      "offset": 7812,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E5": {
+      "offset": 7863,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E6": {
+      "offset": 8066,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E8": {
+      "offset": 6459,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E9": {
+      "offset": 6561,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E10": {
+      "offset": 6510,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E11": {
+      "offset": 1348,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E12": {
+      "offset": 1502,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "E13": {
+      "offset": 1451,
+      "count": 51,
+      "physical_visible_count": 61
+    },
+    "F1": {
+      "offset": 5010,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F2": {
+      "offset": 4960,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F3": {
+      "offset": 4614,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F4": {
+      "offset": 8361,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F5": {
+      "offset": 8311,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F6": {
+      "offset": 7966,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F7": {
+      "offset": 8016,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F8": {
+      "offset": 6409,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F9": {
+      "offset": 6359,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F10": {
+      "offset": 6016,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F11": {
+      "offset": 6066,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F12": {
+      "offset": 1298,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F13": {
+      "offset": 859,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "F14": {
+      "offset": 909,
+      "count": 50,
+      "physical_visible_count": 60
+    },
+    "G1": {
+      "offset": 5060,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G2": {
+      "offset": 4767,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G3": {
+      "offset": 4565,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G4": {
+      "offset": 8411,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G5": {
+      "offset": 8166,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G6": {
+      "offset": 8117,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G10": {
+      "offset": 6165,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G11": {
+      "offset": 6214,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G12": {
+      "offset": 6116,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G13": {
+      "offset": 1249,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G14": {
+      "offset": 1056,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "G15": {
+      "offset": 959,
+      "count": 49,
+      "physical_visible_count": 59
+    },
+    "H1": {
+      "offset": 5109,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H2": {
+      "offset": 4912,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H3": {
+      "offset": 4864,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H4": {
+      "offset": 4816,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H5": {
+      "offset": 8263,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H6": {
+      "offset": 8215,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H11": {
+      "offset": 6263,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H12": {
+      "offset": 6311,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H13": {
+      "offset": 1105,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H14": {
+      "offset": 1153,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H15": {
+      "offset": 1201,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "H16": {
+      "offset": 1008,
+      "count": 48,
+      "physical_visible_count": 58
+    },
+    "J1": {
+      "offset": 3786,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J2": {
+      "offset": 3969,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J3": {
+      "offset": 3923,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J4": {
+      "offset": 3877,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J5": {
+      "offset": 7507,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J6": {
+      "offset": 7461,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J11": {
+      "offset": 7013,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J12": {
+      "offset": 7059,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J13": {
+      "offset": 2046,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J14": {
+      "offset": 2092,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J15": {
+      "offset": 2138,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "J16": {
+      "offset": 2317,
+      "count": 46,
+      "physical_visible_count": 56
+    },
+    "K1": {
+      "offset": 3741,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K2": {
+      "offset": 3832,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K3": {
+      "offset": 4015,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K4": {
+      "offset": 7326,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K5": {
+      "offset": 7416,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K6": {
+      "offset": 7371,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K10": {
+      "offset": 6923,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K11": {
+      "offset": 6968,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K12": {
+      "offset": 7193,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K13": {
+      "offset": 1827,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K14": {
+      "offset": 2001,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "K15": {
+      "offset": 2272,
+      "count": 45,
+      "physical_visible_count": 55
+    },
+    "L1": {
+      "offset": 3697,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L2": {
+      "offset": 3653,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L3": {
+      "offset": 4060,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L4": {
+      "offset": 7282,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L5": {
+      "offset": 7238,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L6": {
+      "offset": 7553,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L7": {
+      "offset": 7597,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L8": {
+      "offset": 6836,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L9": {
+      "offset": 6792,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L10": {
+      "offset": 7105,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L11": {
+      "offset": 7149,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L12": {
+      "offset": 1872,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L13": {
+      "offset": 2184,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "L14": {
+      "offset": 2228,
+      "count": 44,
+      "physical_visible_count": 54
+    },
+    "M1": {
+      "offset": 4189,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M2": {
+      "offset": 4232,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M3": {
+      "offset": 4104,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M4": {
+      "offset": 7684,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M5": {
+      "offset": 7727,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M6": {
+      "offset": 7641,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M8": {
+      "offset": 6880,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M9": {
+      "offset": 6707,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M10": {
+      "offset": 6664,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M11": {
+      "offset": 1916,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M12": {
+      "offset": 1700,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "M13": {
+      "offset": 1657,
+      "count": 43,
+      "physical_visible_count": 53
+    },
+    "N1": {
+      "offset": 4275,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N2": {
+      "offset": 4317,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N3": {
+      "offset": 4147,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N4": {
+      "offset": 7770,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N5": {
+      "offset": 3370,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N6": {
+      "offset": 3453,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N7": {
+      "offset": 2645,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N8": {
+      "offset": 2562,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N9": {
+      "offset": 6750,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N10": {
+      "offset": 1959,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N11": {
+      "offset": 1785,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "N12": {
+      "offset": 1743,
+      "count": 42,
+      "physical_visible_count": 52
+    },
+    "O1": {
+      "offset": 3288,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O2": {
+      "offset": 3207,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O3": {
+      "offset": 3166,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O4": {
+      "offset": 3329,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O5": {
+      "offset": 3412,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O7": {
+      "offset": 2604,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O8": {
+      "offset": 2521,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O9": {
+      "offset": 2687,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O10": {
+      "offset": 2728,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "O11": {
+      "offset": 2809,
+      "count": 41,
+      "physical_visible_count": 51
+    },
+    "P1": {
+      "offset": 3248,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P2": {
+      "offset": 3087,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P3": {
+      "offset": 3008,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P4": {
+      "offset": 3534,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P5": {
+      "offset": 3613,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P6": {
+      "offset": 2481,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P7": {
+      "offset": 2402,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P8": {
+      "offset": 2850,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P9": {
+      "offset": 2929,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "P10": {
+      "offset": 2769,
+      "count": 40,
+      "physical_visible_count": 50
+    },
+    "Q1": {
+      "offset": 3127,
+      "count": 39,
+      "physical_visible_count": 49
+    },
+    "Q2": {
+      "offset": 3048,
+      "count": 39,
+      "physical_visible_count": 49
+    },
+    "Q3": {
+      "offset": 3495,
+      "count": 39,
+      "physical_visible_count": 49
+    },
+    "Q4": {
+      "offset": 3574,
+      "count": 39,
+      "physical_visible_count": 49
+    },
+    "Q6": {
+      "offset": 2442,
+      "count": 39,
+      "physical_visible_count": 49
+    },
+    "Q7": {
+      "offset": 2363,
+      "count": 39,
+      "physical_visible_count": 49
+    },
+    "Q8": {
+      "offset": 2890,
+      "count": 39,
+      "physical_visible_count": 49
+    },
+    "Q9": {
+      "offset": 2969,
+      "count": 39,
+      "physical_visible_count": 49
+    }
+  },
+  "geometry_note": "Resample each named strip onto venue3d's existing geometry; not a hardware count change.",
+  "files": {
+    "activate": {
+      "name": "ripples-activate.rgb.gz",
+      "bytes": 880610,
+      "sha256": "f9b29ab826f621bf3b3b49e8f4742b632c90a6ffb7c1d7a15ad273211ccba150",
+      "decoded_bytes": 17258400
+    },
+    "sleep": {
+      "name": "ripples-sleep.rgb.gz",
+      "bytes": 6657567,
+      "sha256": "f5af4a53c4599b0282950e0fe10f13fd64b4a48a16428ff9b5b749301e8d3d87",
+      "decoded_bytes": 17258400
+    }
+  }
+}

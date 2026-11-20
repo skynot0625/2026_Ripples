@@ -25,6 +25,7 @@ from ripples.realtime import Positions
 from ripples.run import recorded_spikes
 from ripples.sensors import depth_features
 from ripples.visualization import RipplesVisual
+from ripples.example_clip import ExampleClip
 
 FOLDER = DATA_DIR/"m30_session"
 SEED = 20261120
@@ -308,6 +309,7 @@ def render(folder, scene, output):
     with tempfile.TemporaryDirectory(prefix="m30-example-", dir=RUNTIME_DIR) as temporary:
         assert Path(temporary).resolve().is_relative_to(RUNTIME_DIR)
         memory = SpatialMemory(Path(temporary)/"example.sqlite3", namespace="demo")
+        clip = ExampleClip(ROOT/"exhibition-server/static")
         try:
             for s in range(180):
                 memory.import_recording(f"example:{s}", seconds[s], epoch=BASE_NS/1e9)
@@ -331,15 +333,18 @@ def render(folder, scene, output):
                 begin = time.perf_counter()
                 images = [active.render(raw, count, events=batch, dt=.1), sleep.render(raw, count, dt=.1)]
                 timing.append(time.perf_counter()-begin)
+                clip.add(images)
                 movie.counts.append(count)
                 if frame % 2 == 0:
                     movie.add_venue(images, t, count, places, latest)
             source.close()
+            clip_doc = clip.close(scene.led_bounds)
             movie.save(output)
             snapshot = memory.snapshot()
             report = {"example": True, "venue": "m30", "history_s": 180, "visible_input_s": 60, "fade_s": 8,
                       "gif_fps": 5, "led_render_fps": 10, "neurons": 8460, "gain": 9.5,
                       "position_mode": "simulation_truth", "added_radial_waves": False,
+                      "sensor_mapping": "sensory-v2", "venue3d_clip_frames": clip_doc["frames"],
                       "led_mapping_bounds_m": scene.led_bounds.tolist(), "lobby_mapped": False,
                       "active_dark_at_end": not bool(images[0].any()), "spatial_cells": len(snapshot),
                       "cells_with_std": sum(any(v > 0 for v in e["std"].values()) for e in snapshot),
@@ -347,6 +352,8 @@ def render(folder, scene, output):
                       "operational_db_accessed": False, "temporary_example_db_removed": True,
                       "route_length_m": float(scene.cumulative[-1]), "route_speed_m_s": float(scene.cumulative[-1]/60)}
         finally:
+            for stream in clip.streams.values():
+                stream.close()
             memory.close()
     write_json(output.with_suffix(".json"), report)
     return report

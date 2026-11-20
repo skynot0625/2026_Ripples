@@ -66,6 +66,7 @@ GUIDE = """리플즈 M30 공간 시뮬레이터 웹판 ({made})
 - venue.json        공간 도면
 - state.json        내려받은 때의 배치와 장치 위치
 - person_mesh.bin, person_anim.bin   사람 모델과 걷기 동작
+- ripples-example.js/json, ripples-activate.rgb.gz, ripples-sleep.rgb.gz   심탑 감각 예시
 - 읽어주세요.txt     이 글 (올리지 않아도 됩니다)
 
 
@@ -97,6 +98,7 @@ def build(venue, state, default_layout):
     ver = hashlib.sha256(shim.encode("utf-8")).hexdigest()[:10]   # in the script's address: a browser never keeps an old copy (user 2026-11-07)
     html = (ROOT / "venue3d.html").read_text(encoding="utf-8")
     for a, b in (('<script src="/simulator.js"></script>', f'<script src="static-sim.js?v={ver}"></script>'),
+                 ('<script src="/static/ripples-example.js"></script>', '<script src="ripples-example.js"></script>'),
                  ('  <script src="/testui.js"></script>\n', ''),
                  ("fetch('/api/venue', {cache: 'no-store'})", "fetch('venue.json', {cache: 'no-store'})"),
                  ("fetch('/static/person_mesh.bin'", "fetch('person_mesh.bin'"),
@@ -111,6 +113,11 @@ def build(venue, state, default_layout):
              "static-sim.js": shim.encode("utf-8")}
     for f in ("person_mesh.bin", "person_anim.bin"):
         files[f] = (ROOT / "static" / f).read_bytes()
+    for f in ("ripples-example.json", "ripples-activate.rgb.gz", "ripples-sleep.rgb.gz"):
+        files[f] = (ROOT / "static" / f).read_bytes()
+    files["ripples-example.js"] = (ROOT / "static" / "ripples-example.js").read_text(encoding="utf-8").replace(
+        "const root = '/static/'", "const root = './'"
+    ).encode("utf-8")
     files["읽어주세요.txt"] = GUIDE.format(made=time.strftime("%Y-%m-%d %H:%M"), venue=venue.get("id"),
                                        solids=len(venue.get("solids", []))).encode("utf-8")
     return files

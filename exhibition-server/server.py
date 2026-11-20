@@ -1162,6 +1162,21 @@ class ViewerHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+        elif parsed.path in ("/static/ripples-example.js", "/static/ripples-example.json",
+                             "/static/ripples-activate.rgb.gz", "/static/ripples-sleep.rgb.gz"):
+            # Fixed allowlist: view-only example assets, no sensor or LED feed writes.
+            path = self.page_dir / "static" / parsed.path.rsplit("/", 1)[1]
+            if not path.is_file():
+                self.send_error(HTTPStatus.NOT_FOUND)
+                return
+            data = path.read_bytes()
+            kind = "application/javascript" if path.suffix == ".js" else "application/json" if path.suffix == ".json" else "application/octet-stream"
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", kind)
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
         elif parsed.path == "/stream.mjpg":
             self._stream()
         elif parsed.path == "/favicon.ico":

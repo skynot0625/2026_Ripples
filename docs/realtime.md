@@ -56,7 +56,7 @@ LAN 연결은 필요하다. 센터와 심 탑이 별도 PC이면 모니터 captu
 | 혈 원시 카메라 | 240×180, depth `<u2` mm + confidence `<u2`, 약 10 Hz | 유효 화소 검사, 회전, 3×3 영역 거리 median·유효 비율 |
 | 혈 위쪽 거리 | 포인트 **1개**, `id=0`, `distance_mm`, `valid`, `status` | m로 변환. status=255/invalid/0/60m 이상 제외, 혈 XY의 보라 끝점 |
 | 비콘 | 수신기별 nodes, `median_dbm`, `age_ms`, `n`, `state` | 확정 좌표 5개, 신선한 노드 3개 이상. 현재 상대 RSSI 가중 위치 / RF 보정 후 거리 모델 |
-| 맥 현재 실시간 | `/api/maek`: `v:1`, `device`, `seq`, `mics:[L,C,R]` 각 0..1 | `mic_level_0..2`, 낮은 층 베이지 3점. 주파수·dBFS가 아님 |
+| 맥 현재 실시간 | `/api/maek`: `v:1`, `device`, `seq`, `mics:[L,C,R]` 각 0..1 | `mic_level_0..2`, L/C/R 세 음량 기둥(높이·밝기). 주파수·dBFS가 아님 |
 | 맥 원시 음성 선택 경로 | 44.1kHz, 16bit signed LE, 3채널 interleaved PCM | PC에서 DC 제거, RMS 전력·Hann FFT, 저/중/고 대역 추출 |
 
 현재 센터의 `/api/maek`는 direction/haptic/rms도 받을 수 있으나 측정 축·보정 규격이

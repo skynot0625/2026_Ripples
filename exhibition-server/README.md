@@ -1,5 +1,10 @@
 # Ripples ToF Web Viewer
 
+심탑 센서 예시는 [공간 3D 확인](http://127.0.0.1:8000/venue3d?test)의 **심탑 · 센서 맵핑 예시**에서 볼 수 있습니다.
+Activate/Sleep·시간표·일시정지·시점 비교를 지원하며, 같은 Python 렌더 결과를 화면 전용으로 재생합니다.
+[감각별 맵핑과 3D 캡처](../docs/SENSOR_MAPPING.md), [전체 데이터 흐름](../docs/DATA_FLOW.md)을 참고하세요.
+
+
 Raspberry Pi 4 + Arducam B0410(240×180, 최대 4000mm) 깊이 영상을 브라우저로 보내는 헤드리스 뷰어.
 기본 화면은 WebSocket으로 깊이 데이터를 받아 Canvas에 직접 그린다. MJPEG(`/stream.mjpg`)은 비교·호환용으로 남아 있다.
 의존성: Python 표준 라이브러리, OpenCV, NumPy, ArducamDepthCamera.
