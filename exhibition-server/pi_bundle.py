@@ -570,7 +570,7 @@ def current_hash(visual) -> str:
     return composition_hash(comp) if comp else ""
 
 
-def follow(url: str, visual, manifest_path: Path, stop: threading.Event, every: float = 5.0) -> threading.Thread:
+def follow(url: str, visual, manifest_path: Path, stop: threading.Event, every: float = 1.0) -> threading.Thread:
     """Pi side of 「Pi로 보내기」: ask <url>/api/pi-publish every few seconds; a changed composition replaces
     visual.json (VisualStore.replace: the screen redraws at once) and the manifest (so pi_check.py still agrees).
     The exhibition server being out of reach changes nothing: the last received settings stay."""

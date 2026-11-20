@@ -66,7 +66,9 @@ PAGES = {"/": "index.html", "/operator": "operator.html",
          # read-only 3D check of the venue geometry with the live device poses (no editing)
          "/venue3d": "venue3d.html",
          # 심 (central structure) LED matrix simulator: 180 strips / 10,350 LEDs under the tilted top plate (WebGL)
-         "/sim": "sim.html"}
+         "/sim": "sim.html",
+         # phone remote for the 혈 device screen (2026-11-20): edit the shown composition, saved and sent to the 혈 Pi
+         "/remote/hyeol": "remote.html"}
 # editing / checking screens (not exhibition outputs): opened without ?test, ?clean or ?embed they redirect to ?test
 TOOL_PAGES = {"/", "/operator", "/simulator", "/mapping", "/venue3d", "/sim"}
 
@@ -740,6 +742,7 @@ NAV_LINKS = (
     ("/mapping", "블라인드 맵핑"),
     ("/venue3d", "공간 3D 확인"),
     ("/sim", "심 LED 시뮬레이터"),
+    ("/remote/hyeol", "혈 화면 조종 (폰)"),
 )
 # The outputs themselves (device screens, blind outputs) and the compatibility routes are opened from 출력 관리.
 

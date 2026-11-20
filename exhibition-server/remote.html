@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ripples · 혈 화면 조종</title>
+  <style>
+    /* 폰으로 혈 기구 화면을 조종 (2026-11-20). 고치면 저장 → 「Pi로 보내기」까지 자동, 혈 Pi 는 전시컴을 따라가 다시 그린다 */
+    :root { color-scheme: dark; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #000; color: #eee; font-size: 16px; line-height: 1.45; font-variant-numeric: tabular-nums;
+           padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(28px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    h2 { font-size: 15px; color: #aaa; font-weight: 600; margin: 22px 0 8px; }
+    #pi { min-height: 3em; color: #ccc; margin: 0 0 6px; }
+    #pi b { color: #fff; }
+    .ok { color: #9fd49f; } .wait { color: #ffd479; } .bad { color: #ff8a7a; }
+    .comps { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    button { min-height: 48px; background: #161616; color: #fff; border: 1px solid #444; border-radius: 8px; padding: 0 12px; font: inherit; cursor: pointer; text-align: left; }
+    button[aria-pressed="true"] { background: #fff; color: #000; border-color: #fff; }
+    button.on-pi::after { content: " · 혈"; color: #9fd49f; }
+    button[aria-pressed="true"].on-pi::after { color: #1b6b1b; }
+    button:disabled { opacity: .4; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .layer { border-top: 1px solid #262626; padding: 12px 0 4px; }
+    .layer > .head { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 48px; }
+    .layer > .head b { font-size: 16px; flex: 1; }
+    .layer.hidden .params { display: none; }
+    label.f { display: grid; grid-template-columns: 6.5em 1fr 4.2em; gap: 10px; align-items: center; min-height: 48px; }
+    label.f span.v { text-align: right; color: #ccc; white-space: nowrap; overflow: hidden; }
+    input[type=range] { width: 100%; height: 36px; accent-color: #fff; }
+    select, input[type=color] { min-height: 44px; width: 100%; background: #111; color: #fff; border: 1px solid #555; border-radius: 6px; font: inherit; }
+    .switch { min-width: 92px; text-align: center; }
+    .note { color: #999; font-size: 14px; }
+    #msg { min-height: 1.5em; }
+  </style>
+</head>
+<body>
+  <h1>혈 화면 조종</h1>
+  <p id="pi" aria-live="polite">혈 Pi 상태 확인 중…</p>
+  <div class="row"><label class="row note"><input type="checkbox" id="auto" checked> 고치면 바로 혈로 보내기</label>
+    <button type="button" id="send">지금 혈로 보내기</button></div>
+  <p id="msg" class="note" aria-live="polite"></p>
+  <h2>화면 고르기</h2>
+  <div class="comps" id="comps"></div>
+  <h2 id="edit-title">설정</h2>
+  <div id="layers"></div>
+  <p class="note">혈 Pi 는 전시컴에 몇 초마다 물어봐서 바뀐 설정을 받아 다시 그립니다. 기본 화면(SENSOR 등)은 고칠 수 없어서 「복사해서 고치기」로 사본을 만듭니다. 시각화 작업실(/)과 같은 설정을 함께 고칩니다.</p>
+  <script src="/tofrender.js"></script>
+  <script>
+    const $ = id => document.getElementById(id);
+    const R = window.RipplesRender;
+    let vis = null, sel = null, pending = null, pub = null, sendTimer = null, dragging = false;
+    const BUILTIN = id => !/^c\d+$/.test(id);
+    const sync = R.connectVisual(m => { vis = m; if (!sel) sel = (pub && pub.published && pub.published.id) || m.slots.hyeol_device; render(); tryPublish(); },
+                                 (kind, err) => { if (kind === 'error') say(`오류: ${err}`, 'bad'); });
+    function say(t, cls) { $('msg').textContent = t; $('msg').className = 'note ' + (cls || ''); }
+    async function pollPi() {
+      try { pub = await fetch('/api/pi-publish/status', {cache: 'no-store'}).then(r => r.json()); } catch { pub = null; }
+      const p = pub && pub.published, seen = pub && pub.seen;
+      let html = '';
+      if (!seen) html = '<span class="bad">혈 Pi 가 아직 전시컴에 물어보지 않았습니다</span>';
+      else {
+        const ago = Math.round((Date.now() - Date.parse(seen.at)) / 1000);
+        const on = p && seen.hash === p.hash;
+        html = `혈이 보이는 것: <b>${p && on ? p.name : (nameByHash(seen.hash) || seen.hash)}</b> · <span class="${ago < 15 ? 'ok' : 'bad'}">${ago}초 전 확인</span>`;
+        if (p && !on) html += ` · <span class="wait">보낸 「${p.name}」 받는 중…</span>`;
+      }
+      $('pi').innerHTML = html;
+      if (vis) markPi();
+    }
+    function nameByHash() { return null; }
+    function markPi() { const id = pub && pub.published && pub.seen && pub.seen.hash === pub.published.hash ? pub.published.id : null;
+      document.querySelectorAll('[data-comp]').forEach(b => b.classList.toggle('on-pi', b.dataset.comp === id)); }
+    setInterval(pollPi, 1500); pollPi();
+    function render() {
+      $('comps').replaceChildren(...vis.order.map(id => { const c = vis.compositions[id]; if (!c) return document.createTextNode('');
+        const b = Object.assign(document.createElement('button'), {type: 'button', textContent: c.name});
+        b.dataset.comp = id; b.setAttribute('aria-pressed', String(id === sel));
+        b.addEventListener('click', () => { sel = id; render(); if ($('auto').checked) publish(); });
+        return b; }));
+      markPi();
+      if (!dragging) renderLayers();
+    }
+    function renderLayers() {
+      const c = vis.compositions[sel]; if (!c) { $('layers').replaceChildren(); return; }
+      $('edit-title').textContent = `설정 · ${c.name}`;
+      if (BUILTIN(sel)) {
+        const b = Object.assign(document.createElement('button'), {type: 'button', textContent: '복사해서 고치기'});
+        b.addEventListener('click', () => { sync.send({op: 'duplicate', id: sel}); say('복사본을 만드는 중…'); waitNew = true; });
+        $('layers').replaceChildren(Object.assign(document.createElement('p'), {className: 'note', textContent: '기본 화면은 고칠 수 없습니다.'}), b);
+        return;
+      }
+      $('layers').replaceChildren(...c.layers.map((L, i) => layerBox(c, L, i)));
+    }
+    let waitNew = false; const openSet = new Set();
+    function edit(fn, final) {   // change the selected composition (a copy), send it; final = saved and then sent to 혈
+      const c = JSON.parse(JSON.stringify(vis.compositions[sel])); fn(c);
+      vis.compositions[sel] = c;
+      sync.send({op: 'set', id: sel, composition: c}, final);
+      if (final && $('auto').checked) { pending = {id: sel, at: Date.now()}; say('저장 중…', 'wait'); }
+    }
+    function tryPublish() {
+      if (waitNew && vis.created) { waitNew = false; sel = vis.created; render(); say('복사본을 만들었습니다. 이제 고칠 수 있습니다', 'ok'); }
+      if (pending && vis.saved) { pending = null; publish(); }
+    }
+    async function publish() {
+      if (!vis || !vis.saved) { pending = {id: sel}; return; }
+      try {
+        const r = await fetch('/api/pi-publish', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: sel, rev: String(vis.revision)})});
+        const d = await r.json();
+        if (r.status === 409) { pending = {id: sel}; return; }
+        if (!r.ok) throw new Error(d.error || r.status);
+        say(`혈로 보냄: ${vis.compositions[sel].name} (혈이 몇 초 안에 받음)`, 'ok'); pollPi();
+      } catch (e) { say(`보내기 실패: ${e.message}`, 'bad'); }
+    }
+    $('send').addEventListener('click', publish);
+    function layerBox(c, L, i) {
+      const spec = R.RENDERERS[L.renderer] || {label: L.renderer, params: []}, box = document.createElement('div'), key = `${sel}:${L.id || i}`;
+      box.className = 'layer' + (L.visible === false ? ' hidden' : '');
+      const head = document.createElement('div'); head.className = 'head';
+      const t = document.createElement('b'); t.textContent = L.name || spec.label;
+      const sw = Object.assign(document.createElement('button'), {type: 'button', className: 'switch', textContent: L.visible === false ? '꺼짐' : '켜짐'});
+      sw.setAttribute('aria-pressed', String(L.visible !== false));
+      sw.addEventListener('click', () => edit(x => { x.layers[i].visible = x.layers[i].visible === false; }, true));
+      head.append(t, sw);
+      const ps = document.createElement('div'); ps.className = 'params';
+      if (!L.opacity || L.opacity.value !== undefined) ps.append(rangeField('투명도', 0, 1, 0.05, L.opacity ? L.opacity.value : 1, '', v => (x => { x.layers[i].opacity = {value: v}; })));
+      for (const p of spec.params || []) {
+        const cur = (L.params || {})[p.key] ?? (spec.defaults || {})[p.key] ?? p.default;
+        const set = v => x => { x.layers[i].params = Object.assign({}, x.layers[i].params, {[p.key]: v}); };
+        if (p.type === 'bool') ps.append(boolField(p.label, !!cur, set));
+        else if (p.type === 'select') ps.append(selectField(p.label, p.options, cur, set));
+        else if (p.type === 'color') ps.append(colorField(p.label, cur, set));
+        else if (p.type === 'angle') ps.append(rangeField(p.label, p.min ?? 0, p.max ?? 360, p.step ?? 1, cur ?? 0, '°', set));
+        else if (p.min !== undefined && p.max !== undefined && !p.type) ps.append(rangeField(p.label, p.min, p.max, p.step || 1, cur ?? p.min, p.unit || '', set));
+      }
+      const more = Object.assign(document.createElement('button'), {type: 'button', className: 'switch', textContent: openSet.has(key) ? '접기' : '설정'});
+      more.addEventListener('click', () => { openSet.has(key) ? openSet.delete(key) : openSet.add(key); renderLayers(); });
+      head.append(more); ps.hidden = !openSet.has(key);
+      box.append(head, ps); return box;
+    }
+    function wrap(label, input, value) { const l = document.createElement('label'); l.className = 'f'; const s = document.createElement('span'); s.textContent = label; l.append(s, input); if (value) l.append(value); return l; }
+    function rangeField(label, min, max, step, cur, unit, set) {
+      const r = Object.assign(document.createElement('input'), {type: 'range', min, max, step, value: cur}), v = document.createElement('span'); v.className = 'v';
+      const show = x => { v.textContent = `${Math.round(x * 100) / 100}${unit}`; }; show(Number(cur));
+      let t = 0;
+      r.addEventListener('input', () => { dragging = true; show(Number(r.value)); if (performance.now() - t > 150) { t = performance.now(); edit(set(Number(r.value)), false); } });
+      r.addEventListener('change', () => { dragging = false; edit(set(Number(r.value)), true); });
+      return wrap(label, r, v);
+    }
+    function boolField(label, cur, set) {
+      const b = Object.assign(document.createElement('button'), {type: 'button', className: 'switch', textContent: cur ? '켬' : '끔'});
+      b.setAttribute('aria-pressed', String(cur)); b.addEventListener('click', () => edit(set(!cur), true));
+      return wrap(label, b);
+    }
+    function selectField(label, options, cur, set) {
+      const s = document.createElement('select');
+      for (const o of options || []) { const [val, text] = Array.isArray(o) ? o : [o, o]; s.append(Object.assign(document.createElement('option'), {value: val, textContent: text, selected: String(val) === String(cur)})); }
+      s.addEventListener('change', () => { const o = (options || []).map(x => Array.isArray(x) ? x[0] : x).find(x => String(x) === s.value); edit(set(o), true); });
+      return wrap(label, s);
+    }
+    function colorField(label, cur, set) {
+      const c = Object.assign(document.createElement('input'), {type: 'color', value: /^#[0-9a-f]{6}$/i.test(cur || '') ? cur : '#ffffff'});
+      c.addEventListener('change', () => edit(set(c.value), true));
+      return wrap(label, c);
+    }
+  </script>
+</body>
+</html>
