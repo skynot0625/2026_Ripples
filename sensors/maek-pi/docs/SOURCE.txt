@@ -1,0 +1,5 @@
+User-provided source: maek-audio-pi_0.2.0.zip
+SHA256: c24c38fe98e8537c91ea7a3ecb013ef368036400f7f865d525284fc418611a7e
+maek_audio/*.py preserved byte-for-byte.
+Adapter entry point: run.py
+Input protocol copied from this conversation mic3-pi package.

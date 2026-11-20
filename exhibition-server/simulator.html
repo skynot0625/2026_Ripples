@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ripples · Simulator</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #000; color: #eee; overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+           overscroll-behavior: none; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+    /* stacked areas that never overlap (2026-10-15 night): navigation (back / menu / server CPU·GPU) / the preview right
+       under it, taking all the width and every bit of height left / below it the choice row (device, screen, view
+       settings), the view settings when open, the offline note and the controls (compact, scroll inside when short).
+       Nothing is laid over the preview; the page inside keeps its own proportions (letterboxed, never cropped). */
+    body > * { flex: none; min-width: 0; }
+    #monitor { flex: 1 1 auto; }
+    #navarea { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #333;
+      padding: calc(env(safe-area-inset-top, 0px) + 8px) calc(env(safe-area-inset-right, 0px) + 8px) 8px calc(env(safe-area-inset-left, 0px) + 8px); }
+    #venue { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ripples-nav-slot { display: flex; flex-direction: column; align-items: flex-end; }
+    /* server-host CPU / GPU % (the computer running server.py, not this phone): small, next to the navigation buttons */
+    #hoststat { margin-left: auto; flex: none; font: 11px/1.3 ui-monospace, Menlo, monospace; color: #aaa; text-align: right; white-space: pre; }
+    #venue { min-width: 0; }
+    html.ripples-clean #hoststat { display: none; }
+    body.plain #navarea { display: none; }
+    #monitor { min-height: 0; position: relative; box-shadow: 0 1px 0 #333; z-index: 1; }
+    /* 혈/맥 + 기구 화면/블라인드 화면 + 보기 설정, one row just below the picture (never over it) */
+    #viewbar { display: flex; align-items: center; gap: 6px; padding: 6px calc(env(safe-area-inset-right, 0px) + 8px) 0 calc(env(safe-area-inset-left, 0px) + 8px);
+      min-width: 0; }
+    #viewbar [role=group] { display: flex; gap: 6px; min-width: 0; }
+    #views { flex: 1 1 auto; justify-content: flex-end; }
+    #viewbar button { flex: 0 1 auto; min-height: 44px; min-width: 44px; padding: 0 10px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+    #viewbar button[aria-pressed="true"] { background: #fff; color: #000; border-color: #fff; }
+    #settings-btn[aria-expanded="true"] { background: #333; }
+    #frame-box { position: absolute; inset: 0; overflow: hidden; }
+    /* simulator display settings (not saved, not sent): 프로젝터 보기 시각화 / 맵핑 확인 — a row under the choice row */
+    #view-settings { margin: 6px calc(env(safe-area-inset-right, 0px) + 8px) 0 calc(env(safe-area-inset-left, 0px) + 8px); padding: 8px;
+      border: 1px solid #444; border-radius: 8px; display: grid; gap: 6px; font-size: 14px; }
+    #view-settings .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    #view-settings button { min-height: 44px; font-size: 15px; font-weight: 600; }
+    #view-settings button[aria-pressed="true"] { background: #fff; color: #000; border-color: #fff; }
+    #view-note { font-size: 12px; color: #aaa; overflow-wrap: anywhere; }
+    #monitor iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; }
+    #no-blind { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; text-align: center; color: #ff8a7a; font-size: 14px; }
+    #controls { flex: 0 1 auto; min-height: 0; max-height: 45vh; max-height: 45dvh; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 6px;
+      padding: 6px calc(env(safe-area-inset-right, 0px) + 8px) calc(env(safe-area-inset-bottom, 0px) + 6px) calc(env(safe-area-inset-left, 0px) + 8px); }
+    button { font: inherit; color: #fff; background: #1a1a1a; border: 1px solid #555; border-radius: 8px; cursor: pointer;
+      touch-action: none; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    #devices button { min-width: 48px; }
+    /* 혈 attached (in use) / detached (idling) — simulation switch, shown only while 혈 is selected */
+    #attach { min-height: 44px; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    #attach[aria-pressed="false"] { border-color: #ff8a7a; color: #ff8a7a; }
+    #attach .sub { font-weight: 400; font-size: 14px; color: #ccc; }
+    #attach[hidden] { display: none; }
+    /* pad: turns beside forward on top, sideways moves in the middle row, backward at the bottom */
+    #pad { min-height: 0; display: grid; gap: 6px; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: repeat(3, 46px);
+      grid-template-areas: "left fwd right" "sleft . sright" ". back ."; }
+    #pad button { min-width: 44px; min-height: 44px; font-size: 16px; font-weight: 600; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 1px; line-height: 1.05; }
+    #pad button .arrow { font-size: 18px; line-height: 1; }
+    #pad button.held { background: #fff; color: #000; border-color: #fff; }
+    #pad button.blocked { border-color: #ff8a7a; box-shadow: inset 0 0 0 2px #ff8a7a; }
+    [data-drive="fwd"] { grid-area: fwd; } [data-drive="back"] { grid-area: back; }
+    [data-drive="left"] { grid-area: left; } [data-drive="right"] { grid-area: right; }
+    [data-drive="sleft"] { grid-area: sleft; } [data-drive="sright"] { grid-area: sright; }
+    #offline { display: none; margin: 6px calc(env(safe-area-inset-right, 0px) + 8px) 0 calc(env(safe-area-inset-left, 0px) + 8px); padding: 8px; background: #000; color: #ff8a7a;
+      border: 1px solid #ff8a7a; border-radius: 6px; font-size: 14px; }
+    body.offline #offline { display: block; }
+    /* "UI 숨기기" (test UI): only the monitor stays, with "‹ 뒤로" and "UI 보이기" in the navigation area */
+    html.ripples-hide #controls, html.ripples-clean #controls { display: none; }
+    html.ripples-hide #venue { visibility: hidden; }
+    /* PC (2026-10-20): navigation across the top, the preview on the left with all the height, and the choice row, view
+       settings, offline note and controls stacked in a right-hand column. Phones keep the stacked layout above. */
+    @media (min-width: 1024px) {
+      body { display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 26vw, 400px); grid-template-rows: auto auto auto auto minmax(0, 1fr); }
+      #navarea { grid-column: 1 / -1; grid-row: 1; }
+      #monitor { grid-column: 1; grid-row: 2 / span 4; box-shadow: 1px 0 0 #333; }
+      #viewbar { grid-column: 2; grid-row: 2; flex-wrap: wrap; padding: 12px 12px 0; }
+      #views { flex: 1 1 auto; justify-content: flex-start; }
+      #view-settings { grid-column: 2; grid-row: 3; margin: 10px 12px 0; }
+      #offline { grid-column: 2; grid-row: 4; margin: 10px 12px 0; }
+      #controls { grid-column: 2; grid-row: 5; max-height: none; align-content: start; gap: 10px; padding: 12px; }
+      #pad { grid-template-rows: repeat(3, 58px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="navarea"><span id="venue">venue 확인 중…</span><span id="hoststat" role="status" aria-live="off" title="서버 컴퓨터 CPU / GPU 사용률">서버 CPU --
+GPU --</span><div id="ripples-nav-slot"></div></div>
+  <div id="monitor">
+    <div id="frame-box">
+      <iframe id="monitor-frame" title="선택한 장치의 기구 화면" src="/display/hyeol?embed&simpreview=1"></iframe>
+      <div id="no-blind" role="status" hidden></div>
+    </div>
+  </div>
+  <div id="viewbar">
+    <div id="devices" role="group" aria-label="움직일 장치">
+      <button type="button" data-device="hyeol" aria-pressed="true">혈</button>
+      <button type="button" data-device="maek" aria-pressed="false">맥</button>
+    </div>
+    <div id="views" role="group" aria-label="미리보기 화면">
+      <button type="button" data-view="device" aria-pressed="true">기구 화면</button>
+      <button type="button" data-view="blind" aria-pressed="false">블라인드 화면</button>
+    </div>
+    <button type="button" id="settings-btn" aria-expanded="false" aria-controls="view-settings" aria-label="보기 설정" title="보기 설정">⚙</button>
+  </div>
+  <div id="view-settings" role="region" aria-label="보기 설정" hidden>
+    <div>프로젝터 보기 (블라인드 화면)</div>
+    <div class="opts" role="group" aria-label="프로젝터 보기">
+      <button type="button" data-projector="visual" aria-pressed="true">시각화</button>
+      <button type="button" data-projector="mapcheck" aria-pressed="false">맵핑 확인</button>
+    </div>
+    <div id="view-note" aria-live="polite"></div>
+  </div>
+  <div id="offline" role="status">서버 연결 끊김 · 버튼이 동작하지 않음 · 다시 연결 중</div>
+  <div id="controls">
+    <button type="button" id="attach" aria-pressed="true" title="시뮬레이션용 전환 (실제 기구의 접속 판별 방식은 미결)">혈 기구 접속 · 사용 중<span class="sub">눌러서 해제</span></button>
+    <div id="pad" role="group" aria-label="장치 이동 (누르고 있는 동안 움직임)">
+      <button type="button" data-drive="fwd" aria-label="전진"><span class="arrow" aria-hidden="true">▲</span>전진</button>
+      <button type="button" data-drive="left" aria-label="좌회전"><span class="arrow" aria-hidden="true">↺</span>좌회전</button>
+      <button type="button" data-drive="right" aria-label="우회전"><span class="arrow" aria-hidden="true">↻</span>우회전</button>
+      <button type="button" data-drive="sleft" aria-label="좌이동 (방향 그대로 왼쪽으로)"><span class="arrow" aria-hidden="true">◀</span>좌이동</button>
+      <button type="button" data-drive="sright" aria-label="우이동 (방향 그대로 오른쪽으로)"><span class="arrow" aria-hidden="true">▶</span>우이동</button>
+      <button type="button" data-drive="back" aria-label="후진"><span class="arrow" aria-hidden="true">▼</span>후진</button>
+    </div>
+  </div>
+  <script src="/simulator.js"></script>
+  <script src="/mapout.js"></script>
+  <script>
+    // Simulator controller. A person pushing a device is simulated with hold-to-move buttons: while a button is held
+    // this page sends {"op": "drive", move, turn, strafe} (again every drive_repeat_s); the server moves the device with
+    // fixed speeds, gentle acceleration / deceleration, sideways moves that keep the heading, and collision that slides
+    // along walls at an angle (simulator_store.py), so every tab
+    // follows the same motion. The top half shows the selected device's 기구 화면 (/display/hyeol, /display/maek) or,
+    // with "블라인드 화면", the blind output of the space the mapping assignment currently gives that device — the same
+    // address the projector window opens (/display/blind?space=a|b&clean), so it is the real output, not a copy.
+    // The venue is fixed by the run settings; there is no venue, speed or position control here.
+    const $ = id => document.getElementById(id);
+    const query = new URLSearchParams(location.search);
+    document.body.classList.toggle('plain', !query.has('test'));
+    // projector: 'visual' = the assigned blind composition as it is (no mapping); 'mapcheck' = the same composition through
+    // the saved booth mapping. A display setting of this page only: always 'visual' when the page opens, never saved.
+    let state = null, selected = 'hyeol', view = 'device', mapping = null, projector = 'visual';
+    try { if (sessionStorage.getItem('simulator-view') === 'blind') view = 'blind'; } catch (_) {}
+    const sim = RipplesSim.connect(onState, kind => { if (kind === 'offline') document.body.classList.add('offline'); });
+
+    function onState(msg) {
+      state = msg;
+      document.body.classList.remove('offline');
+      const v = msg.venue || {};
+      $('venue').textContent = v.name ? `${v.name}${v.status && v.status !== 'complete' ? ` · ${v.status}` : ''}` : '';
+      const h = msg.hyeol || {attached: true};
+      const at = $('attach');
+      at.hidden = selected !== 'hyeol';
+      at.setAttribute('aria-pressed', String(h.attached));
+      at.firstChild.textContent = h.attached ? '혈 기구 접속 · 사용 중' : '혈 기구 해제 · 아이들링';
+      at.querySelector('.sub').textContent = h.attached ? '눌러서 해제' : '눌러서 접속';
+      RipplesSim.markBlocked(document.querySelectorAll('[data-drive]'), msg.motion && msg.motion[selected]);
+    }
+
+    // --- held buttons -> drive input (shared with /venue3d: simulator.js RipplesSim.bindDrivePad) -------------------
+    const {input, releaseAll} = RipplesSim.bindDrivePad({sim, buttons: document.querySelectorAll('[data-drive]'), device: () => selected,
+                                                         repeatS: () => (state && state.drive_repeat_s) || 0.2});
+    for (const b of document.querySelectorAll('[data-drive]')) b.addEventListener('contextmenu', e => e.preventDefault());
+    window.addEventListener('blur', releaseAll);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
+    window.addEventListener('pagehide', releaseAll);
+
+    // --- 혈 attach / detach (simulation switch: the real device's attach signal is not decided) ----------------------
+    $('attach').addEventListener('click', () => {
+      if (!state) return;
+      sim.send({op: 'attach', device: 'hyeol', attached: !(state.hyeol && state.hyeol.attached)}, true);
+    });
+
+    // --- device selection: the top half follows -------------------------------------------------------------------------
+    for (const b of document.querySelectorAll('[data-device]')) {
+      b.addEventListener('click', () => {
+        if (b.dataset.device === selected) return;
+        releaseAll();
+        selected = b.dataset.device;
+        for (const x of document.querySelectorAll('[data-device]')) x.setAttribute('aria-pressed', String(x === b));
+        showView();
+        if (state) onState(state);
+      });
+    }
+
+    // --- 기구 화면 / 블라인드 화면 (preview only: the device's pose, attach state and the controls stay as they are) -------
+    const ROLE_NAMES = {hyeol: '혈', maek: '맥'}, SPACE_NAMES = {a: 'A', b: 'B'};
+    // the space whose blinds currently show this device's screen: the existing mapping assignment, no new rule
+    const blindSpace = () => mapping && mapping.assignment ? Object.keys(mapping.assignment).find(sp => mapping.assignment[sp] === selected) || null : null;
+    function frameUrl() {
+      if (view === 'device') return `/display/${selected}?embed&simpreview=1${query.has('debug') ? '&debug' : ''}`;
+      const sp = blindSpace();
+      if (!sp) return null;
+      return projector === 'mapcheck' ? `/display/blind?space=${sp}&clean&embed&mapcheck&simpreview=1` : `/display/blind?space=${sp}&embed&simpreview=1`;
+    }
+    function showView() {
+      for (const x of document.querySelectorAll('[data-view]')) x.setAttribute('aria-pressed', String(x.dataset.view === view));
+      for (const x of document.querySelectorAll('[data-projector]')) x.setAttribute('aria-pressed', String(x.dataset.projector === projector));
+      const frame = $('monitor-frame'), url = frameUrl(), sp = blindSpace();
+      const waiting = view === 'blind' && !mapping;
+      $('no-blind').hidden = Boolean(url) || waiting;
+      $('no-blind').textContent = `현재 블라인드 맵핑 배정에 ${ROLE_NAMES[selected]}을(를) 보여 주는 공간이 없습니다.`;
+      frame.hidden = !url;
+      if (url && frame.getAttribute('src') !== url) frame.setAttribute('src', url);   // reload only when the address changes
+      frame.title = view === 'device' ? `${ROLE_NAMES[selected]} 기구 화면` : `${ROLE_NAMES[selected]} 블라인드 출력 (공간 ${SPACE_NAMES[sp] || '?'})`;
+      const booth = sp && mapping.booths && mapping.booths[sp];
+      $('view-note').textContent = view === 'device' ? `${ROLE_NAMES[selected]} 기구 화면 (/display/${selected})`
+        : waiting ? '블라인드 맵핑 배정 확인 중…'
+        : sp ? `공간 ${SPACE_NAMES[sp]} = ${ROLE_NAMES[selected]} (맵핑 배정) · ${projector === 'mapcheck' ? '배정된 composition을 저장된 블라인드 맵핑으로' : '배정된 composition 그대로 (맵핑 없이)'}`
+          + (booth && booth.content === 'pattern' ? ' · 실제 프로젝터 창은 부스 "출력 내용"이 테스트 패턴이라 지금 패턴을 내보냄' : '') : '대응 블라인드 없음';
+    }
+    for (const b of document.querySelectorAll('[data-view]')) {
+      b.addEventListener('click', () => {
+        view = b.dataset.view;
+        try { sessionStorage.setItem('simulator-view', view); } catch (_) {}
+        showView();
+      });
+    }
+    for (const b of document.querySelectorAll('[data-projector]')) b.addEventListener('click', () => { projector = b.dataset.projector; showView(); });
+    $('settings-btn').addEventListener('click', () => {
+      const open = $('view-settings').hidden;
+      $('view-settings').hidden = !open; $('settings-btn').setAttribute('aria-expanded', String(open));
+    });
+    // the assignment can rotate (혈 ↔ 맥) while this page is open: the blind view follows the device, not the space
+    RipplesMap.connect(msg => { mapping = msg; showView(); });
+    showView();
+
+    // test hook (ui tests)
+    window.simulator = {get state() { return state; }, get selected() { return selected; }, get view() { return view; }, get projector() { return projector; }, get mapping() { return mapping; }, frameUrl, input, sim};
+  </script>
+  <script>
+    // server-host CPU / GPU usage (/api/host: real readings cached by the server every 2 s; null = cannot be measured
+    // on that machine → "--", never a made-up number). Polled every 3 s while this page is visible; not on any output.
+    (() => {
+      const box = document.getElementById('hoststat');
+      const pct = v => (typeof v === 'number' ? `${Math.round(v)}%` : '--');
+      let busy = false;
+      async function poll() {
+        if (busy || document.hidden) return;
+        busy = true;
+        try {
+          const h = await fetch('/api/host', {cache: 'no-store', signal: AbortSignal.timeout ? AbortSignal.timeout(2500) : undefined}).then(r => r.json());
+          box.textContent = `서버 CPU ${pct(h.cpu)}\nGPU ${pct(h.gpu)}`;
+          const gpu = typeof h.gpu === 'number' ? `${h.gpu_name || 'GPU'} (${h.gpu_note})` : `측정 불가 · ${h.gpu_note || ''}`;
+          box.title = `서버 컴퓨터 사용률 (이 기기 아님) · CPU 전체 코어${h.cpu === null ? ' 측정 불가' : ''} · GPU ${gpu}`;
+          box.dataset.cpu = h.cpu ?? ''; box.dataset.gpu = h.gpu ?? '';
+        } catch (_) { box.textContent = '서버 CPU --\nGPU --'; box.title = '서버 응답 없음'; }
+        finally { busy = false; }
+      }
+      poll(); setInterval(poll, 3000);
+      document.addEventListener('visibilitychange', poll);
+    })();
+  </script>
+  <script src="/testui.js"></script>
+</body>
+</html>

@@ -236,3 +236,14 @@ outputs/                   로컬 새 미리보기 (Git 제외)
 [검증 기록](docs/validation.md)에 전체 테스트 결과, 이전 하드웨어 실측과 이번 오프라인
 검증의 범위를 구분해 기록합니다. [requirements-tested.txt](requirements-tested.txt)는 검증 PC의
 의존성 버전 기록이며, 일반 설치는 `pyproject.toml`의 범위를 사용합니다.
+
+## 감각기구 쪽 코드와 데이터 흐름 (2026-11-20)
+
+혈, 맥, 비콘 수신기가 센서를 읽고 처리해 공유기로 보내는 코드와, 전시컴 서버 전체를 추가했습니다. 각 기구가 받는 형식, 처리, 보내는 형식, 심탑이 전시컴에서 읽는 형식과 남은 일은 [감각기구 데이터 흐름](docs/DATA_FLOW.md)에 있습니다.
+
+| 폴더 | 내용 |
+|---|---|
+| `sensors/hyeol-pi` | 혈 Pi: ToF 카메라와 천장 거리 수집, 저장, 전시컴 송신 (TCP 9500) |
+| `sensors/maek-pi` | 맥 Pi: Teensy 마이크 3채널 수신, 소리 처리, 스피커와 진동모터, 전시컴 송신 (`/api/maek`) |
+| `sensors/beacon` | BLE 비콘 수신기 (혈, 맥 Pi 공용, `/api/beacon`) |
+| `exhibition-server` | 전시컴 서버 전체: 센서 수신, 기구 화면과 블라인드 출력, 갤러리 3D 시뮬레이터, 연결 관리 |

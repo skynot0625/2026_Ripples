@@ -1,0 +1,75 @@
+{
+ "id": "c3",
+ "name": "test3.1",
+ "builtin": false,
+ "revision": 1125,
+ "hash": "f1442773e602",
+ "created_at": "2026-11-10T21:44:24+09:00",
+ "output": "/output/hyeol?clean",
+ "port": 8000,
+ "follow": "http://100.81.166.8:8000",
+ "layers": [
+  {
+   "id": "l1",
+   "name": "공간선(실험) · ToF 3D 선 (누적·처짐·초점)",
+   "renderer": "tof_spaceline",
+   "visible": true,
+   "status": "ok",
+   "needs": [
+    "ToF 깊이 (Arducam B0410) · Pi에서 직접 읽음",
+    "혈 움직임 · ToF 윤곽으로 추정 (Pi에서 직접, 오래 움직이면 조금씩 어긋남 · 4 m 안에 벽 · 물건이 없으면 그동안의 회전은 놓침)"
+   ]
+  },
+  {
+   "id": "l2",
+   "name": "ToF SENSOR (깊이 흑백)",
+   "renderer": "tof_sensor",
+   "visible": false,
+   "status": "hidden",
+   "needs": [
+    "ToF 깊이 (Arducam B0410) · Pi에서 직접 읽음"
+   ]
+  },
+  {
+   "id": "l3",
+   "name": "VERTICAL METER 왼쪽 · 천장 거리(높이)",
+   "renderer": "updist_meter",
+   "visible": true,
+   "status": "ok",
+   "needs": [
+    "천장 거리 (TOFSense-F2 P, UART) · Pi에서 직접 읽음"
+   ]
+  },
+  {
+   "id": "l4",
+   "name": "VERTICAL METER 오른쪽 · 천장 거리(높이)",
+   "renderer": "updist_meter",
+   "visible": true,
+   "status": "ok",
+   "needs": [
+    "천장 거리 (TOFSense-F2 P, UART) · Pi에서 직접 읽음"
+   ]
+  }
+ ],
+ "files": {
+  "app/display.html": "a2a667373a864ded",
+  "app/host_stats.py": "5f3bce9f7a399720",
+  "app/inputs.py": "19c6ea20e43ab460",
+  "app/mapout.js": "bc001f7666761567",
+  "app/mapping_store.py": "249a53caf9239f5b",
+  "app/mock_tof.py": "13222e7dd828831b",
+  "app/odometry.py": "ce084f30d98ac759",
+  "app/pi_bundle.py": "b8cc1a74c34da8cb",
+  "app/pi_check.py": "a4676b7d0f534f62",
+  "app/server.py": "0f23f4d1a413df62",
+  "app/sim_feed.py": "0c5f9ac6c9119063",
+  "app/simulator_store.py": "55aadca81e164f64",
+  "app/testui.js": "7cbdf9de41d72adf",
+  "app/tofrender.js": "c20729f862e5fbb5",
+  "app/tofsense.py": "93aa84dd229652bc",
+  "app/venue.py": "ac27e9e9abc03d0b",
+  "app/visual_store.py": "85122a71dccd8d1b",
+  "data/visual.json": "d373caafdb72ff10"
+ },
+ "note": "11-15 값 (new_1115) · Pi에서 직접"
+}

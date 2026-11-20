@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>Ripples · 시각화 작업실</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #000; color: #eee; display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+    main { position: relative; min-height: 0; overflow: hidden; }
+    #view, #mjpeg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #mjpeg { object-fit: contain; image-rendering: pixelated; display: none; }
+    body.use-mjpeg #mjpeg { display: block; }
+    body.use-mjpeg #view { display: none; }
+    #empty { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; color: #777; }
+    /* the editing panel never pushes the preview away: at most 55 % of the screen, scrolled inside */
+    footer { background: rgba(10,10,10,.96); border-top: 1px solid #262626; padding: 10px 16px; display: grid; gap: 10px; align-content: start;
+      max-height: 55vh; max-height: 55dvh; overflow-y: auto; overscroll-behavior: contain; }
+    button, select, input[type=text], input[type=number] { background: #1a1a1a; color: #fff; border: 1px solid #444; border-radius: 6px; padding: 6px 10px; font: inherit; font-size: 13px; min-width: 0; }
+    button { cursor: pointer; }
+    button:disabled, select:disabled, input:disabled { opacity: .45; cursor: default; }
+    button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    input[type=range] { width: 100%; min-width: 0; accent-color: #fff; }
+    input[type=checkbox] { accent-color: #fff; width: 18px; height: 18px; margin: 0; }
+    input[type=color] { width: 44px; height: 32px; padding: 0; border: 1px solid #444; border-radius: 6px; background: #111; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-width: 0; }
+    h2 { margin: 6px 0 0; font-size: 13px; color: #fff; }
+    .note { font-size: 13px; color: #aaa; overflow-wrap: anywhere; }
+    .bad { color: #ff6b6b; }
+    #save-state.ok { color: #9fd49f; }
+    /* Pi 실행본: what the chosen composition needs on the Pi, then the download */
+    #pi-box { display: grid; gap: 4px; }
+    #pi-box ul { margin: 0; padding-left: 18px; }
+    #pi-box .warn { color: #ffcf7a; }
+    #pi-follow.warn { color: #ffcf7a; }
+    .field { display: grid; grid-template-columns: 7em minmax(0, 1fr) 7.5em; gap: 8px; align-items: center; font-size: 13px; color: #bbb; min-width: 0; }
+    /* the current value: a number field you can type into (slider and field always show the same value) + its unit */
+    .field .val { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    .field .val input { flex: 1 1 auto; width: 100%; min-width: 0; padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+    .field .val input::-webkit-outer-spin-button, .field .val input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    .field .val .unit { flex: none; color: #888; font-size: 12px; }
+    .field.check { grid-template-columns: 7em auto 1fr; }
+    .bind { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); gap: 6px 10px; padding: 6px 0 6px 12px; border-left: 2px solid #333; font-size: 13px; color: #bbb; }
+    .bind label { display: grid; gap: 2px; }
+    .bind .field { grid-column: 1 / -1; display: grid; }
+    details.layer { border: 1px solid #333; border-radius: 6px; }
+    details.layer > summary { list-style: none; cursor: pointer; padding: 10px 12px; display: flex; gap: 8px; align-items: center; min-height: 44px; }
+    details.layer > summary::-webkit-details-marker { display: none; }
+    details.layer > summary::before { content: "▸"; color: #aaa; }
+    details.layer[open] > summary::before { content: "▾"; }
+    details.layer.hidden-layer > summary { color: #888; }
+    .layer-body { padding: 4px 12px 12px; display: grid; gap: 8px; }
+    /* never wider than the screen (2026-10-15): a select is as wide as its longest option (the long layer-type names),
+       so every select / grid column may shrink; long names wrap */
+    footer, .layer-body, .fx-body, .fx-group, .bind, .angle { grid-template-columns: minmax(0, 1fr); }
+    .bind { grid-template-columns: repeat(auto-fill, minmax(min(100%, 140px), 1fr)); }
+    select { max-width: 100%; text-overflow: ellipsis; }
+    .row > select { flex: 1 1 12em; }
+    details.layer > summary, details.fx > summary { min-width: 0; overflow-wrap: anywhere; }
+    #layers { display: grid; gap: 8px; }
+    /* 시각 실험 (per ToF layer, inside its card): one group per effect, in the processing order */
+    details.fx { border: 1px dashed #444; border-radius: 6px; }
+    details.fx > summary { cursor: pointer; padding: 8px 10px; min-height: 44px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #fff; }
+    .fx-body { padding: 0 10px 10px; display: grid; gap: 8px; }
+    .fx-group { border-top: 1px solid #262626; padding-top: 6px; display: grid; gap: 4px; }
+    .fx-group.off > .fx-params { display: none; }
+    .fx-group .fx-head { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 13px; color: #fff; }
+    .fx-group .fx-head input[type=checkbox] { flex: none; }
+    /* flow direction: four quick buttons + the angle (0–359°) */
+    .angle { display: grid; gap: 6px; font-size: 13px; color: #bbb; }
+    .angle .dirs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .angle .dirs button { min-height: 44px; }
+    .angle .dirs button[aria-pressed=true] { background: #fff; color: #000; border-color: #fff; }
+    .angle .deg { display: grid; grid-template-columns: minmax(0, 1fr) 5.5em; gap: 8px; align-items: center; }
+    .angle input[type=number] { min-height: 44px; }
+    .link-note { font-size: 13px; color: #9cf; }
+    #slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 8px 16px; }
+    #slots label { display: grid; grid-template-columns: 7em minmax(0, 1fr); gap: 8px; align-items: center; font-size: 13px; color: #bbb; }
+    #inputs-box > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 13px; color: #fff; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    th, td { text-align: left; padding: 4px 6px; border-bottom: 1px solid #262626; vertical-align: top; overflow-wrap: anywhere; }
+    th { color: #aaa; font-weight: 600; }
+    #status { font-size: 13px; color: #aaa; display: flex; gap: 6px 12px; flex-wrap: wrap; align-items: center; min-width: 0; }
+    #status .dot { width: 8px; height: 8px; border-radius: 50%; background: #555; display: inline-block; }
+    #status.ok .dot { background: #fff; }
+    #error { color: #ff6b6b; overflow-wrap: anywhere; }
+    #more[aria-expanded=true] { background: #fff; color: #000; border-color: #fff; }
+    /* joystick on the preview (mock only): the device choice + a short state line; the overlay only while pressed */
+    #joy-row button { min-width: 44px; }
+    #joy-row [data-joy-device][aria-pressed=true] { background: #fff; color: #000; border-color: #fff; }
+    #joy-state { flex: 1 1 10em; min-width: 0; }
+    main { touch-action: none; }   /* only the preview: the rest of the page scrolls as usual */
+    #joy { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; display: none; z-index: 2; }
+    #joy.on { display: block; }
+    #joy .ring { position: absolute; border: 1px solid rgba(255,255,255,.55); border-radius: 50%; transform: translate(-50%, -50%); }
+    #joy .dot { position: absolute; width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; }
+    #joy .knob { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; border: 2px solid #9cf; background: rgba(150,200,255,.25); }
+    #joy svg { position: absolute; overflow: visible; }
+    #joy .label { position: absolute; transform: translate(-50%, 0); white-space: nowrap; font-size: 12px; color: #fff; background: rgba(0,0,0,.6); padding: 1px 6px; border-radius: 4px; }
+    body.collapsed #editor { display: none; }
+    @media (max-width: 640px) {
+      footer { padding: 8px max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+      button, select, input[type=text], input[type=number] { min-height: 44px; }
+      input[type=color] { width: 44px; height: 44px; }
+      input[type=checkbox] { width: 24px; height: 24px; }
+      .field { min-height: 44px; grid-template-columns: 5.5em minmax(0, 1fr) 6.5em; gap: 6px; }
+      input[type=range] { min-height: 44px; }
+      /* a checkbox is tapped through its whole label row */
+      label:has(input[type=checkbox]) { min-height: 44px; display: flex; align-items: center; gap: 8px; }
+    }
+    body.fs footer { position: fixed; left: 0; right: 0; bottom: 0; transition: opacity .3s; }
+    body.fs.idle footer { opacity: 0; pointer-events: none; }
+    body.fs.idle { cursor: none; }
+    /* PC (2026-10-20): wide screens get the editing panel as a right-hand sidebar with its own scroll; the preview keeps
+       the rest. Phones / narrow windows keep the stacked layout above. Collapsed editing, fullscreen and "UI 숨기기"
+       go back to the full-width preview. */
+    @media (min-width: 1024px) {
+      html:not(.ripples-hide):not(.ripples-clean) body:not(.collapsed):not(.fs) { grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr) clamp(380px, 32vw, 540px); }
+      html:not(.ripples-hide):not(.ripples-clean) body:not(.collapsed):not(.fs) footer { max-height: none; height: 100%; border-top: 0; border-left: 1px solid #262626;
+        padding: 64px 18px 18px; gap: 12px; }
+    }
+    /* PC 3단 (2026-11-02): from 1280 px wide the editing is split in three — left: composition, layer list (pick one),
+       outputs and inputs · middle: the preview · right: the picked layer's settings with their own scroll. Narrower
+       windows keep the 2-column sidebar above, phones the stacked layout; collapsed / fullscreen / "UI 숨기기" = preview only. */
+    #inspector { display: none; }
+    @media (min-width: 1280px) {
+      html:not(.ripples-hide):not(.ripples-clean) body:not(.collapsed):not(.fs) { grid-template-columns: clamp(300px, 22vw, 400px) minmax(0, 1fr) clamp(360px, 26vw, 480px);
+        grid-template-areas: "side view insp"; }
+      html:not(.ripples-hide):not(.ripples-clean) body:not(.collapsed):not(.fs) main { grid-area: view; }
+      html:not(.ripples-hide):not(.ripples-clean) body:not(.collapsed):not(.fs) footer { grid-area: side; border-left: 0; border-right: 1px solid #262626; padding: 18px; }
+      html:not(.ripples-hide):not(.ripples-clean) body:not(.collapsed):not(.fs) #inspector { display: grid; grid-area: insp; align-content: start; gap: 12px; min-height: 0;
+        overflow-y: auto; overscroll-behavior: contain; background: rgba(10,10,10,.96); border-left: 1px solid #262626; padding: 64px 18px 18px; }
+    }
+    body.three details.layer > summary::before { content: ""; }
+    body.three details.layer > summary { min-height: 40px; flex-direction: column; align-items: stretch; gap: 2px; }
+    body.three details.layer .ltype, #insp-type { font-size: 12px; color: #888; overflow-wrap: anywhere; }
+    body.three details.layer.sel { border-color: #fff; background: #151515; }
+    #insp-title { margin: 0; font-size: 14px; color: #fff; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <main>
+    <canvas id="view" aria-label="미리보기 (선택한 composition)"></canvas>
+    <div id="joy" aria-hidden="true"><div class="ring"></div><svg width="0" height="0"><line stroke="#9cf" stroke-width="2"/></svg><div class="dot"></div><div class="knob"></div><div class="label"></div></div>
+    <img id="mjpeg" alt="실시간 ToF 깊이 화면 (MJPEG)">
+    <div id="empty">카메라 연결 대기 중…</div>
+  </main>
+  <footer>
+    <div class="row">
+      <select id="comp" aria-label="composition"></select>
+      <button id="dup" title="선택한 composition을 복제해 새 composition으로 (기본 composition은 복제해서 편집)">복제</button>
+      <button id="fullscreen">전체 화면</button>
+      <button id="pi" title="선택한 composition을 혈 Pi 5에서 실행할 파일 묶음(zip)으로 받기">Pi 실행본</button>
+      <button id="pi-send" title="선택한 composition을 켜져 있는 혈 Pi로 보내기 (Pi가 몇 초 안에 받아 바로 바꿔 그림, 설정만 바뀜)">Pi로 보내기</button>
+      <button id="more" aria-expanded="false" aria-controls="editor">편집</button>
+    </div>
+    <div class="row" id="joy-row" role="group" aria-label="미리보기 조이스틱으로 움직일 장치 (mock 시뮬레이션)">
+      <span class="note">조작</span>
+      <button type="button" data-joy-device="hyeol" aria-pressed="true">혈</button>
+      <button type="button" data-joy-device="maek" aria-pressed="false">맥</button>
+      <span id="joy-state" class="note" aria-live="polite">확인 중…</span>
+    </div>
+    <div id="save-state" class="note" aria-live="polite">불러오는 중…</div>
+    <div id="pi-box" class="note" aria-live="polite" hidden></div>
+    <div id="pi-follow" class="note" aria-live="polite"></div>
+    <div id="editor">
+      <div class="row">
+        <input id="comp-name" type="text" maxlength="40" placeholder="composition 이름" aria-label="composition 이름">
+        <button id="rename">이름 바꾸기</button>
+      </div>
+      <div class="row">
+        <label for="screen-size">화면 크기</label>
+        <select id="screen-size" aria-label="이 composition이 나갈 화면 크기">
+          <option value="">창에 맞춤 (크기 가정 없음)</option>
+          <option value="1920x1280">1920×1280 · 3:2 (ZSUS 10.5″ 휴대용 모니터)</option>
+          <option value="1920x1080">1920×1080 · 16:9</option>
+          <option value="1280x800">1280×800 · 16:10</option>
+        </select>
+      </div>
+      <p id="readonly" class="note">기본 composition(기존 기능 이식·검증용)은 읽기 전용입니다. 바꾸려면 "복제"를 누르세요.</p>
+      <h2>레이어 (목록 위쪽이 화면 맨 위에 그려짐)</h2>
+      <div id="layers"></div>
+      <div class="row">
+        <select id="add-type" aria-label="추가할 레이어 종류"></select>
+        <button id="add-layer">레이어 추가</button>
+      </div>
+      <h2>출력 배정 (한 composition을 여러 출력에)</h2>
+      <div id="slots"></div>
+      <details id="inputs-box"><summary>입력 목록 (서버에 실제로 있는 값)</summary>
+        <table><thead><tr><th>입력</th><th>현재값</th><th>연결</th><th>갱신</th><th>구분</th></tr></thead><tbody id="inputs"></tbody></table>
+      </details>
+    </div>
+    <div id="status"><span class="dot"></span><span id="camera">연결 중…</span><span id="resolution"></span><span id="fps"></span><span id="error"></span></div>
+  </footer>
+  <aside id="inspector" aria-label="고른 레이어 설정">
+    <div><h2 id="insp-title">레이어 설정</h2><div id="insp-type"></div></div>
+    <div id="insp-body"></div>
+  </aside>
+  <script src="/tofrender.js"></script>
+  <script src="/simulator.js"></script>
+  <script>
+    // 시각화 작업실: compositions (ordered layers: input source → renderer → layer → output) are edited here and drawn by
+    // the shared compositor (tofrender.js) — the same code every output uses. Edits are saved on the server at once
+    // (visual_store.py, /ws/visual). Inputs and layer types come from the registries in tofrender.js only.
+    const $ = id => document.getElementById(id);
+    const params = new URLSearchParams(location.search);
+    const {SOURCES, RENDERERS, hub} = RipplesRender;
+    const view = RipplesRender.createComposition($('view'));
+    const NUMS = {opacity: {label: '투명도', min: 0, max: 1, step: 0.01}, x: {label: '가로 위치', min: -1, max: 1, step: 0.01},
+                  y: {label: '세로 위치', min: -1, max: 1, step: 0.01}, scale: {label: '배율', min: 0.1, max: 4, step: 0.05},
+                  rotation: {label: '회전', min: -180, max: 180, step: 1}};
+    const BLEND_NAMES = {'source-over': '덮기', lighter: '밝게 더하기', screen: '스크린', multiply: '곱하기', difference: '차이', lighten: '밝은 쪽', darken: '어두운 쪽'};
+    const SLOT_ORDER = ['hyeol_device', 'maek_device', 'hyeol_blind', 'maek_blind'];
+    let visual = null, selected = null, edit = null, pendingSeq = 0, ackSeq = 0, saveTimer = null, saveError = null;
+    const openLayers = new Set();
+    // PC 3단: the picked layer (its settings in the right column); three = the 3-column layout is showing now
+    let pickedLayer = null, three = false;
+    const isThree = () => getComputedStyle($('inspector')).display !== 'none';
+    function focusLayer(id) { openLayers.add(id); pickedLayer = id; }
+    function relayout() { if (isThree() !== three && edit) renderEditor(); }
+    try { selected = localStorage.getItem('workshop-composition'); } catch (_) {}
+
+    // --- composition list, autosave state ------------------------------------------------------------------------
+    const sync = RipplesRender.connectVisual(onVisual, (kind, error) => {
+      saveError = kind === 'error' ? `저장 안 됨: ${error}` : '서버 연결 끊김 · 다시 연결 중';
+      showSave();
+    });
+    function compLabel(c) { return c.builtin ? `${c.name} (기본)` : c.name; }
+    function onVisual(v) {
+      visual = v;
+      let created = null;
+      if (v.origin === sync.client && typeof v.seq === 'number') { ackSeq = Math.max(ackSeq, v.seq); if (v.seq === pendingSeq) created = v.created || null; }
+      if (created) selected = created;
+      if (!v.compositions[selected]) selected = v.order[0];
+      const sel = $('comp');
+      sel.replaceChildren(...v.order.map(id => new Option(compLabel(v.compositions[id]), id)));
+      sel.value = selected;
+      renderSlots();
+      // another page changed this composition and nothing of ours is waiting: take the server's version
+      const remote = v.compositions[selected];
+      if (!edit || edit.id !== selected || (ackSeq >= pendingSeq && !saveTimer && JSON.stringify(strip(remote)) !== JSON.stringify(strip(edit)))) select(selected);
+      if (!v.save_error) saveError = null;
+      showSave();
+    }
+    const strip = c => ({name: c.name, canvas: c.canvas, layers: c.layers});
+    function select(id) {
+      selected = id;
+      try { localStorage.setItem('workshop-composition', id); } catch (_) {}
+      if (visual && visual.compositions[id]) { edit = JSON.parse(JSON.stringify(visual.compositions[id])); $('comp').value = id; renderEditor(); }
+    }
+    function showSave() {
+      const el = $('save-state');
+      el.className = 'note';
+      if (saveError || (visual && visual.save_error)) { el.textContent = saveError || `저장 실패: ${visual.save_error}`; el.classList.add('bad'); return; }
+      if (!visual) { el.textContent = '불러오는 중…'; return; }
+      if (pendingSeq > ackSeq || saveTimer) el.textContent = '자동 저장 중…';
+      else { el.textContent = `자동 저장됨 · 서버 ${visual.path} (revision ${visual.revision})${edit && edit.builtin ? ' · 기본 composition (읽기 전용)' : ''}`; el.classList.add('ok'); }
+    }
+    // every edit: preview at once, save to the server (while dragging every 0.15 s; the last value with final)
+    function changed(final) {
+      view.set(edit);
+      if (edit.builtin) return;
+      clearTimeout(saveTimer);
+      const send = fin => { saveTimer = null; pendingSeq = sync.send({op: 'set', id: edit.id, composition: strip(edit)}, fin) || pendingSeq; showSave(); };
+      if (final) send(true); else { saveTimer = setTimeout(() => send(false), 150); showSave(); }
+    }
+    $('comp').addEventListener('change', () => select($('comp').value));
+    // Pi 실행본 (pi_bundle.py): flush a pending save, wait until the server has saved it, list what each layer needs on
+    // the Pi (inputs it does not have are shown, not mocked), then download the zip of exactly the revision shown here
+    const PI_STATUS = {ok: 'Pi에서 그대로 작동', pose: '맥 미리보기와 다르게 보임', missing: 'Pi에 없는 입력 필요', hidden: '숨김 (그리지 않음)'};
+    let piBusy = false;
+    // shared by both buttons: flush and wait for the save, show what each layer needs, ask when an input is missing
+    async function piPrepare(say, verb) {
+      if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; pendingSeq = sync.send({op: 'set', id: edit.id, composition: strip(edit)}, true) || pendingSeq; }
+      say('저장 끝나기 기다리는 중…');
+      for (let t = 0; !(ackSeq >= pendingSeq && !saveTimer && visual && visual.saved); t++) {
+        if (t > 100) throw new Error('저장이 10초 안에 끝나지 않음');
+        await new Promise(r => setTimeout(r, 100));
+      }
+      const id = selected, rev = visual.revision;
+      const info = await fetch(`/api/pi-bundle/check?id=${encodeURIComponent(id)}`, {cache: 'no-store'}).then(r => r.json());
+      if (info.error) throw new Error(info.error);
+      const list = el('ul', {}, ...info.layers.map(l => el('li', {className: ['missing', 'pose'].includes(l.status) ? 'warn' : ''},
+        `${l.name} (${l.renderer}) · ${PI_STATUS[l.status]}`, ...(l.needs.length ? [el('ul', {}, ...l.needs.map(n => el('li', {}, n)))] : []))));
+      const head = el('div', {}, `${info.name} · revision ${rev} · 확인값 ${info.hash}`);
+      say(head, list);
+      const warn = info.layers.filter(l => ['missing', 'pose'].includes(l.status));
+      if (warn.length && !confirm(`Pi에 없는 입력을 쓰는 레이어가 ${warn.length}개 있어요.\n${warn.map(l => `· ${l.name}: ${PI_STATUS[l.status]}`).join('\n')}\n\nmock 값으로 바꾸지 않고 그대로 ${verb}. 할까요?`)) {
+        say(head, list, el('div', {}, '하지 않음')); return null;
+      }
+      return {id, rev, info, head, list};
+    }
+    function piButton(button, label, run) {
+      $(button).addEventListener('click', async () => {
+        if (piBusy || !edit) return;
+        piBusy = true; $('pi').disabled = $('pi-send').disabled = true;
+        const box = $('pi-box'), say = (...nodes) => { box.hidden = false; box.replaceChildren(...nodes); };
+        try { await run(say); }
+        catch (e) { say(el('div', {className: 'bad'}, `${label} 실패: ${e.message}`)); }
+        finally { piBusy = false; $('pi').disabled = $('pi-send').disabled = false; }
+      });
+    }
+    piButton('pi', 'Pi 실행본 만들기', async say => {
+      const p = await piPrepare(say, '묶어요'); if (!p) return;
+      const res = await fetch(`/api/pi-bundle?id=${encodeURIComponent(p.id)}&rev=${p.rev}`, {cache: 'no-store'});
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+      const disp = res.headers.get('Content-Disposition') || '', m = disp.match(/filename\*=UTF-8''([^;]+)/);
+      const name = m ? decodeURIComponent(m[1]) : 'ripples-hyeol-pi.zip';
+      const url = URL.createObjectURL(await res.blob());
+      const a = el('a', {href: url, download: name}); document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      say(el('div', {}, `받음: ${name}`), el('div', {}, `${p.info.name} · revision ${res.headers.get('X-Bundle-Revision')} · 확인값 ${res.headers.get('X-Bundle-Hash')}`), p.list,
+          el('div', {}, 'Pi 설치·시작 방법은 묶음 안 README.md'));
+    });
+    // 「Pi로 보내기」 (pi_bundle.Publish): the Pi asks every 5 s and redraws with it; below: what it last had
+    piButton('pi-send', 'Pi로 보내기', async say => {
+      const p = await piPrepare(say, '보내요'); if (!p) return;
+      const res = await fetch('/api/pi-publish', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({id: p.id, rev: p.rev})});
+      const st = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(st.error || `HTTP ${res.status}`);
+      say(el('div', {}, `보냄: ${st.published.name} · revision ${st.published.revision} · 확인값 ${st.published.hash}`), p.list,
+          el('div', {}, 'Pi가 켜져 있고 전시컴에 닿으면 5초 안에 받아요. 받았는지는 아래 줄에서 확인'));
+      piFollow();
+    });
+    async function piFollow() {
+      let st; try { st = await fetch('/api/pi-publish/status', {cache: 'no-store'}).then(r => r.json()); } catch { return; }
+      const P = st.published, S = st.seen, ago = S ? Math.round((Date.now() - Date.parse(S.at)) / 1000) : null;
+      const t = iso => new Date(iso).toLocaleTimeString('ko-KR', {hour12: false});
+      const pi = !S ? 'Pi에서 아직 물어본 적 없음 (이 서버가 켜진 뒤)' : ago > 20 ? `Pi 연락 끊김 · 마지막 ${t(S.at)}`
+        : !P ? `Pi 연결됨 · 아직 보낸 화면 없음 · ${t(S.at)}`
+        : P && S.hash === P.hash ? `Pi 받음 · ${t(S.at)} 확인` : `Pi가 아직 다른 화면 (확인값 ${S.hash || '없음'}) · ${t(S.at)}`;
+      $('pi-follow').textContent = P ? `Pi로 보낸 화면: ${P.name} · revision ${P.revision} · 확인값 ${P.hash} (${t(P.published_at)}) · ${pi}` : (S ? pi : '');
+      $('pi-follow').className = 'note' + (P && S && ago <= 20 && S.hash === P.hash ? '' : P ? ' warn' : '');
+    }
+    piFollow(); setInterval(() => { if (!document.hidden) piFollow(); }, 5000);
+    $('dup').addEventListener('click', () => { pendingSeq = sync.send({op: 'duplicate', id: selected}); showSave(); });
+    // 화면 크기: the screen this composition is made for (the preview and the outputs draw it at that aspect)
+    $('screen-size').addEventListener('change', () => {
+      if (!edit || edit.builtin) return;
+      const [w, h] = $('screen-size').value.split('x').map(Number);
+      edit.canvas = w && h ? Object.assign({}, edit.canvas, {width: w, height: h}) : {background: edit.canvas.background};
+      changed(true);
+    });
+    $('rename').addEventListener('click', () => {
+      const name = $('comp-name').value.trim();
+      if (!name || edit.builtin) return;
+      edit.name = name; pendingSeq = sync.send({op: 'rename', id: edit.id, name}); showSave();
+    });
+
+    // --- layer editor (built from the registries) ------------------------------------------------------------------
+    const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
+    function sourceOptions(kind, only) {
+      const opts = [];
+      for (const [id, s] of Object.entries(SOURCES)) {
+        if (kind && s.kind !== kind) continue;
+        if (only && !only.includes(id)) continue;
+        const o = new Option(`${s.label}${s.unavailable ? ` — ${s.unavailable}` : ''}`, id);
+        if (s.unavailable) o.disabled = true;
+        opts.push(o);
+      }
+      return opts;
+    }
+    // every editable number: a slider + the current value as a number field (type a value: Enter / leaving the field
+    // applies it, Escape goes back; not a number → the last valid value; outside the range → clamped, on the step grid)
+    const decimalsOf = step => { const t = String(step); return t.includes('.') ? t.split('.')[1].length : 0; };
+    function slider(label, min, max, step, value, onInput, unit = '') {
+      const dec = decimalsOf(step), fmt = v => String(Number(Number(v).toFixed(dec)));
+      const range = el('input', {type: 'range', min, max, step, value});
+      const num = el('input', {type: 'number', min, max, step, value: fmt(value), inputMode: dec || min < 0 ? 'decimal' : 'numeric', enterKeyHint: 'done'});
+      num.setAttribute('aria-label', `${label} 값${unit ? ` (${unit.trim()})` : ''}`);
+      let before = num.value;
+      range.addEventListener('input', () => { num.value = fmt(range.value); before = num.value; onInput(Number(range.value), false); });
+      range.addEventListener('change', () => { num.value = fmt(range.value); before = num.value; onInput(Number(range.value), true); });
+      num.addEventListener('focus', () => { before = num.value; num.select(); });
+      const commit = () => {
+        const raw = String(num.value).trim(), v = Number(raw);
+        if (raw === '' || !Number.isFinite(v)) { num.value = before; return; }   // not a number: keep the last valid value
+        let c = Math.min(max, Math.max(min, v));
+        c = Math.min(max, Math.max(min, Number((min + Math.round((c - min) / step) * step).toFixed(dec))));
+        num.value = fmt(c); range.value = c;
+        if (num.value !== before) { before = num.value; onInput(c, true); }
+      };
+      num.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); num.blur(); }
+        else if (e.key === 'Escape') { e.preventDefault(); num.value = before; num.blur(); }
+      });
+      num.addEventListener('blur', commit);
+      const box = el('label', {className: 'field'}, label, range, el('span', {className: 'val'}, num, el('span', {className: 'unit', textContent: unit.trim()})));
+      box.dataset.slider = label;
+      return box;
+    }
+    function check(label, value, onChange) {
+      const input = el('input', {type: 'checkbox', checked: value});
+      input.addEventListener('change', () => onChange(input.checked));
+      return el('label', {className: 'field check'}, label, input, el('span'));
+    }
+    function numField(layer, key) {
+      const spec = NUMS[key], cur = layer[key];
+      const box = el('div');
+      box.dataset.num = key;
+      const mode = el('select', {}, new Option('고정값', 'value'), new Option('입력 연결', 'bind'));
+      mode.value = cur.bind ? 'bind' : 'value';
+      mode.setAttribute('aria-label', `${spec.label} 값 방식`);
+      mode.addEventListener('change', () => {
+        if (mode.value === 'bind') {
+          const src = Object.keys(SOURCES).find(id => SOURCES[id].kind === 'number' && !SOURCES[id].unavailable);
+          const r = SOURCES[src].range || [0, 1];
+          layer[key] = {bind: {source: src, in_min: r[0], in_max: r[1], out_min: spec.min, out_max: spec.max, invert: false, smoothing: 0}};
+        } else layer[key] = {value: Math.min(spec.max, Math.max(spec.min, view.bound(layer.id, key) ?? spec.min))};
+        changed(true); renderEditor();
+      });
+      box.append(el('div', {className: 'row'}, el('span', {className: 'note'}, spec.label), mode));
+      if (!cur.bind) {
+        box.append(slider(spec.label, spec.min, spec.max, spec.step, cur.value, (v, fin) => { layer[key] = {value: v}; changed(fin); }));
+      } else {
+        const b = cur.bind, grid = el('div', {className: 'bind'});
+        const src = el('select', {}, ...sourceOptions('number'));
+        src.value = b.source;
+        src.addEventListener('change', () => { const r = SOURCES[src.value].range || [0, 1]; Object.assign(b, {source: src.value, in_min: r[0], in_max: r[1]}); changed(true); renderEditor(); });
+        const n = (label, k, lo, hi) => { const i = el('input', {type: 'number', value: b[k], step: 'any'}); if (lo !== undefined) { i.min = lo; i.max = hi; }
+          i.addEventListener('change', () => { const v = Number(i.value); if (Number.isFinite(v)) { b[k] = lo !== undefined ? Math.min(hi, Math.max(lo, v)) : v; changed(true); } }); return el('label', {}, label, i); };
+        const inv = el('input', {type: 'checkbox', checked: b.invert}); inv.addEventListener('change', () => { b.invert = inv.checked; changed(true); });
+        const sm = slider('부드럽게', 0, 0.95, 0.05, b.smoothing, (v, fin) => { b.smoothing = v; changed(fin); });
+        const live = el('span', {className: 'note'});
+        live.dataset.live = `${layer.id}:${key}`;
+        grid.append(el('label', {}, '입력', src), n('입력 최소', 'in_min'), n('입력 최대', 'in_max'), n('출력 최소', 'out_min', spec.min, spec.max), n('출력 최대', 'out_max', spec.min, spec.max),
+                    el('label', {}, '반전', inv), el('label', {}, '지금 값', live), sm);
+        box.append(grid);
+      }
+      return box;
+    }
+    // one setting from a registry spec (renderer params, visual experiments): set(value, final)
+    function control(p, v, set) {
+      if (p.type === 'bool') return check(p.label, Boolean(v), c => set(c, true));
+      if (p.type === 'text') { const i = el('input', {type: 'text', value: v, maxLength: 40}); i.addEventListener('change', () => set(i.value, true)); return el('label', {className: 'field'}, p.label, i, el('span')); }
+      if (p.type === 'number') { const i = el('input', {type: 'number', value: v, step: 'any'}); i.addEventListener('change', () => { if (Number.isFinite(Number(i.value))) set(Number(i.value), true); }); return el('label', {className: 'field'}, p.label, i, el('span')); }
+      if (p.type === 'color') { const i = el('input', {type: 'color', value: v}); i.addEventListener('input', () => set(i.value, false)); i.addEventListener('change', () => set(i.value, true)); return el('label', {className: 'field'}, p.label, i, el('span')); }
+      if (p.type === 'angle') {   // flow direction: the angle is the one stored value; the buttons set it and show it
+        const box = el('div', {className: 'angle'});
+        box.dataset.angle = p.key;
+        const range = el('input', {type: 'range', min: 0, max: 359, step: 1, value: v}), num = el('input', {type: 'number', min: 0, max: 359, step: 1, value: v});
+        range.setAttribute('aria-label', `${p.label} (각도)`); num.setAttribute('aria-label', `${p.label} (각도 숫자)`);
+        const btns = RipplesRender.DIRECTIONS.map(([name, deg]) => { const b = el('button', {type: 'button', textContent: name}); b.dataset.deg = deg; return b; });
+        const show = a => { range.value = a; num.value = a; btns.forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.deg) === a))); };
+        const apply = (a, fin) => { a = ((Math.round(Number(a)) % 360) + 360) % 360; if (!Number.isFinite(a)) return; show(a); set(a, fin); };
+        btns.forEach(b => b.addEventListener('click', () => apply(b.dataset.deg, true)));
+        range.addEventListener('input', () => apply(range.value, false)); range.addEventListener('change', () => apply(range.value, true));
+        let before = String(v);
+        num.addEventListener('focus', () => { before = num.value; num.select(); });
+        num.addEventListener('change', () => { if (num.value.trim() === '' || !Number.isFinite(Number(num.value))) { num.value = before; return; } apply(num.value, true); before = num.value; });
+        num.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); num.blur(); } else if (e.key === 'Escape') { e.preventDefault(); num.value = before; num.blur(); } });
+        num.inputMode = 'numeric'; num.enterKeyHint = 'done';
+        show(Number(v));
+        box.append(el('span', {}, `${p.label} (0° = 위, 시계 방향)`), el('div', {className: 'dirs'}, ...btns), el('div', {className: 'deg'}, range, num));
+        return box;
+      }
+      if (p.type === 'select') { const i = el('select', {}, ...p.options.map(([value, label]) => new Option(label, value))); i.value = v; i.addEventListener('change', () => set(i.value, true)); return el('label', {className: 'field'}, p.label, i, el('span')); }
+      return slider(p.label, p.min, p.max, p.step, v, set, p.unit || '');
+    }
+    function rendererParams(layer) {
+      const R = RENDERERS[layer.renderer], box = el('div', {className: 'layer-body', style: 'padding:0'});
+      for (const p of (R && R.params) || []) box.append(control(p, layer.params[p.key] ?? p.legacy ?? p.default, (x, fin) => { layer.params[p.key] = x; changed(fin); }));
+      return box;
+    }
+    // 시각 실험: only inside a ToF (or PULSE) layer's card, saved with that layer (layer.effects); all off by default
+    const openFx = new Set();
+    function fxPanel(layer) {
+      const e = RipplesRender.fxOf(layer);
+      const on = Object.entries(RipplesRender.EFFECTS).filter(([id, d]) => (d.always ? e[id].mode !== 'none' : e[id].on)).map(([, d]) => d.label);
+      const box = el('details', {className: 'fx'});
+      box.dataset.fx = layer.id;
+      box.open = openFx.has(layer.id);
+      box.addEventListener('toggle', () => { box.open ? openFx.add(layer.id) : openFx.delete(layer.id); });
+      box.append(el('summary', {}, `시각 실험 · ${on.length ? `켜짐: ${on.join(', ')}` : '모두 꺼짐'}`));
+      const body = el('div', {className: 'fx-body'});
+      body.append(el('div', {className: 'note'}, '처리 순서: 기본 그림 → 색상·단계·픽셀 → 블러/글로우 → 대칭 → 잔상 → 레이어 위치·합성. 크기 단위 px = 센서 화소 1칸.'));
+      const store = (id, key, value, fin) => {
+        if (!layer.effects) layer.effects = RipplesRender.fxDefaults();
+        layer.effects[id] = Object.assign({}, RipplesRender.fxDefaults()[id], layer.effects[id], {[key]: value});
+        changed(fin);
+      };
+      for (const [id, d] of Object.entries(RipplesRender.EFFECTS)) {
+        const group = el('div', {className: 'fx-group'});
+        group.dataset.effect = id;
+        const params = el('div', {className: 'fx-params layer-body', style: 'padding:0'});
+        for (const p of d.params) params.append(control(p, e[id][p.key], (x, fin) => { store(id, p.key, x, fin); if (p.type === 'select' && fin) renderEditor(); }));
+        if (d.always) group.append(params);
+        else {
+          const box2 = el('input', {type: 'checkbox', checked: e[id].on});
+          box2.setAttribute('aria-label', `${d.label} 켜기`);
+          box2.addEventListener('change', () => { store(id, 'on', box2.checked, true); renderEditor(); });
+          group.classList.toggle('off', !e[id].on);
+          group.append(el('label', {className: 'fx-head'}, box2, d.label), params);
+        }
+        if (d.note) params.prepend(el('div', {className: 'note'}, d.note));
+        body.append(group);
+      }
+      box.append(body);
+      return box;
+    }
+    function newLayerId() { let n = 1; while (edit.layers.some(l => l.id === `l${n}`)) n++; return `l${n}`; }
+    function makeLayer(renderer) {
+      const R = RENDERERS[renderer];
+      const src = R.sources ? R.sources[0] : R.accepts === 'number' ? 'audio.level' : R.accepts ? Object.keys(SOURCES).find(id => SOURCES[id].kind === R.accepts && !SOURCES[id].unavailable) : null;
+      // a layer added on top of others starts with "스크린" so its black (no data / empty) does not hide what is below
+      return {id: newLayerId(), name: R.label.slice(0, 40).trim(), source: src, renderer, visible: true, blend: edit && edit.layers.length ? 'screen' : 'source-over', color: '#ffffff', mono: false,
+              w: 1, h: 1, params: JSON.parse(JSON.stringify(R.defaults || {})), opacity: {value: 1}, x: {value: 0}, y: {value: 0}, scale: {value: 1}, rotation: {value: 0}};
+    }
+    function layerCard(layer, listIndex, count) {
+      const R = RENDERERS[layer.renderer] || {label: `${layer.renderer} (등록 안 된 종류)`, params: []};
+      const card = el('details', {className: 'layer' + (layer.visible ? '' : ' hidden-layer')});
+      card.dataset.layer = layer.id;
+      card.open = !three && openLayers.has(layer.id);
+      card.addEventListener('toggle', () => { if (!three) card.open ? openLayers.add(layer.id) : openLayers.delete(layer.id); });
+      card.append(three ? el('summary', {}, el('span', {className: 'lname'}, `${layer.visible ? '' : '(숨김) '}${layer.name}`), el('span', {className: 'ltype'}, R.label))
+                        : el('summary', {}, `${layer.visible ? '' : '(숨김) '}${layer.name} · ${R.label}`));
+      const body = el('div', {className: 'layer-body'});
+      const act = (label, fn, disabled, name) => { const b = el('button', {type: 'button', textContent: label, disabled}); if (name) b.dataset.act = name; b.addEventListener('click', fn); return b; };
+      let armed = null;
+      // the list shows the topmost layer first; the stored order is bottom → top
+      const at = () => edit.layers.indexOf(layer);
+      const viewer = edit.layers.find(l => l.link === layer.id);
+      const del = act('삭제', () => {
+        if (armed) {
+          clearTimeout(armed);
+          edit.layers = edit.layers.filter(l => l !== layer && l.link !== layer.id);   // no orphan linked picture left behind
+          changed(true); renderEditor(); return;
+        }
+        del.textContent = viewer ? '한 번 더 누르면 삭제 (연결된 ToF 원본 레이어도)' : '한 번 더 누르면 삭제'; armed = setTimeout(() => { armed = null; del.textContent = '삭제'; }, 3000);
+      }, false, 'delete');
+      body.append(el('div', {className: 'row'},
+        act(layer.visible ? '숨기기' : '보이기', () => { layer.visible = !layer.visible; changed(true); renderEditor(); }, false, 'visible'),
+        act('위로', () => { const i = at(); edit.layers.splice(i, 1); edit.layers.splice(i + 1, 0, layer); changed(true); renderEditor(); }, listIndex === 0, 'up'),
+        act('아래로', () => { const i = at(); edit.layers.splice(i, 1); edit.layers.splice(i - 1, 0, layer); changed(true); renderEditor(); }, listIndex === count - 1, 'down'),
+        act('복제', () => { const c = JSON.parse(JSON.stringify(layer)); c.id = newLayerId(); c.name = `${layer.name} 복사`.slice(0, 40); delete c.link; edit.layers.splice(at() + 1, 0, c); focusLayer(c.id); changed(true); renderEditor(); }, edit.layers.length >= 16, 'duplicate'),
+        del));
+      const name = el('input', {type: 'text', value: layer.name, maxLength: 40});
+      name.addEventListener('change', () => { if (name.value.trim()) { layer.name = name.value.trim(); changed(true); renderEditor(); } });
+      body.append(el('label', {className: 'field'}, '이름', name, el('span')));
+      const rsel = el('select', {}, ...typeOptions());
+      rsel.value = layer.renderer; rsel.dataset.field = 'renderer';
+      rsel.addEventListener('change', () => {
+        const fresh = makeLayer(rsel.value);
+        Object.assign(layer, {renderer: rsel.value, params: fresh.params, source: fresh.source});
+        if (!RipplesRender.fxRenderer(RENDERERS[rsel.value])) delete layer.effects;   // visual experiments: ToF layers and PULSE only
+        if (rsel.value !== 'tof_side') for (const l of edit.layers) if (l.link === layer.id) delete l.link;   // its picture stays as an ordinary layer
+        changed(true); renderEditor();
+      });
+      body.append(el('label', {className: 'field'}, '종류', rsel, el('span')));
+      if (layer.link) {
+        const owner = edit.layers.find(l => l.id === layer.link);
+        body.append(el('div', {className: 'link-note'}, `연결 레이어: "${owner ? owner.name : layer.link}"의 ToF 원본 보기 (켜고 끄기는 그 레이어에서, 위치·크기·투명도·합성·순서는 여기서)`));
+      }
+      if (R.viewer) {   // SIDE: the ToF picture is its own linked layer, not drawn into the flow
+        const on = Boolean(viewer && viewer.visible);
+        const t = check('ToF 원본 보기 (연결 레이어)', on, c => toggleViewer(layer, c));
+        t.dataset.viewer = layer.id;
+        body.append(t);
+        if (layer.params.inset !== false) body.append(el('div', {className: 'note'}, '이 레이어는 예전 방식으로 ToF 원본이 그림 구석에 들어 있습니다. 켜면 구석 그림을 빼고 따로 움직일 수 있는 연결 레이어로 보여 줍니다.'));
+      }
+      if (R.accepts) {
+        const ssel = el('select', {}, ...sourceOptions(R.accepts, R.sources));
+        ssel.value = layer.source || ''; ssel.dataset.field = 'source';
+        ssel.addEventListener('change', () => { layer.source = ssel.value || null; changed(true); });
+        body.append(el('label', {className: 'field'}, '입력', ssel, el('span')));
+      }
+      const bsel = el('select', {}, ...visual.blends.map(b => new Option(BLEND_NAMES[b] || b, b)));
+      bsel.value = layer.blend; bsel.dataset.field = 'blend';
+      bsel.addEventListener('change', () => { layer.blend = bsel.value; changed(true); });
+      body.append(el('label', {className: 'field'}, '합성', bsel, el('span')));
+      const color = el('input', {type: 'color', value: layer.color});
+      color.addEventListener('input', () => { layer.color = color.value; changed(false); });
+      color.addEventListener('change', () => { layer.color = color.value; changed(true); });
+      const mono = el('input', {type: 'checkbox', checked: layer.mono});
+      mono.addEventListener('change', () => { layer.mono = mono.checked; changed(true); });
+      body.append(el('div', {className: 'row'}, el('span', {className: 'note'}, '색'), color, el('label', {className: 'row note'}, mono, '단색으로 물들이기')));
+      body.append(slider('너비', 0.05, 2, 0.05, layer.w, (v, fin) => { layer.w = v; changed(fin); }), slider('높이', 0.05, 2, 0.05, layer.h, (v, fin) => { layer.h = v; changed(fin); }));
+      for (const key of Object.keys(NUMS)) body.append(numField(layer, key));
+      if (R.art === 'topdown') {   // where the positions come from (simulator, not an estimate from the ToF)
+        const st = el('div', {className: 'link-note'});
+        st.dataset.tdstatus = layer.id;
+        body.append(st);
+      }
+      if (R.art === 'spaceline') {   // what this 공간선 layer is doing right now (venue / camera space), from the renderer
+        const st = el('div', {className: 'link-note'});
+        st.dataset.slstatus = layer.id;
+        body.append(st);
+      }
+      if (R.updist === 'pulse') body.append(el('div', {className: 'note'}, '둘레 = 천장 거리 센서(단일점)의 최근 거리 기록을 시간 순서로 한 바퀴 놓은 것 (위 = 지금, 시계 방향 = 과거). 방향별 천장 형상이 아님. 선 두께는 고정, 변화의 세기는 밝기·불투명도로만.'));
+      body.append(rendererParams(layer));
+      if (RipplesRender.fxRenderer(R)) body.append(fxPanel(layer));
+      body.querySelectorAll('input, select, button').forEach(i => { if (edit.builtin) i.disabled = true; });
+      card.append(body);
+      return card;
+    }
+    // "ToF 원본 보기" on a SIDE layer: show / create its one linked ToF SENSOR layer (same input and range) right above
+    // it; off = hide it (its position, size, order and the rest stay for next time). Never a second one.
+    function toggleViewer(side, on) {
+      let v = edit.layers.find(l => l.link === side.id);
+      side.params.inset = false;   // the flow layer draws the flow only
+      if (on && !v) {
+        if (edit.layers.length >= 16) { renderEditor(); return; }
+        v = makeLayer('tof_sensor');
+        Object.assign(v, {name: `ToF 원본 (${side.name})`.slice(0, 40), link: side.id, source: side.source, blend: 'source-over', w: 0.3, h: 0.3, x: {value: 0.02}, y: {value: 0.02}});
+        for (const k of ['near', 'far', 'confidence']) v.params[k] = side.params[k];
+        edit.layers.splice(edit.layers.indexOf(side) + 1, 0, v);
+      } else if (v) v.visible = on;
+      changed(true); renderEditor();
+    }
+    function renderEditor() {
+      if (!edit) return;
+      view.set(edit);
+      $('comp-name').value = edit.name;
+      $('readonly').hidden = !edit.builtin;
+      for (const id of ['comp-name', 'rename', 'add-type', 'add-layer', 'screen-size']) $(id).disabled = Boolean(edit.builtin);
+      {
+        const c = edit.canvas || {}, key = c.width && c.height ? `${c.width}x${c.height}` : '', sel = $('screen-size');
+        if (key && ![...sel.options].some(o => o.value === key)) sel.append(el('option', {value: key, textContent: `${c.width}×${c.height}`}));
+        sel.value = key;
+      }
+      const list = [...edit.layers].reverse();
+      three = isThree();
+      document.body.classList.toggle('three', three);
+      const cards = list.map((l, i) => layerCard(l, i, list.length));
+      $('layers').replaceChildren(...cards);
+      if (three) {
+        // the list keeps the names only; a click picks the layer and its settings go to the right column
+        if (!list.some(l => l.id === pickedLayer)) pickedLayer = list.length ? list[0].id : null;
+        let picked = null;
+        for (const card of cards) {
+          const body = card.querySelector(':scope > .layer-body'), on = card.dataset.layer === pickedLayer;
+          body.remove();
+          if (on) picked = {body, name: card.querySelector('.lname').textContent, type: card.querySelector('.ltype').textContent};
+          card.classList.toggle('sel', on);
+          card.querySelector('summary').addEventListener('click', e => { e.preventDefault(); pickedLayer = card.dataset.layer; renderEditor(); });
+        }
+        $('insp-title').textContent = picked ? picked.name : '레이어 없음';
+        $('insp-type').textContent = picked ? picked.type : '';
+        $('insp-body').replaceChildren(...(picked ? [picked.body] : [el('p', {className: 'note'}, '왼쪽에서 레이어를 추가하면 여기에 설정이 보입니다.')]));
+      } else $('insp-body').replaceChildren();
+      showSave();
+    }
+    // layer types grouped by input (the same registry; a new type lands in its group)
+    function typeOptions() {
+      const groups = [['ToF (2D 깊이 240×180)', ([, r]) => r.tofMode], ['천장 거리 센서 (단일 거리 · up_distance)', ([, r]) => r.group === 'updist'],
+                      ['기타', ([, r]) => !r.tofMode && r.group !== 'updist']];
+      return groups.map(([label, f]) => { const g = el('optgroup'); g.label = label; g.append(...Object.entries(RENDERERS).filter(f).map(([id, r]) => new Option(r.label, id))); return g; });
+    }
+    $('add-type').append(...typeOptions());
+    $('add-layer').addEventListener('click', () => {
+      if (!edit || edit.builtin || edit.layers.length >= 16) return;
+      const layer = makeLayer($('add-type').value);
+      edit.layers.push(layer); focusLayer(layer.id); changed(true); renderEditor();
+    });
+    function renderSlots() {
+      $('slots').replaceChildren(...SLOT_ORDER.map(slot => {
+        const pick = el('select', {}, ...visual.order.map(id => new Option(compLabel(visual.compositions[id]), id)));
+        pick.dataset.slot = slot;
+        pick.value = visual.slots[slot];
+        pick.addEventListener('change', () => { pendingSeq = sync.send({op: 'assign', slot, id: pick.value}); showSave(); });
+        return el('label', {}, visual.slot_names[slot], pick);
+      }));
+    }
+    // linked values shown live next to their links, and the input list
+    const SL_MODES = {world: '공간 고정 — 혈 시뮬레이션 위치·방향으로 읽은 선을 공간에 남김 (누적된 센서 기록)',
+      local: '카메라 기준 — 장치 위치 정보가 없어 센서 화면 좌표로만 표시 (공간에 고정되지 않음)', nogl: 'WebGL을 쓸 수 없어 표시 불가', starting: '시작 중…'};
+    setInterval(() => {
+      document.querySelectorAll('[data-slstatus]').forEach(e => {
+        const st = view.status(e.dataset.slstatus);
+        const mode = st && st.mode === 'world' && st.pose_src === 'tof'
+          ? '공간 고정 — ToF 윤곽으로 추정한 혈 움직임으로 선을 공간에 남김 (조금씩 어긋남)' : st && (SL_MODES[st.mode] || st.mode);
+        e.textContent = !st ? 'ToF 프레임 대기 중' : `${mode} · 묶음 ${st.batches} · 선 ${st.segments.toLocaleString()} · 초점 ${st.focus_z ? st.focus_z.toFixed(2) + ' m' : '--'}`;
+      });
+      document.querySelectorAll('[data-tdstatus]').forEach(e => {
+        const st = view.status(e.dataset.tdstatus);
+        e.textContent = !st ? 'ToF 프레임 대기 중' : st.mode === 'world'
+          ? `공간 지도 — 위치·방향은 시뮬레이터의 혈 값 (실제 센서 위치 추정 아님) · ${st.still ? '흔적 기록 멈춤 (큰 움직임 없음)' : '흔적 기록 중'} · 현재 ${st.shape === 'contour' ? '선 조각' : '점'} ${st.points.toLocaleString()} · 흔적 기록 ${st.stamps} · 천장 거리 trace ${st.ceil}`
+          : st.mode === 'local' ? `카메라 기준 — 장치 위치 정보가 없어 센서 앞쪽만 위에서 본 모습 (공간 지도·누적·천장 trace 없음) · 현재 ${st.shape === 'contour' ? '선 조각' : '점'} ${st.points.toLocaleString()}` : '시작 중…';
+      });
+      document.querySelectorAll('[data-live]').forEach(s => { const [lid, key] = s.dataset.live.split(':'); const v = view.bound(lid, key); s.textContent = v === undefined ? '--' : v.toFixed(3); });
+      if (!$('inputs-box').open) return;
+      $('inputs').replaceChildren(...Object.entries(SOURCES).map(([id, s]) => {
+        const r = hub.sample(id);
+        const value = s.unavailable ? '없음' : s.kind === 'frame' ? '프레임' : r.value === null || r.value === undefined ? '--' : `${Number(r.value).toFixed(3)}${s.unit && s.unit !== '0–1' ? ' ' + s.unit : ''}`;
+        const row = el('tr', {}, el('td', {}, `${s.label} · ${id}`), el('td', {}, value), el('td', {className: r.connected ? '' : 'bad'}, s.unavailable ? '연결 안 됨' : r.connected ? '연결됨' : '입력 없음'),
+          el('td', {}, r.rate_hz ? `${r.rate_hz} Hz` : '--'), el('td', {}, s.unavailable || r.mode || '--'));
+        row.dataset.source = id;
+        return row;
+      }));
+    }, 300);
+
+    // --- panel collapse, fullscreen / kiosk auto-hide, MJPEG compare view (as before) -------------------------------
+    function setCollapsed(collapsed) {
+      document.body.classList.toggle('collapsed', collapsed);
+      $('more').setAttribute('aria-expanded', String(!collapsed));
+      $('more').textContent = collapsed ? '편집 열기' : '편집 닫기';
+      try { localStorage.setItem('tof-collapsed', collapsed ? '1' : '0'); } catch (_) {}
+      relayout();
+    }
+    let savedCollapsed = null;
+    try { savedCollapsed = localStorage.getItem('tof-collapsed'); } catch (_) {}
+    setCollapsed(savedCollapsed === '1');
+    $('more').addEventListener('click', () => setCollapsed(!document.body.classList.contains('collapsed')));
+    if (params.has('mjpeg')) {
+      document.body.classList.add('use-mjpeg');
+      $('mjpeg').src = '/stream.mjpg';
+      $('mjpeg').addEventListener('error', () => setTimeout(() => { $('mjpeg').src = '/stream.mjpg?t=' + Date.now(); }, 1000));
+    }
+    const root = document.documentElement;
+    const kiosk = params.has('kiosk');
+    const canFullscreen = Boolean(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    let fitMode = false;
+    function toggleFitMode() { fitMode = !fitMode; onFullscreenChange(); }
+    $('fullscreen').addEventListener('click', () => {
+      if (!canFullscreen) return toggleFitMode();
+      if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else { const request = (root.requestFullscreen || root.webkitRequestFullscreen).call(root); if (request && request.catch) request.catch(toggleFitMode); }
+    });
+    let idleTimer;
+    function wake() {
+      document.body.classList.remove('idle');
+      clearTimeout(idleTimer);
+      if (document.body.classList.contains('fs')) {
+        idleTimer = setTimeout(() => {
+          const hovering = matchMedia('(hover: hover)').matches && document.querySelector('footer:hover');
+          if (!hovering && !document.querySelector('footer :focus-visible')) document.body.classList.add('idle'); else wake();
+        }, 2500);
+      }
+    }
+    function onFullscreenChange() {
+      const fs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+      document.body.classList.toggle('fs', fs || fitMode || kiosk);
+      $('fullscreen').textContent = canFullscreen ? (fs ? '전체 화면 종료' : '전체 화면') : (fitMode ? '화면 맞춤 종료' : '화면 맞춤');
+      wake();
+      relayout();
+    }
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    ['mousemove', 'mousedown', 'touchstart', 'keydown'].forEach(e => document.addEventListener(e, wake, {passive: true}));
+    onFullscreenChange();
+    addEventListener('resize', relayout);
+    new MutationObserver(relayout).observe(root, {attributes: true, attributeFilter: ['class']});   // UI 숨기기 / clean
+
+    // --- status line ------------------------------------------------------------------------------------------------
+    let frames0 = 0, since = performance.now();
+    async function refreshStatus() {
+      const t = performance.now(), shown = (view.stats.frames - frames0) * 1000 / (t - since); frames0 = view.stats.frames; since = t;
+      try {
+        const s = await fetch('/status', {cache: 'no-store'}).then(r => r.json());
+        $('status').classList.toggle('ok', s.connected);
+        isMock = Boolean(s.mock);
+        if (!isMock) joyEnd();
+        showJoy();
+        $('camera').textContent = s.connected ? '카메라 연결됨' : '카메라 끊김';
+        $('resolution').textContent = s.resolution;
+        $('fps').textContent = `캡처 ${s.fps} · 미리보기 ToF ${shown.toFixed(1)} fps`;
+        $('error').textContent = s.error || '';
+        $('empty').style.display = s.connected ? 'none' : 'grid';
+      } catch (_) {
+        $('status').classList.remove('ok'); $('camera').textContent = '서버 연결 끊김';
+        joyEnd('서버 연결 끊김 · 멈춤'); $('fps').textContent = ''; $('empty').style.display = 'grid';
+      }
+    }
+    refreshStatus(); setInterval(refreshStatus, 1000);
+    // --- joystick on the preview (mock simulation only) ------------------------------------------------------------
+    // Press anywhere on the preview: that point is the centre. Drag up / down = forward / reverse, left / right = turn
+    // left / right (not sideways); the farther from the centre, the stronger (up to the device's top speed / turn rate).
+    // It sends the simulator's own drive input ({"op": "drive", move, turn} over /ws/simulator, repeated every
+    // drive_repeat_s while pressed); speeds, inertia, collisions and people stepping aside are the server's
+    // (simulator_store.py). Release / cancel / leaving / hiding the page / connection lost → neutral input at once (and a
+    // page that vanishes stops repeating: the server releases it after input_timeout_s). Always on; ignored (with a
+    // short note) when the server is not in mock mode. Nothing is saved.
+    const JOY_NAMES = {hyeol: '혈', maek: '맥'}, DEAD = 0.12;
+    let joyDev = 'hyeol', joy = null, simState = null, simOnline = false, isMock = null, joyNote = '';
+    const joySim = RipplesSim.connect(st => { simState = st; simOnline = true; showJoy(); },
+      kind => { if (kind === 'offline') { simOnline = false; joyEnd('서버 연결 끊김 · 멈춤'); } });
+    function joyBlocked() {
+      if (isMock === false) return '실제 장치 모드 — 조이스틱 이동은 mock 시뮬레이션에서만';
+      if (isMock === null || !simState) return '확인 중…';
+      if (!simOnline) return '서버 연결 끊김';
+      return '';
+    }
+    function showJoy() {
+      for (const b of document.querySelectorAll('[data-joy-device]')) b.setAttribute('aria-pressed', String(b.dataset.joyDevice === joyDev));
+      $('joy-state').textContent = joyBlocked() || (joy ? `${JOY_NAMES[joyDev]} 조작 중` : joyNote || `미리보기를 누르고 끌면 ${JOY_NAMES[joyDev]} 이동 (위·아래 전후진, 좌·우 회전)`);
+    }
+    const shape = v => { const a = Math.abs(v); return a < DEAD ? 0 : Math.sign(v) * Math.round(Math.min(1, (a - DEAD) / (1 - DEAD)) * 20) / 20; };
+    function joyInput() {
+      const R = joy.R, dx = joy.x - joy.cx, dy = joy.y - joy.cy;
+      return {move: shape(-dy / R), turn: shape(dx / R)};
+    }
+    function joySend(final) {
+      if (!joy || joyBlocked()) return;
+      const i = joyInput();
+      joySim.send({op: 'drive', device: joy.dev, move: i.move, turn: i.turn, strafe: 0}, final);
+      joy.sent = i;
+      drawJoy();
+    }
+    function drawJoy() {
+      const o = $('joy'), i = joy.sent || {move: 0, turn: 0}, R = joy.R, kx = joy.cx + i.turn * R, ky = joy.cy - i.move * R;
+      o.classList.add('on');
+      Object.assign(o.querySelector('.ring').style, {left: `${joy.cx}px`, top: `${joy.cy}px`, width: `${2 * R}px`, height: `${2 * R}px`});
+      Object.assign(o.querySelector('.dot').style, {left: `${joy.cx}px`, top: `${joy.cy}px`});
+      Object.assign(o.querySelector('.knob').style, {left: `${kx}px`, top: `${ky}px`});
+      const line = o.querySelector('line'); line.setAttribute('x1', joy.cx); line.setAttribute('y1', joy.cy); line.setAttribute('x2', kx); line.setAttribute('y2', ky);
+      const words = [i.move > 0 ? `전진 ${Math.round(i.move * 100)}%` : i.move < 0 ? `후진 ${Math.round(-i.move * 100)}%` : '', i.turn > 0 ? `우회전 ${Math.round(i.turn * 100)}%` : i.turn < 0 ? `좌회전 ${Math.round(-i.turn * 100)}%` : ''].filter(Boolean);
+      const label = o.querySelector('.label');
+      label.textContent = `${JOY_NAMES[joy.dev]} · ${words.join(' · ') || '정지'}`;
+      Object.assign(label.style, {left: `${joy.cx}px`, top: `${Math.max(0, joy.cy - R - 24)}px`});
+    }
+    function joyEnd(note) {
+      if (note) joyNote = note;
+      if (joy) {
+        clearInterval(joy.timer);
+        if (simOnline && !joyBlocked()) joySim.send({op: 'drive', device: joy.dev, move: 0, turn: 0, strafe: 0}, true);   // neutral at once
+        joy = null;
+      }
+      $('joy').classList.remove('on');
+      showJoy();
+    }
+    const area = document.querySelector('main');
+    area.addEventListener('pointerdown', e => {
+      if (joy || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      e.preventDefault();
+      const why = joyBlocked();
+      if (why) { joyNote = why; showJoy(); return; }   // real devices: the picture stays, no move command
+      const r = area.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+      joy = {id: e.pointerId, dev: joyDev, cx: x, cy: y, x, y, R: Math.max(40, Math.min(110, Math.min(r.width, r.height) * 0.3)), sent: null};
+      joyNote = '';
+      area.setPointerCapture(e.pointerId);
+      joySend(false);
+      joy.timer = setInterval(() => joySend(false), 1000 * ((simState && simState.drive_repeat_s) || 0.2));
+      showJoy();
+    });
+    area.addEventListener('pointermove', e => {
+      if (!joy || e.pointerId !== joy.id) return;
+      const r = area.getBoundingClientRect();
+      joy.x = e.clientX - r.left; joy.y = e.clientY - r.top;
+      const before = joy.sent, now = joyInput();
+      if (!before || before.move !== now.move || before.turn !== now.turn) joySend(false);   // changes go out at once
+    });
+    for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) area.addEventListener(t, e => { if (joy && e.pointerId === joy.id) joyEnd(t === 'pointerup' ? '' : '조작 취소 · 멈춤'); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) joyEnd('화면 숨김 · 멈춤'); });
+    window.addEventListener('pagehide', () => joyEnd());
+    window.addEventListener('blur', () => joyEnd());
+    for (const b of document.querySelectorAll('[data-joy-device]')) b.addEventListener('click', () => {
+      if (b.dataset.joyDevice === joyDev) return;
+      joyEnd(); joyDev = b.dataset.joyDevice; joyNote = ''; showJoy();   // only the chosen device is driven
+    });
+    window.joystick = {get active() { return Boolean(joy); }, get device() { return joyDev; }, get input() { return joy && joy.sent; }, get blocked() { return joyBlocked(); }};
+
+    window.workshop = {select, get edit() { return edit; }, get visual() { return visual; }, view, sync, changed, renderEditor, makeLayer, openFx, openLayers, toggleViewer};
+  </script>
+  <script src="/testui.js"></script>
+</body>
+</html>

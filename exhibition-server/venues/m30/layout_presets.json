@@ -1,0 +1,193 @@
+{
+  "format": "ripples-layout-presets/1",
+  "note": "기본 시안 (사용자 2026-11-06, /venue3d 「배치 저장」 파일 두 개 그대로). /venue3d 전시 배치의 시안 버튼이 불러옴. default: true 인 시안(시안 1)이 기본 배치(「기본 배치로」·처음 시작)와 혈/맥 시작 위치가 됨(사용자 2026-11-06)",
+  "presets": [
+    {
+      "id": "plan-1",
+      "name": "시안 1",
+      "source": "ripples-배치-202611061023.json",
+      "layout": {
+        "big_walls": {
+          "movable-west": 180,
+          "movable-east-1": 90,
+          "movable-east-2": 0,
+          "movable-east-3": 0
+        },
+        "small_walls": [
+          {
+            "id": "small-1",
+            "x": 3230,
+            "y": 700,
+            "heading": 0
+          },
+          {
+            "id": "small-2",
+            "x": 9615,
+            "y": 2515,
+            "heading": 124
+          },
+          {
+            "id": "small-3",
+            "x": 2219,
+            "y": 16928,
+            "heading": 150
+          }
+        ],
+        "windows": [
+          1,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "sim": {
+          "x": 7646,
+          "y": 12490,
+          "heading": 183
+        },
+        "pc": {
+          "x": 10266,
+          "y": 12250,
+          "heading": 180
+        },
+        "screens": [
+          {
+            "id": "screen-hyeol",
+            "wall": "small-3",
+            "u": 1015.9,
+            "z": 1500,
+            "side": 1,
+            "inch": 10,
+            "ratio": "4:3"
+          },
+          {
+            "id": "screen-maek",
+            "wall": "small-2",
+            "u": -1015.9,
+            "z": 1500,
+            "side": -1,
+            "inch": 10,
+            "ratio": "4:3"
+          }
+        ]
+      },
+      "devices": {
+        "hyeol": {
+          "x": 3138,
+          "y": 15956,
+          "heading": 149
+        },
+        "maek": {
+          "x": 8449,
+          "y": 3161,
+          "heading": 308
+        }
+      },
+      "default": true
+    },
+    {
+      "id": "plan-2",
+      "name": "시안 2",
+      "source": "ripples-배치-202611061104.json",
+      "layout": {
+        "big_walls": {
+          "movable-west": 180,
+          "movable-east-1": 90,
+          "movable-east-2": 0,
+          "movable-east-3": 0
+        },
+        "small_walls": [
+          {
+            "id": "small-1",
+            "x": 3230,
+            "y": 700,
+            "heading": 0
+          },
+          {
+            "id": "small-2",
+            "x": 9680,
+            "y": 3820,
+            "heading": 181
+          },
+          {
+            "id": "small-3",
+            "x": 3803,
+            "y": 18230,
+            "heading": 90
+          }
+        ],
+        "windows": [
+          1,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ],
+        "sim": {
+          "x": 7646,
+          "y": 12490,
+          "heading": 183
+        },
+        "pc": {
+          "x": 10266,
+          "y": 12250,
+          "heading": 180
+        },
+        "screens": [
+          {
+            "id": "screen-hyeol",
+            "wall": "small-3",
+            "u": 827.0,
+            "z": 1500,
+            "side": -1,
+            "inch": 10,
+            "ratio": "4:3"
+          },
+          {
+            "id": "screen-maek",
+            "wall": "movable-east-1",
+            "u": -1644.0,
+            "z": 1500,
+            "side": 1,
+            "inch": 10,
+            "ratio": "4:3"
+          }
+        ],
+        "parking": {
+          "hyeol": {
+            "x": 1989,
+            "y": 18003,
+            "heading": 179
+          },
+          "maek": {
+            "x": 9758,
+            "y": 2096,
+            "heading": 268
+          }
+        }
+      },
+      "devices": {
+        "hyeol": {
+          "x": 1989,
+          "y": 18003,
+          "heading": 179
+        },
+        "maek": {
+          "x": 9758,
+          "y": 2096,
+          "heading": 268
+        }
+      }
+    }
+  ]
+}

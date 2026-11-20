@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ripples · 혈 센싱 모니터</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #000; color: #eee; overflow: hidden; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+    #navarea { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #333;
+      padding: calc(env(safe-area-inset-top, 0px) + 8px) calc(env(safe-area-inset-right, 0px) + 8px) 8px calc(env(safe-area-inset-left, 0px) + 8px); }
+    #navarea h1 { margin: 0; font-size: 17px; font-weight: 700; }
+    #ripples-nav-slot { display: flex; flex-direction: column; align-items: flex-end; }
+    body.embed #navarea, html.ripples-clean #navarea { display: none; }
+    /* two inputs side by side: ToF depth image (wide) and the straight-up distance sensor (narrow column) */
+    #work { flex: 1 1 auto; min-height: 0; display: flex; gap: 8px; padding: 8px; }
+    .panel { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+    #tof { flex: 1 1 auto; }
+    #up { flex: 0 0 96px; }
+    .head { font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .state { font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .state.bad { color: #ff8a7a; }
+    /* the narrow up-distance column: let its rate line wrap instead of cutting the number ("mock · 갱신 10 Hz") */
+    #up .state, #tof-state { white-space: normal; overflow-wrap: anywhere; }
+    canvas { display: block; width: 100%; flex: 1 1 auto; min-height: 0; }
+    #upvalue { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; }
+    #upvalue.none { font-size: 14px; font-weight: 600; color: #ff8a7a; }
+    /* 혈 in use / idling (simulator attach switch) */
+    #hyeol-state { flex: none; margin: 8px 8px 0; padding: 6px 10px; border: 1px solid #555; border-radius: 6px; font-size: 14px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #hyeol-state.idle { border-color: #ff8a7a; color: #ff8a7a; }
+    /* ?debug only: frame path measurements (server generation / receive / render / WebSocket round trip) */
+    #tof-diag { display: none; font-size: 12px; color: #9cf; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    body.debug #tof-diag { display: block; }
+    body.idle canvas { opacity: .25; }
+  </style>
+</head>
+<body>
+  <div id="navarea"><h1>혈 센싱 모니터</h1><div id="ripples-nav-slot"></div></div>
+  <div id="hyeol-state" role="status" aria-live="polite">혈 상태 확인 중…</div>
+  <div id="work">
+    <section class="panel" id="tof" aria-label="ToF 깊이 입력">
+      <div class="head">ToF 정면 깊이</div>
+      <div class="state">밝을수록 가까움 · 검정 = 측정 없음 · 0.2–4 m</div>
+      <canvas id="depth"></canvas>
+      <div class="state" id="tof-state" aria-live="polite">ToF 연결 중…</div>
+      <div id="tof-diag" aria-live="off"></div>
+    </section>
+    <section class="panel" id="up" aria-label="상향 거리센서 입력">
+      <div class="head">위쪽 거리</div>
+      <div id="upvalue">--</div>
+      <canvas id="uphist" aria-label="최근 10초 거리 변화"></canvas>
+      <div class="state" id="up-state" aria-live="polite">확인 중…</div>
+    </section>
+  </div>
+  <script src="/testui.js"></script>
+  <script>
+    // 혈 sensing monitor: shows that the two 혈 inputs arrive and change — the ToF depth image (measured depth, always
+    // the SENSOR form from /ws/monitor, whatever mode the outputs use) and the 20 m distance sensor pointing up
+    // (/inputs → channels.distance). Input check only: no AI visualisation, no exhibition styling.
+    // ?embed = inside the simulator controller (no navigation area).
+    const $ = id => document.getElementById(id);
+    const embed = new URLSearchParams(location.search).has('embed');
+    if (embed) document.body.classList.add('embed');
+    const NEAR = 200, FAR = 4000;
+
+    // --- ToF depth ---------------------------------------------------------------------------------------------
+    const depthCanvas = $('depth'), dctx = depthCanvas.getContext('2d');
+    const small = document.createElement('canvas'), sctx = small.getContext('2d');
+    let latest = null, drawPending = false, frames = 0, fpsSince = performance.now(), fps = 0, lastFrameAt = 0;
+    function parse(buf) {
+      const v = new DataView(buf);
+      const f = {w: v.getUint16(6, true), h: v.getUint16(8, true), center: v.getFloat32(22, true)};
+      f.depth = new Uint16Array(buf, 40, f.w * f.h);
+      return f;
+    }
+    function fmt(mm) { return !Number.isFinite(mm) ? '--' : mm < 1000 ? `${Math.round(mm)} mm` : `${(mm / 1000).toFixed(2)} m`; }
+    function draw() {
+      drawPending = false;
+      if (!latest) return;
+      const t0 = performance.now();
+      const f = parse(latest);
+      if (small.width !== f.w || small.height !== f.h) { small.width = f.w; small.height = f.h; }
+      const img = sctx.createImageData(f.w, f.h), px = img.data;
+      let valid = 0;
+      for (let i = 0, j = 0; i < f.depth.length; i++, j += 4) {
+        const d = f.depth[i];
+        if (d === 0) { px[j] = px[j + 1] = px[j + 2] = 0; }  // no data (beyond range, weak return): black
+        else { valid++; px[j] = px[j + 1] = px[j + 2] = 255 * Math.min(1, Math.max(0, (FAR - d) / (FAR - NEAR))); }
+        px[j + 3] = 255;
+      }
+      const t1 = performance.now();
+      sctx.putImageData(img, 0, 0);
+      const dpr = window.devicePixelRatio || 1;
+      const cw = Math.round(depthCanvas.clientWidth * dpr), ch = Math.round(depthCanvas.clientHeight * dpr);
+      if (depthCanvas.width !== cw || depthCanvas.height !== ch) { depthCanvas.width = cw; depthCanvas.height = ch; }
+      const s = Math.min(cw / f.w, ch / f.h), x = (cw - f.w * s) / 2, y = (ch - f.h * s) / 2;
+      dctx.fillStyle = '#000'; dctx.fillRect(0, 0, cw, ch);
+      dctx.imageSmoothingEnabled = false;
+      dctx.drawImage(small, x, y, f.w * s, f.h * s);
+      // centre patch used for the centre distance
+      dctx.lineWidth = 2 * dpr; dctx.strokeStyle = '#000'; dctx.strokeRect(x + (f.w / 2 - 2) * s, y + (f.h / 2 - 2) * s, 5 * s, 5 * s);
+      dctx.lineWidth = 1 * dpr; dctx.strokeStyle = '#fff'; dctx.strokeRect(x + (f.w / 2 - 2) * s, y + (f.h / 2 - 2) * s, 5 * s, 5 * s);
+      frames++;
+      const now = performance.now();
+      if (diag) { diag.decode.push(t1 - t0); diag.draw.push(now - t1); diag.rendered++; }
+      if (now - fpsSince >= 1000) { fps = frames * 1000 / (now - fpsSince); frames = 0; fpsSince = now; }
+      $('tof-state').textContent = `입력 있음 · 표시 ${fps.toFixed(0)} fps · 중앙 ${fmt(f.center)} · 유효 ${Math.round(100 * valid / f.depth.length)}%`;
+      $('tof-state').className = 'state';
+    }
+    // ?debug: measurements of the frame path, shown under the ToF state and exposed as window.monitorDiag. They do not
+    // change how frames are requested or drawn. server_generation_fps = /status fps (the server's camera / mock loop);
+    // client_receive_fps = binary frames received; client_render_fps = draw() calls (the "표시 fps" above);
+    // websocket_rtt_ms = "ping" → "pong" on the same socket; request_to_frame_ms = "next" sent → frame received;
+    // applied_wait_ms = the wait actually used before the next request (pacing below).
+    const diag = new URLSearchParams(location.search).has('debug') ? {received: 0, rendered: 0, bytes: 0, decode: [], draw: [], rtt: [], wait: [], pause: [], serverFps: null, frameBytes: 0, out: {}} : null;
+    if (diag) document.body.classList.add('debug');
+    const median = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+    // Pacing (2026-10-15, option A): aim at 15 frames/s. One request in flight at a time ("next" only after a frame
+    // arrived); the wait before the next request is what is left of the 1000/15 ms cycle after this frame's own
+    // request → arrival time, so a slow link (phone over Tailscale, ~64 ms) no longer adds a fixed 66 ms on top, and a
+    // fast one (local) still waits about 66 ms and never goes over 15 frames/s. Slower than the cycle: ask at once.
+    const TARGET_FPS = 15, TARGET_CYCLE_MS = 1000 / TARGET_FPS;
+    function connect() {
+      const ws = new WebSocket(`ws://${location.host}/ws/monitor`);
+      ws.binaryType = 'arraybuffer';
+      let pace = null, askedAt = 0, pinger = null;
+      const ask = () => { if (ws.readyState === 1) { askedAt = performance.now(); ws.send('next'); } };
+      ws.onopen = () => { ask(); if (diag) pinger = setInterval(() => ws.readyState === 1 && ws.send(`ping ${performance.now()}`), 1000); };
+      ws.onmessage = e => {
+        if (typeof e.data === 'string') { if (diag && e.data.startsWith('pong ')) diag.rtt.push(performance.now() - Number(e.data.split(' ')[1])); return; }
+        latest = e.data; lastFrameAt = performance.now();
+        const pause = Math.max(0, TARGET_CYCLE_MS - (lastFrameAt - askedAt));
+        if (diag) { diag.received++; diag.bytes += e.data.byteLength; diag.frameBytes = e.data.byteLength; diag.wait.push(lastFrameAt - askedAt); diag.pause.push(pause); }
+        clearTimeout(pace); pace = setTimeout(ask, pause);
+        if (!drawPending) { drawPending = true; requestAnimationFrame(draw); }
+      };
+      ws.onclose = () => { clearTimeout(pace); clearInterval(pinger); setTimeout(connect, 1000); };
+    }
+    if (diag) {
+      let since = performance.now();
+      setInterval(async () => {
+        try { diag.serverFps = (await fetch('/status', {cache: 'no-store'}).then(r => r.json())).fps; } catch (_) { diag.serverFps = null; }
+        const now = performance.now(), s = (now - since) / 1000; since = now;
+        const o = diag.out = {server_generation_fps: diag.serverFps, client_receive_fps: diag.received / s, client_render_fps: diag.rendered / s,
+          websocket_rtt_ms: median(diag.rtt), request_to_frame_ms: median(diag.wait), frame_bytes: diag.frameBytes, kbytes_per_s: diag.bytes / 1000 / s,
+          decode_ms: median(diag.decode), draw_ms: median(diag.draw), target_fps: TARGET_FPS, target_cycle_ms: TARGET_CYCLE_MS, applied_wait_ms: median(diag.pause)};
+        diag.received = diag.rendered = diag.bytes = 0; diag.decode = []; diag.draw = []; diag.rtt = []; diag.wait = []; diag.pause = [];
+        const n = (v, d = 1) => v === null || v === undefined ? '--' : v.toFixed(d);
+        $('tof-diag').textContent = `진단 · 서버 생성 ${n(o.server_generation_fps)} fps · 수신 ${n(o.client_receive_fps)} fps · 표시 ${n(o.client_render_fps)} fps · `
+          + `RTT ${n(o.websocket_rtt_ms, 0)} ms · 요청→도착 ${n(o.request_to_frame_ms, 0)} ms · 목표 ${TARGET_FPS} fps · 실제 대기 ${n(o.applied_wait_ms, 0)} ms · ${(o.frame_bytes / 1000).toFixed(1)} kB/프레임 · ${n(o.kbytes_per_s, 0)} kB/s · 해석 ${n(o.decode_ms)} ms · 그리기 ${n(o.draw_ms)} ms`;
+      }, 2000);
+      window.monitorDiag = diag;
+    }
+    connect();
+    setInterval(() => {
+      if (hyeol && hyeol.applied && !hyeol.attached) { $('tof-state').textContent = 'ToF 수집 멈춤 (아이들링) · 마지막 프레임'; $('tof-state').className = 'state bad'; }
+      else if (performance.now() - lastFrameAt > 3000) { $('tof-state').textContent = 'ToF 입력 없음 (3초 이상 프레임 없음)'; $('tof-state').className = 'state bad'; }
+    }, 1000);
+
+    // --- straight-up distance (20 m sensor) ---------------------------------------------------------------------
+    const hist = [], HISTORY_S = 10, upCanvas = $('uphist'), uctx = upCanvas.getContext('2d');
+    let lastSeq = -1, inflight = false, upInfo = null, hyeol = null;
+    // 혈 attached = in use (values collected); detached = idling (collection stopped). Simulation switch for now.
+    function showHyeol() {
+      const el = $('hyeol-state');
+      const idle = Boolean(hyeol && hyeol.applied && !hyeol.attached);
+      document.body.classList.toggle('idle', idle);
+      el.className = idle ? 'idle' : '';
+      el.textContent = !hyeol ? '혈 상태 모름' : !hyeol.applied ? `혈 ${hyeol.label} (시뮬레이션 전환 · 실제 장치 모드에는 적용 안 됨)`
+        : hyeol.attached ? '사용 중 · 혈 기구 접속 (시뮬레이션) · 센서값 수집 중' : '아이들링 · 혈 기구 해제 (시뮬레이션) · 센서값 수집 멈춤';
+    }
+    const timeoutSignal = ms => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+    async function poll() {
+      if (inflight) return;
+      inflight = true;
+      try {
+        const d = await fetch('/inputs', {cache: 'no-store', signal: timeoutSignal(2000)}).then(r => r.json());
+        upInfo = d.channels.distance;
+        hyeol = d.hyeol || null;
+        showHyeol();
+        if (upInfo.connected && upInfo.seq !== lastSeq) { lastSeq = upInfo.seq; hist.push({t: performance.now(), v: upInfo.value}); }
+      } catch (_) { upInfo = null; }
+      finally { inflight = false; }
+    }
+    function drawUp() {
+      const now = performance.now();
+      while (hist.length && now - hist[0].t > HISTORY_S * 1000) hist.shift();
+      const a = upInfo;
+      const val = $('upvalue'), st = $('up-state');
+      if (!a) { val.textContent = '--'; val.className = 'none'; st.textContent = '서버 연결 끊김'; st.className = 'state bad'; }
+      else if (a.paused) { val.textContent = '수집 멈춤'; val.className = 'none'; st.textContent = '아이들링'; st.className = 'state bad'; }
+      else if (!a.connected) { val.textContent = '입력 없음'; val.className = 'none'; st.textContent = `source ${a.source}`; st.className = 'state bad'; }
+      else if (a.value === null) { val.textContent = '측정값 없음'; val.className = 'none'; st.textContent = `갱신 ${a.rate_hz} Hz · 천장 미확인`; st.className = 'state'; }
+      else { val.textContent = `${a.value.toFixed(2)} m`; val.className = ''; st.textContent = `${a.source} · 갱신 ${a.rate_hz} Hz`; st.className = 'state'; }
+      // last 10 s: time runs downward, distance to the right (auto range around the recent values)
+      const dpr = window.devicePixelRatio || 1;
+      const cw = Math.round(upCanvas.clientWidth * dpr), ch = Math.round(upCanvas.clientHeight * dpr);
+      if (upCanvas.width !== cw || upCanvas.height !== ch) { upCanvas.width = cw; upCanvas.height = ch; }
+      uctx.fillStyle = '#0b0b0b'; uctx.fillRect(0, 0, cw, ch);
+      const vals = hist.filter(p => p.v !== null).map(p => p.v);
+      if (vals.length > 1) {
+        let lo = Math.min(...vals), hi = Math.max(...vals);
+        // at least 0.5 m across, so sensor noise (a few mm) stays small and real changes stand out
+        const mid = (lo + hi) / 2, half = Math.max(0.25, (hi - lo) * 0.6); lo = mid - half; hi = mid + half;
+        uctx.strokeStyle = '#fff'; uctx.lineWidth = 2 * dpr; uctx.beginPath();
+        let first = true;
+        for (const p of hist) {
+          if (p.v === null) { first = true; continue; }
+          const x = (p.v - lo) / (hi - lo) * cw, y = (now - p.t) / (HISTORY_S * 1000) * ch;
+          if (first) uctx.moveTo(x, y); else uctx.lineTo(x, y);
+          first = false;
+        }
+        uctx.stroke();
+        uctx.fillStyle = '#ccc'; uctx.font = `${12 * dpr}px -apple-system, system-ui, sans-serif`;
+        uctx.fillText('지금', 4 * dpr, 14 * dpr); uctx.fillText('10초 전', 4 * dpr, ch - 4 * dpr);
+      }
+      requestAnimationFrame(drawUp);
+    }
+    poll(); setInterval(poll, 100); requestAnimationFrame(drawUp);
+  </script>
+</body>
+</html>

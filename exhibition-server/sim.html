@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ripples · 심 LED 시뮬레이터</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #000; color: #eee; overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+           overscroll-behavior: none; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+    /* navigation / 3D view / controls, never overlapping (PC: controls as a right-hand column) */
+    #navarea { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #333;
+      padding: calc(env(safe-area-inset-top, 0px) + 8px) calc(env(safe-area-inset-right, 0px) + 8px) 8px calc(env(safe-area-inset-left, 0px) + 8px); }
+    #title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    #ripples-nav-slot { display: flex; flex-direction: column; align-items: flex-end; }
+    #work { position: relative; flex: 1 1 auto; min-height: 200px; overflow: hidden; }
+    #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+    #gl.dragging { cursor: grabbing; }
+    #tip { position: absolute; pointer-events: none; padding: 4px 8px; font-size: 13px; background: rgba(0,0,0,.8); border: 1px solid #555; border-radius: 4px;
+      white-space: nowrap; transform: translate(12px, -50%); }
+    #bar { flex: 0 1 auto; max-height: 50vh; max-height: 50dvh; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid #333; display: grid; gap: 10px;
+      font-size: 14px; line-height: 1.4; align-content: start;
+      padding: 10px calc(env(safe-area-inset-right, 0px) + 10px) calc(env(safe-area-inset-bottom, 0px) + 10px) calc(env(safe-area-inset-left, 0px) + 10px); }
+    .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .label { font-weight: 600; margin-right: 4px; }
+    button, select { min-height: 44px; min-width: 44px; padding: 0 12px; font: inherit; color: #fff; background: #1a1a1a; border: 1px solid #555; border-radius: 6px; }
+    button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    button[aria-pressed="true"] { background: #fff; color: #000; border-color: #fff; font-weight: 600; }
+    .field { display: grid; grid-template-columns: 9em minmax(0, 1fr) 4.5em; gap: 8px; align-items: center; min-height: 44px; }
+    .field input[type=range] { width: 100%; accent-color: #fff; }
+    .field .v { font-variant-numeric: tabular-nums; text-align: right; color: #ccc; }
+    .note { color: #aaa; font-size: 13px; margin: 0; overflow-wrap: anywhere; }
+    .warn { color: #ffd27a; }
+    .code { font: 12px/1.5 ui-monospace, Menlo, monospace; color: #ccc; background: #111; border: 1px solid #333; border-radius: 4px; padding: 8px; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    #rows { font: 12px/1.5 ui-monospace, Menlo, monospace; color: #bbb; white-space: pre-wrap; }
+    input[type=color] { width: 44px; height: 36px; padding: 0; border: 1px solid #555; border-radius: 6px; background: #111; }
+    @media (min-width: 1024px) {
+      body { display: grid; grid-template-columns: minmax(0, 1fr) clamp(320px, 26vw, 400px); grid-template-rows: auto minmax(0, 1fr); }
+      #navarea { grid-column: 1 / -1; }
+      #work { grid-column: 1; grid-row: 2; min-height: 0; }
+      #bar { grid-column: 2; grid-row: 2; max-height: none; border-top: 0; border-left: 1px solid #333; }
+    }
+    #drive .pad { display: grid; grid-template-columns: repeat(3, 56px); gap: 6px; margin: 4px 0; }
+    #drive .pad button { min-height: 44px; font-size: 18px; touch-action: none; user-select: none; }
+    #drive .pad button.held { background: #fff; color: #000; }
+  </style>
+</head>
+<body>
+  <div id="navarea"><span id="title">심 LED 시뮬레이터 · 180 스트립 · 10,350 LED</span><div id="ripples-nav-slot"></div></div>
+  <div id="work"><canvas id="gl" aria-label="심 LED 3D 보기 (드래그 회전, 휠·두 손가락 확대)"></canvas><div id="tip" hidden></div></div>
+  <div id="bar">
+    <p class="note">드래그 = 회전 · 휠/두 손가락 = 확대 · 오른쪽 드래그/두 손가락 이동 = 옮기기</p>
+    <div class="row" role="group" aria-label="시점">
+      <span class="label">시점</span>
+      <button type="button" data-view="eye" aria-pressed="true">눈높이</button>
+      <button type="button" data-view="near">가까이 서서</button>
+      <button type="button" data-view="angle">비스듬히</button>
+      <button type="button" data-view="under">아래에서</button>
+      <button type="button" data-view="side">옆에서</button>
+      <button type="button" data-view="top">위에서</button>
+    </div>
+    <div class="row">
+      <span class="label">렌즈</span>
+      <select id="lens" aria-label="렌즈 화각">
+        <option value="50">표준 50°</option>
+        <option value="75">넓게 75°</option>
+        <option value="95">사람 눈처럼 95°</option>
+      </select>
+      <label class="row"><input id="orbit" type="checkbox"> 천천히 돌기</label>
+    </div>
+    <div class="row" role="group" aria-label="패턴">
+      <span class="label">패턴</span>
+      <select id="pattern" aria-label="패턴">
+        <optgroup label="공간 샘플">
+          <option value="mass" selected>비정형 매스 (떠다니는 덩어리 표면)</option>
+          <option value="massfill">비정형 매스 (속이 찬)</option>
+          <option value="sheet">출렁이는 면</option>
+          <option value="slice">기울어 도는 면</option>
+          <option value="cloud">흐르는 연기</option>
+          <option value="walker">사람 크기 기둥 지나감</option>
+          <option value="spiral">나선</option>
+          <option value="burst">퍼지는 구 껍질</option>
+        </optgroup>
+        <optgroup label="외부 입력">
+          <option value="ai">AI 입력 (서버로 받은 프레임)</option>
+          <option value="data">혈·맥 데이터 (가상 공간 · 사람 · 소리 방향)</option>
+        </optgroup>
+        <optgroup label="확인용">
+          <option value="rows">행 색 확인 (A–Q)</option>
+          <option value="white">전체 켜기</option>
+          <option value="plane">수평면 스캔 (위아래)</option>
+          <option value="ripple">동심 물결</option>
+          <option value="fall">떨어지는 빛</option>
+          <option value="off">끄기</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="row">
+      <span class="label">색</span>
+      <select id="palette" aria-label="색 방식">
+        <option value="mono">한 색</option>
+        <option value="height">높이에 따라</option>
+        <option value="depth">거리에 따라 (가까움 따뜻 · 멂 차가움)</option>
+      </select>
+      <input id="color" type="color" value="#ffffff" aria-label="한 색">
+    </div>
+    <p class="note" id="aist" hidden></p>
+    <p class="note" id="datast" hidden></p>
+    <div id="drive" hidden>
+      <div class="row"><span class="label">혈 조종</span><span class="note" id="drivest" aria-live="polite">확인 중…</span></div>
+      <div class="pad" role="group" aria-label="혈 조종 (누르는 동안 움직임)">
+        <button type="button" data-drive="sleft" aria-label="왼쪽으로 옆걸음">◀</button>
+        <button type="button" data-drive="fwd" aria-label="전진">▲</button>
+        <button type="button" data-drive="sright" aria-label="오른쪽으로 옆걸음">▶</button>
+        <button type="button" data-drive="left" aria-label="좌회전">↺</button>
+        <button type="button" data-drive="back" aria-label="후진">▼</button>
+        <button type="button" data-drive="right" aria-label="우회전">↻</button>
+      </div>
+      <p class="note">누르는 동안 움직임. 키보드 W/S(↑/↓) 전진·후진, A/D(←/→) 회전, Q/E 옆으로. mock 시뮬레이션에서만 움직임.</p>
+    </div>
+    <p class="note" id="datanote" hidden>탑 안의 가상 공간(차가운 흰색) = 혈 주변 ±6 m의 갤러리 M30을 0.16배로 줄인 모형. 혈을 따라가고 혈과 같이 돎(혈의 앞 = 탑의 A행 쪽, 보통 보는 사람의 반대쪽이라 혈 어깨 너머로 보는 느낌). 바닥은 탑 높이 1.0 m의 한 층(1 m 격자), 벽·기둥·가벽·유리·전시물은 공식 도면 형상(높이 0.6배, 2.6 m에서 잘라 위가 열린 모형), 지나다니는 사람 = 시뮬레이터 관람객, 가운데 깜빡이는 점 = 혈. 혈 ToF가 최근 약 90초 동안 본 바닥·벽은 더 밝아짐(쌓인 센서 기록, AI 학습 결과 아님). AI 학습 결과가 아니라 쌓인 센서 기록입니다. 따뜻한 흰색 = 맥(점)과 소리 : 맥 마이크 3개(가정 배치)의 레벨 차로 어림한 방향에서, 그 방향에 가장 가까운 관람객(±25°, 8 m 안)을 소리 나는 곳으로 추정해(없으면 그 방향 2.5 m 앞) 입 높이에서 구 모양 물결이 0.5초마다 퍼짐(밝기 = 소리 크기). 위치는 추정이고 마이크는 방향만 줌. 지금은 시뮬레이터 mock 데이터입니다.</p>
+    <p class="note">공간 샘플은 3차원 부피 안의 모양을 LED로 찍어 본 예시입니다. AI가 학습한 공간을 보여 줄 콘텐츠는 아직 없습니다.</p>
+    <div class="row">
+      <button type="button" id="gif">GIF 5초 만들기</button>
+      <select id="gifw" aria-label="GIF 가로 크기"><option value="480">가로 480</option><option value="720">가로 720</option></select>
+      <span class="v" id="gifst" aria-live="polite"></span>
+    </div>
+    <label class="field"><span>밝기</span><input id="bright" type="range" min="0.05" max="1" step="0.05" value="0.8"><span class="v" id="bright-v"></span></label>
+    <label class="field"><span>속도</span><input id="speed" type="range" min="0" max="3" step="0.05" value="1"><span class="v" id="speed-v"></span></label>
+    <label class="field"><span>주변광 (전시장 조명)</span><input id="amb" type="range" min="0" max="1" step="0.05" value="0.25"><span class="v" id="amb-v"></span></label>
+    <h3 style="margin:6px 0 0;font-size:14px">AI 입력</h3>
+    <p class="note">패턴에서 "AI 입력"을 고르면 서버로 들어온 프레임을 그대로 보여 줍니다. 서버는 마지막 프레임만 둡니다.</p>
+    <p class="note">한 프레임은 numpy uint8 배열 (12, 16, 64, 3)을 bytes로 바꾼 것입니다(36,864 bytes). 12는 서브모듈(zone 1–12), 16은 포트(1–16), 64는 위에서부터 LED 순서(구멍 속 1번 LED는 빼고 2번부터), 3은 RGB입니다. 스트립이 없는 포트와 스트립보다 긴 칸은 0으로 둡니다.</p>
+    <p class="note">보내는 곳은 둘 중 하나입니다. HTTP는 POST <span class="sim-host"></span>/api/sim/frame(본문 = bytes 그대로)이고, WebSocket은 <span class="sim-ws"></span>/ws/sim/in(바이너리 메시지 하나가 프레임 하나)입니다. 받는 상태는 GET /api/sim/status 에서 봅니다. 20 fps면 초당 약 0.74 MB입니다.</p>
+    <pre class="code">import numpy as np, urllib.request
+f = np.zeros((12, 16, 64, 3), np.uint8)
+f[8 - 1, 16 - 1, 0] = (255, 0, 0)   # zone 8 / port 16 = A1, LED 2 빨강
+req = urllib.request.Request("<span class="sim-host"></span>/api/sim/frame",
+    data=f.tobytes(), method="POST")
+urllib.request.urlopen(req)</pre>
+    <p class="note">포트 표는 sim_mapping.csv(배선 proposal, 확정 전)를 따릅니다. 예제 프로그램 : python sim_send.py (zone별 색), python sim_send.py --demo ball. 아두이노로 내보내는 출력은 아직 없습니다.</p>
+    <h3 style="margin:6px 0 0;font-size:14px">치수 (고정)</h3>
+    <p class="note" id="geom"></p>
+    <p class="note warn" id="geomwarn" hidden></p>
+    <p class="note">확정 : 육각 윗판 가로 2120 mm · 세로 1835.97 mm, 구멍 17행 삼각 격자, 행별 LED 수(첫 도면), LED 간격 5 cm, 가장 낮은 LED 끝 바닥 위 50 cm(11-01), 1번 LED = 구멍 위치(실제로는 켜지 않음), 탑 반투명 검정, 윗판 불투명 검정에 위로 5 cm 테두리, 스트립 검정 케이블 + 흰 LED 알. 고정해 쓰는 값(실측 전) : 판 두께 24 mm, 보 60 mm, LED 알 지름 12 mm, 케이블 굵기 7 mm, 스트립 아래 끝이 같은 높이(행별 LED 수가 정확히 그 직선을 반올림한 값), 탑 모양(사진 근사), 윗판 테두리 두께 12 mm. zone/port = sim_mapping.csv.</p>
+    <div id="rows" aria-label="행별 스트립과 LED 수"></div>
+  </div>
+  <script>
+    // 심 (central structure) LED matrix simulator (2026-11-01). 180 vertical LED strips hang from a tilted hexagonal top
+    // plate; 10,350 LEDs drawn with WebGL as points. Geometry (fixed): hexagon 2120 × 1835.97 mm, holes on a 17-row
+    // triangular grid with pitch 2120/17 mm, the 37 holes without a strip (tower / beam), LEDs per strip by row
+    // (A 65 … H 58, I none, J 57 … Q 50); LED pitch 5 cm, LED 1 in the hole and never lit, translucent black structure
+    // (user, 11-01). Assumptions (adjustable, marked): plate centre height, strip bottoms
+    // level (the plate tilts so the row counts are 65 − 15/16·r rounded), tower shape. Patterns are test patterns only.
+    // Coordinates: metres, y up, x right, z toward row Q (front).
+    const $ = id => document.getElementById(id);
+    const ROWS = 'ABCDEFGHIJKLMNOPQ';
+    const LEDS = {A: 65, B: 64, C: 63, D: 62, E: 61, F: 60, G: 59, H: 58, I: 0, J: 57, K: 56, L: 55, M: 54, N: 53, O: 52, P: 51, Q: 50};
+    const EMPTY = new Set(['A5', 'C6', 'E7', 'G7', 'G8', 'G9', 'H7', 'H8', 'H9', 'H10', 'J7', 'J8', 'J9', 'J10', 'K7', 'K8', 'K9', 'M7', 'O6', 'Q5',
+      ...Array.from({length: 17}, (_, k) => `I${k + 1}`)]);
+    const PITCH = 2.120 / 17, ROWSTEP = PITCH * Math.sqrt(3) / 2;
+    const geo = {d: 0.05, hc: 0};   // LED pitch (m, 5 cm confirmed 11-01); plate centre height hc is set below from the 50 cm floor gap
+    // strips: name, row, x, z, LED count
+    const strips = [];
+    for (let r = 0; r < 17; r++) {
+      const n = 9 + Math.min(r, 16 - r), z = (r - 8) * ROWSTEP;
+      for (let k = 0; k < n; k++) {
+        const name = `${ROWS[r]}${k + 1}`;
+        if (EMPTY.has(name) || !LEDS[ROWS[r]]) continue;
+        strips.push({name, row: ROWS[r], r, x: (k - (n - 1) / 2) * PITCH, z, n: LEDS[ROWS[r]]});
+      }
+    }
+    const TOTAL = strips.reduce((s, t) => s + t.n, 0);
+    const plateY = z => geo.hc - (z / ROWSTEP) * (15 / 16) * geo.d;   // A (z < 0) higher, Q lower
+    // port map (11-01, sim_mapping.csv "proposal" = drawing LED Layout & Port Map): strip → zone (submodule 1–12) / port (1–16)
+    const PORTMAP = Object.fromEntries('A1:8/16 A2:8/14 A3:8/1 A4:8/3 A6:1/15 A7:1/13 A8:1/2 A9:1/4 B1:8/11 B2:8/15 B3:8/13 B4:8/2 B5:8/4 B6:1/16 B7:1/14 B8:1/1 B9:1/3 B10:1/7 C1:8/12 C2:8/10 C3:8/9 C4:8/5 C5:8/7 C7:1/11 C8:1/9 C9:1/5 C10:1/6 C11:1/8 D1:7/3 D2:7/4 D3:7/8 D4:12/3 D5:8/6 D6:8/8 D7:1/12 D8:1/10 D9:9/15 D10:2/12 D11:2/16 D12:2/15 E1:7/1 E2:7/2 E3:7/7 E4:12/1 E5:12/2 E6:12/7 E8:9/11 E9:9/14 E10:9/13 E11:2/11 E12:2/14 E13:2/13 F1:7/14 F2:7/13 F3:7/6 F4:12/14 F5:12/13 F6:12/5 F7:12/6 F8:9/10 F9:9/9 F10:9/1 F11:9/2 F12:2/10 F13:2/1 F14:2/2 G1:7/15 G2:7/9 G3:7/5 G4:12/15 G5:12/10 G6:12/9 G10:9/5 G11:9/6 G12:9/3 G13:2/9 G14:2/5 G15:2/3 H1:7/16 H2:7/12 H3:7/11 H4:7/10 H5:12/12 H6:12/11 H11:9/7 H12:9/8 H13:2/6 H14:2/7 H15:2/8 H16:2/4 J1:6/4 J2:6/8 J3:6/7 J4:6/6 J5:11/8 J6:11/7 J11:10/11 J12:10/12 J13:3/10 J14:3/11 J15:3/12 J16:3/16 K1:6/3 K2:6/5 K3:6/9 K4:11/3 K5:11/6 K6:11/5 K10:10/9 K11:10/10 K12:10/15 K13:3/5 K14:3/9 K15:3/15 L1:6/2 L2:6/1 L3:6/10 L4:11/2 L5:11/1 L6:11/9 L7:11/10 L8:10/6 L9:10/5 L10:10/13 L11:10/14 L12:3/6 L13:3/13 L14:3/14 M1:6/13 M2:6/14 M3:6/11 M4:11/13 M5:11/14 M6:11/11 M8:10/7 M9:10/2 M10:10/1 M11:3/7 M12:3/2 M13:3/1 N1:6/15 N2:6/16 N3:6/12 N4:11/15 N5:5/10 N6:5/12 N7:4/8 N8:4/6 N9:10/3 N10:3/8 N11:3/4 N12:3/3 O1:5/8 O2:5/6 O3:5/5 O4:5/9 O5:5/11 O7:4/7 O8:4/5 O9:4/9 O10:4/10 O11:4/12 P1:5/7 P2:5/3 P3:5/1 P4:5/14 P5:5/16 P6:4/4 P7:4/2 P8:4/13 P9:4/15 P10:4/11 Q1:5/4 Q2:5/2 Q3:5/13 Q4:5/15 Q6:4/3 Q7:4/1 Q8:4/14 Q9:4/16'.split(' ').map(e => { const [n, zp] = e.split(':'), [z, q] = zp.split('/').map(Number); return [n, [z, q]]; }));
+    strips.forEach(s => { [s.zone, s.port] = PORTMAP[s.name]; });
+    const PLATE_T = 0.024, BEAM_W = 0.06;   // plate thickness, the I-row beam (assumptions from the photo)
+    const RIM_H = 0.05, RIM_T = 0.012;   // board along the plate edge, standing up 5 cm (11-01 사용자 "5cm 정도"), its thickness assumed
+    const topY = s => plateY(s.z) + PLATE_T / 2;   // LED 1 sits in the hole (middle of the plate); it is never lit
+    // 11-01 사용자 : LED 끝은 바닥에서 50 cm. The lowest strip end is BOTTOM_GAP above the floor; that fixes the plate height
+    // (bottoms are level to within one LED, so the others end 0.50–0.55 m up). Samples placed for the old 2.9 m plate move up by Y0.
+    const BOTTOM_GAP = 0.5;
+    geo.hc = BOTTOM_GAP - Math.min(...strips.map(s => topY(s) - (s.n - 1) * geo.d));
+    const Y0 = geo.hc - 2.9;
+    $('title').textContent = `심 LED 시뮬레이터 · ${strips.length} 스트립 · ${TOTAL.toLocaleString()} LED (켜는 LED ${(TOTAL - strips.length).toLocaleString()})`;
+    $('rows').textContent = [...ROWS].filter(c => LEDS[c]).map(c => { const k = strips.filter(s => s.row === c).length; return `${c}  ${String(k).padStart(2)} 스트립 × ${LEDS[c]} LED = ${k * LEDS[c]}`; }).join('\n')
+      + `\n합계 ${strips.length} 스트립 · ${TOTAL.toLocaleString()} LED (도면 180 · 10,350)\n구멍의 1번 LED ${strips.length}개는 켜지 않음 → 켜는 LED ${(TOTAL - strips.length).toLocaleString()}`;
+
+    // --- WebGL ---------------------------------------------------------------------------------------------------------
+    const canvas = $('gl'), gl = canvas.getContext('webgl', {antialias: true});
+    if (!gl) { $('tip').hidden = false; $('tip').textContent = 'WebGL을 쓸 수 없어 그릴 수 없음'; }
+    function prog(vs, fs) {
+      const sh = (t, src) => { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+      const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS); for (let i = 0; i < n; i++) { const a = gl.getActiveUniform(p, i); u[a.name] = gl.getUniformLocation(p, a.name); }
+      return {p, u, a: name => gl.getAttribLocation(p, name)};
+    }
+    // the bead is drawn as a disc pulled toward the eye by its radius, so it sits in front of its 7 mm cable like the real one
+    const LED_VS = `attribute vec3 aPos; attribute vec3 aCol; uniform mat4 uVP; uniform vec3 uEye; uniform float uSize, uH; varying vec3 vCol;
+      void main() { vec3 p = aPos + normalize(uEye - aPos) * uSize * 0.5; vec4 c = uVP * vec4(p, 1.0); gl_Position = c; gl_PointSize = uSize * uH / max(c.w, 0.2); vCol = aCol; }`;
+    // uBead 1: the LED itself, a white diffuse bead (shaded by the room light uAmb) plus its own light (vCol); written opaque.
+    // uBead 0: the soft halo around a lit LED, added on top.
+    const LED_FS = `precision mediump float; varying vec3 vCol; uniform float uAlpha, uSoft, uAmb, uBead;
+      void main() { vec2 q = gl_PointCoord * 2.0 - 1.0; float r = dot(q, q); if (r > 1.0) discard;
+        if (uBead > 0.5) { float nz = sqrt(max(0.0, 1.0 - r)); float m = max(vCol.r, max(vCol.g, vCol.b));
+          vec3 room = vec3(0.86) * uAmb * (0.3 + 0.7 * nz * (0.6 + 0.4 * q.y * -1.0));
+          vec3 emit = vCol * (0.75 + 0.45 * nz) + vec3(m * 0.35 * nz * nz);
+          gl_FragColor = vec4(room + emit, 1.0); return; }
+        float a = exp(-3.0 * r); gl_FragColor = vec4(vCol * a * uAlpha, 1.0); }`;
+    // solids (plate, beam, tower, floor): a dim gallery key light + the LEDs' own light (uGlow, the mean LED colour), stronger
+    // on faces that look down / sideways at the strips — an approximation, not a light simulation
+    const SOLID_VS = `attribute vec3 aPos; attribute vec3 aNorm; uniform mat4 uVP; varying vec3 vN;
+      void main() { gl_Position = uVP * vec4(aPos, 1.0); vN = aNorm; }`;
+    const SOLID_FS = `precision mediump float; uniform vec4 uCol; uniform vec3 uGlow; uniform float uAmb; varying vec3 vN;
+      void main() { vec3 n = normalize(vN); float lam = max(dot(n, normalize(vec3(0.35, 0.85, 0.4))), 0.0);
+        float under = max(-n.y, 0.0), side = 1.0 - abs(n.y);
+        gl_FragColor = vec4(uCol.rgb * uAmb * (0.35 + 0.65 * lam) + uGlow * (0.12 + 0.7 * under + 0.35 * side), uCol.a); }`;
+    // light the strips throw on the floor: one soft spot per strip (its mean colour), added
+    const GLOW_VS = `attribute vec3 aPos; attribute vec2 aUV; attribute vec3 aCol; uniform mat4 uVP; varying vec2 vUV; varying vec3 vCol;
+      void main() { gl_Position = uVP * vec4(aPos, 1.0); vUV = aUV; vCol = aCol; }`;
+    const GLOW_FS = `precision mediump float; varying vec2 vUV; varying vec3 vCol;
+      void main() { float a = exp(-4.0 * dot(vUV, vUV)); gl_FragColor = vec4(vCol * a, 1.0); }`;
+    const P = gl && {led: prog(LED_VS, LED_FS), solid: prog(SOLID_VS, SOLID_FS), glow: prog(GLOW_VS, GLOW_FS)};
+    const ledPos = new Float32Array(TOTAL * 3), ledCol = new Float32Array(TOTAL * 3), ledStrip = new Uint16Array(TOTAL), ledIdx = new Uint8Array(TOTAL);
+    let cableBuf, cableN = 0, posBuf, colBuf, plateBuf, plateLines, towerBuf, floorBuf, gridBuf, glowBuf, plateN = 0, plateLineN = 0, towerN = 0, floorN = 0, gridN = 0;
+    // meshes: interleaved x, y, z, nx, ny, nz
+    const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]], cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const unit = a => { const l = Math.hypot(...a) || 1; return a.map(v => v / l); };
+    function quad(out, p0, p1, p2, p3, n) { for (const q of [p0, p1, p2, p0, p2, p3]) out.push(...q, ...n); }
+    function beam(out, a, b, w) {   // square tube from a to b, w wide
+      const d = unit(sub(b, a)), u = unit(Math.abs(d[1]) < 0.9 ? cross(d, [0, 1, 0]) : cross(d, [1, 0, 0])), v = cross(d, u), h = w / 2;
+      const at = (p, su, sv) => [p[0] + (su * u[0] + sv * v[0]) * h, p[1] + (su * u[1] + sv * v[1]) * h, p[2] + (su * u[2] + sv * v[2]) * h];
+      for (const [c1, c2, n] of [[[1, -1], [1, 1], u], [[-1, 1], [-1, -1], u.map(x => -x)], [[1, 1], [-1, 1], v], [[-1, -1], [1, -1], v.map(x => -x)]])
+        quad(out, at(a, ...c1), at(b, ...c1), at(b, ...c2), at(a, ...c2), n);
+    }
+    function upload(buf, data) { buf = buf || gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW); return buf; }
+    function buildGeometry() {
+      let o = 0;
+      strips.forEach((s, si) => { s.first = o; const y0 = topY(s); for (let j = 0; j < s.n; j++, o++) { ledPos.set([s.x, y0 - j * geo.d, s.z], o * 3); ledStrip[o] = si; ledIdx[o] = j; } s.bottom = y0 - (s.n - 1) * geo.d; });
+      if (!gl) return;
+      posBuf = posBuf || gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, posBuf); gl.bufferData(gl.ARRAY_BUFFER, ledPos, gl.STATIC_DRAW);
+      colBuf = colBuf || gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, colBuf); gl.bufferData(gl.ARRAY_BUFFER, ledCol, gl.DYNAMIC_DRAW);
+      // plate: a hexagonal slab PLATE_T thick on the tilted plane (pointy left / right), top, bottom and six sides
+      const R = 1.060, hx = [[R, 0], [R / 2, R * Math.sqrt(3) / 2], [-R / 2, R * Math.sqrt(3) / 2], [-R, 0], [-R / 2, -R * Math.sqrt(3) / 2], [R / 2, -R * Math.sqrt(3) / 2]];
+      const k = (15 / 16) * geo.d / ROWSTEP, nTop = unit([0, 1, k]), nBot = nTop.map(x => -x), pt = (x, z, dy) => [x, plateY(z) + dy, z];
+      const pl = [];
+      for (let i = 0; i < 6; i++) {
+        const a = hx[i], b = hx[(i + 1) % 6];
+        for (const [dy, n] of [[PLATE_T, nTop], [0, nBot]]) pl.push(...pt(0, 0, dy), ...n, ...pt(a[0], a[1], dy), ...n, ...pt(b[0], b[1], dy), ...n);
+        quad(pl, pt(a[0], a[1], 0), pt(b[0], b[1], 0), pt(b[0], b[1], PLATE_T), pt(a[0], a[1], PLATE_T), unit([(a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2]));
+        // rim (11-01): a RIM_H board standing up along each edge, hiding the circuits on top of the plate
+        const out = unit([(a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2]), inn = out.map(v => -v), si = 1 - RIM_T / (R * Math.sqrt(3) / 2), up = (q, h) => [q[0], q[1] + h, q[2]];
+        const oa = pt(a[0], a[1], PLATE_T), ob = pt(b[0], b[1], PLATE_T), ia = pt(a[0] * si, a[1] * si, PLATE_T), ib = pt(b[0] * si, b[1] * si, PLATE_T);
+        quad(pl, oa, ob, up(ob, RIM_H), up(oa, RIM_H), out); quad(pl, ib, ia, up(ia, RIM_H), up(ib, RIM_H), inn);
+        quad(pl, up(oa, RIM_H), up(ob, RIM_H), up(ib, RIM_H), up(ia, RIM_H), [0, 1, 0]);
+      }
+      plateBuf = upload(plateBuf, pl); plateN = pl.length / 6;
+      const ln = [];   // a faint outline of the top and bottom edges (keeps the black slab readable)
+      for (const dy of [0, PLATE_T]) for (let i = 0; i < 6; i++) { const a = hx[i], b = hx[(i + 1) % 6]; ln.push(...pt(a[0], a[1], dy), 0, 1, 0, ...pt(b[0], b[1], dy), 0, 1, 0); }
+      for (let i = 0; i < 6; i++) { const a = pt(...hx[i], PLATE_T), b = pt(...hx[(i + 1) % 6], PLATE_T); a[1] += RIM_H; b[1] += RIM_H; ln.push(...a, 0, 1, 0, ...b, 0, 1, 0); }   // rim top edge
+      plateLines = upload(plateLines, ln); plateLineN = ln.length / 6;
+      // the beam under the I row (all 17 I holes are empty) and the tower (photo approximation): tapering legs, rings, X braces
+      const tw = [], top = plateY(0) - BEAM_W, b0 = 0.36, b1 = 0.2, corner = (w, y) => [[w, y, w], [-w, y, w], [-w, y, -w], [w, y, -w]];
+      beam(tw, [-0.98, plateY(0) - BEAM_W / 2, 0], [0.98, plateY(0) - BEAM_W / 2, 0], BEAM_W);
+      const at = y => b0 + (b1 - b0) * (y / top);
+      for (let i = 0; i < 4; i++) beam(tw, corner(b0, 0)[i], corner(b1, top)[i], 0.04);
+      for (let q = 0; q <= 6; q++) { const y = q * top / 6, c = corner(at(y), y); for (let i = 0; i < 4; i++) beam(tw, c[i], c[(i + 1) % 4], 0.025); }
+      for (let q = 0; q < 6; q++) { const y0 = q * top / 6, y1 = (q + 1) * top / 6, c0 = corner(at(y0), y0), c1 = corner(at(y1), y1); for (let i = 0; i < 4; i++) { beam(tw, c0[i], c1[(i + 1) % 4], 0.018); beam(tw, c0[(i + 1) % 4], c1[i], 0.018); } }
+      towerBuf = upload(towerBuf, tw); towerN = tw.length / 6;
+      // each strip: a black cable from the hole to a little past its last LED
+      const cb = []; for (const st of strips) beam(cb, [st.x, topY(st), st.z], [st.x, st.bottom - 0.03, st.z], 0.007);
+      cableBuf = upload(cableBuf, cb); cableN = cb.length / 6;
+      const fl = []; quad(fl, [-6, 0, -6], [6, 0, -6], [6, 0, 6], [-6, 0, 6], [0, 1, 0]); floorBuf = upload(floorBuf, fl); floorN = fl.length / 6;
+      const gr = []; for (let v = -3; v <= 3 + 1e-6; v += 0.5) gr.push(v, 0.001, -3, 0, 1, 0, v, 0.001, 3, 0, 1, 0, -3, 0.001, v, 0, 1, 0, 3, 0.001, v, 0, 1, 0);
+      gridBuf = upload(gridBuf, gr); gridN = gr.length / 6;
+      glowBuf = glowBuf || gl.createBuffer();
+      const lens = strips.map(s => (s.n - 1) * geo.d), bot = strips.map(s => s.bottom);
+      const low = Math.min(...bot), w = $('geomwarn');
+      w.hidden = low >= 0;
+      w.textContent = low < 0 ? `주의 : 지금 치수로는 스트립 아래 끝이 바닥보다 최대 ${(-low).toFixed(2)} m 아래로 내려감(판 중심 ${geo.hc.toFixed(2)} m, 가장 긴 스트립 ${Math.max(...lens).toFixed(2)} m). 판 높이·기울기 가정이나 스트립 방향 확인 필요.` : '';
+      $('geom').textContent = `1번 LED(구멍)부터 마지막 LED까지 `
+        + `${Math.min(...lens).toFixed(2)}–${Math.max(...lens).toFixed(2)} m · 아래 끝 높이 ${Math.min(...bot).toFixed(3)}–${Math.max(...bot).toFixed(3)} m · `
+        + `판 기울기 ${(Math.atan((15 / 16) * geo.d / ROWSTEP) * 180 / Math.PI).toFixed(1)}° (A쪽이 ${((16 * 15 / 16) * geo.d * 1000).toFixed(0)} mm 높음)`;
+    }
+
+    // --- camera ----------------------------------------------------------------------------------------------------------
+    const cam = {target: [0, 2.2, 0], yaw: 0.6, pitch: 0.25, dist: 5};
+    let FOV = 50;   // vertical field of view (lens select: 50 standard, 75 wide, 95 about what a person standing close takes in)
+    // near: eye 1.65 m high, 2.4 m from the centre, looking slightly up (and a wide lens)
+    const VIEWS = {eye: [0.55, -0.06, 5.2, 1.95], near: [0.5, -0.146, 2.4, 2.0], angle: [0.6, 0.25, 5.4, 2.5], under: [0.3, -0.75, 3.2, 2.6], side: [Math.PI / 2, 0.02, 5.4, 2.2], top: [0, 1.45, 5.4, 2.3]};
+    function setView(v) { const [yaw, pitch, dist, ty] = VIEWS[v]; Object.assign(cam, {yaw, pitch, dist, target: [0, ty, 0]}); document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+      if (v === 'near') { $('lens').value = '95'; FOV = 95; } }
+    const eyePos = () => [cam.target[0] + cam.dist * Math.cos(cam.pitch) * Math.sin(cam.yaw), cam.target[1] + cam.dist * Math.sin(cam.pitch), cam.target[2] + cam.dist * Math.cos(cam.pitch) * Math.cos(cam.yaw)];
+    function mul(a, b) { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; }
+    function viewProj(w, h) {
+      const e = eyePos();
+      const f = cam.target.map((t, i) => t - e[i]), fl = Math.hypot(...f); f.forEach((v, i) => f[i] = v / fl);
+      let s = [f[1] * 0 - f[2] * 1, f[2] * 0 - f[0] * 0, f[0] * 1 - f[1] * 0]; const sl = Math.hypot(...s) || 1; s = s.map(v => v / sl);   // f × up(0,1,0)
+      const u = [s[1] * f[2] - s[2] * f[1], s[2] * f[0] - s[0] * f[2], s[0] * f[1] - s[1] * f[0]];
+      const V = new Float32Array([s[0], u[0], -f[0], 0, s[1], u[1], -f[1], 0, s[2], u[2], -f[2], 0,
+        -(s[0] * e[0] + s[1] * e[1] + s[2] * e[2]), -(u[0] * e[0] + u[1] * e[1] + u[2] * e[2]), (f[0] * e[0] + f[1] * e[1] + f[2] * e[2]), 1]);
+      const fov = FOV * Math.PI / 180, t = 1 / Math.tan(fov / 2), n = 0.05, fr = 60;
+      const Pm = new Float32Array([t * h / w, 0, 0, 0, 0, t, 0, 0, 0, 0, -(fr + n) / (fr - n), -1, 0, 0, -2 * fr * n / (fr - n), 0]);
+      return mul(Pm, V);
+    }
+    const ptrs = new Map(); let pinch = null;
+    canvas.addEventListener('pointerdown', e => { canvas.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, {x: e.clientX, y: e.clientY, b: e.button}); canvas.classList.add('dragging'); });
+    canvas.addEventListener('pointermove', e => {
+      const p = ptrs.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+      if (ptrs.size === 2) {
+        const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch) { cam.dist = Math.max(0.8, Math.min(30, cam.dist * pinch / d)); pan(dx / 2, dy / 2); }
+        pinch = d; return;
+      }
+      if (p.b === 2 || e.shiftKey) pan(dx, dy);
+      else { cam.yaw -= dx * 0.008; cam.pitch = Math.max(-1.5, Math.min(1.5, cam.pitch + dy * 0.008)); }
+      document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', 'false'));
+    });
+    const up = e => { ptrs.delete(e.pointerId); pinch = null; if (!ptrs.size) canvas.classList.remove('dragging'); };
+    canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
+    canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(0.8, Math.min(30, cam.dist * Math.exp(e.deltaY * 0.001))); }, {passive: false});
+    function pan(dx, dy) { const k = cam.dist * 0.0015; cam.target[0] -= Math.cos(cam.yaw) * dx * k; cam.target[2] += Math.sin(cam.yaw) * dx * k; cam.target[1] += dy * k; }
+    document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+
+    // --- test patterns -----------------------------------------------------------------------------------------------
+    const hsv = (h, s, v) => { const f = n => { const k = (n + h * 6) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return [f(5), f(3), f(1)]; };
+    let external = null;   // window.sim.setColors(): colours from outside (future content); a pattern choice clears it
+    const smooth = (a, b, x) => { const u = Math.max(0, Math.min(1, (x - a) / (b - a))); return u * u * (3 - 2 * u); };
+    // 3D value noise 0–1 (for the smoke)
+    const hash3 = (x, y, z) => { let h = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(z, 1274126177) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
+    function noise3(x, y, z) {
+      const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), fx = x - xi, fy = y - yi, fz = z - zi;
+      const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy), w = fz * fz * (3 - 2 * fz), L = (a, b, k) => a + (b - a) * k;
+      const c = (dx, dy, dz) => hash3(xi + dx, yi + dy, zi + dz);
+      return L(L(L(c(0, 0, 0), c(1, 0, 0), u), L(c(0, 1, 0), c(1, 1, 0), u), v), L(L(c(0, 0, 1), c(1, 0, 1), u), L(c(0, 1, 1), c(1, 1, 1), u), v), w);
+    }
+    // the floating masses: 5 balls on slow Lissajous paths inside the LED volume (x ±0.9, y 0.4–2.8, z ±0.8 m)
+    // AI input: frames of uint8 (12 submodule, 16 port, 64 LED from the top without LED 1, RGB) via /ws/sim (latest only).
+    // Drawn as they are (밝기 slider not applied). The socket is open only while the AI pattern is chosen.
+    let aiFrame = null, aiSock = null, aiTimes = [];
+    function aiConnect() {
+      if (aiSock || $('pattern').value !== 'ai') return;
+      const ws = aiSock = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/sim`); ws.binaryType = 'arraybuffer';
+      ws.onmessage = e => { if (e.data.byteLength === 36864) { aiFrame = new Uint8Array(e.data); aiTimes.push(performance.now()); if (aiTimes.length > 40) aiTimes.shift(); } };
+      ws.onclose = () => { aiSock = null; setTimeout(aiConnect, 1000); };
+    }
+    function aiStatus() {
+      const on = $('pattern').value === 'ai', el = $('aist'); el.hidden = !on; if (!on) return;
+      const now = performance.now(), recent = aiTimes.filter(t => now - t < 2000), fps = recent.length > 1 ? (recent.length - 1) / ((recent.at(-1) - recent[0]) / 1000) : 0;
+      el.textContent = !aiSock || aiSock.readyState !== 1 ? 'AI 입력 : 서버 연결 중' : !aiTimes.length ? 'AI 입력 : 기다리는 중 (POST /api/sim/frame 또는 ws /ws/sim/in, uint8 12×16×64×3)'
+        : now - aiTimes.at(-1) > 2000 ? `AI 입력 : ${((now - aiTimes.at(-1)) / 1000).toFixed(0)}초 동안 없음 (마지막 프레임 표시 중)` : `AI 입력 : 받는 중 ${fps.toFixed(1)} fps`;
+    }
+    setInterval(aiStatus, 500);
+    document.querySelectorAll('.sim-host').forEach(e => { e.textContent = location.origin; });
+    document.querySelectorAll('.sim-ws').forEach(e => { e.textContent = location.origin.replace(/^http/, 'ws'); });
+    $('pattern').addEventListener('change', () => { if ($('pattern').value === 'ai') aiConnect(); else if (aiSock) { aiSock.onclose = () => { aiSock = null; }; aiSock.close(); } aiStatus(); });
+    // 혈·맥 데이터 (2026-11-02, pattern "data"): the central mass = the space 혈's ToF has seen (each depth sample of the
+    // filtered SIDE stream placed in the venue with 혈's simulator pose, like 평면 점 흔적 in tofrender.js: ToF 1.5 m high,
+    // level, 70°), kept in a 3D grid of the venue (VOX m cells, fading with time constant VOX_TAU s) and drawn shrunk into
+    // the middle of the tower. Accumulated sensor readings, not a learned model. The outer glow = 맥's sound direction
+    // (/inputs maek_features.direction_deg: a rough loudest-side estimate from the three mock mic levels, null when the
+    // levels are too close) and loudness (mean mic level). Connections are open only while this pattern is chosen.
+    const VOX = 0.2, VOX_H = 3.0, VOX_TAU = 90, CAM_H = 1.0,
+    // the room model (11-02 night): the venue around 혈 as a model inside the tower (follows 혈 and turns with it: 혈's
+    // forward = row A side).
+    // Plan scale ROOM_S (±6 m → the tower's ±1 m), heights ×ROOM_VS from the floor at ROOM_FLOOR m, walls cut at
+    // ROOM_CUT m (open top). The whole venue at once was tried first: ~13 strips across 19.8 m blurred walls and people.
+          ROOM_S = 0.16, ROOM_VS = 0.6, ROOM_FLOOR = 1.0, ROOM_CUT = 2.6,
+          ROOM_KINDS = {wall: 1, movable_wall: 1, column: 1, glass: 0.45, door: 0.6, curtain: 0.6, mock_blind: 0.7, mock_frame: 0.7, mock_plate: 0.7}, TOF_FX = 120 / Math.tan(35 * Math.PI / 180);
+    const TOF_KEY = JSON.stringify({mode: 'side', near: 200, far: 4000, confidence: 30, interval: 200, line: 1, slats: false, vertical: false, temporal: true, row: 50, gain: 1, base: 60, flow: 1});
+    const MASS_COL = [0.66, 0.79, 1], SOUND_COL = [1, 0.7, 0.42];   // two colours only: cool white (혈), warm white (맥)
+    const D = {on: false, simWs: null, tofWs: null, poll: 0, pose: null, bounds: null, grid: null, nx: 0, ny: 0, nh: 0, lastDecay: 0,
+               maek: null, people: [], solids: null, stripCache: null, cacheAt: [0, 0, 0], src: null, srcWho: '', rings: [], ringAt: 0,
+               frames: [], dir: null, shown: null, lobe: 0, level: 0, inputsAt: 0, lastStep: 0, pool: null, poolKey: '', pooledAt: 0, dirty: false};
+    const wsUrl = path => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}${path}`;
+    function dataConnect() {
+      if (D.on || $('pattern').value !== 'data') return;
+      D.on = true;
+      const sim = () => { const ws = D.simWs = new WebSocket(wsUrl('/ws/simulator'));
+        ws.onmessage = e => { const m = JSON.parse(e.data); if (m.type !== 'state') return; if (m.devices && m.devices.hyeol) D.pose = m.devices.hyeol; D.tof = m.tof_pose || D.pose;
+          if (m.devices && m.devices.maek) D.maek = m.devices.maek; D.people = Array.isArray(m.people) ? m.people : []; if (m.bounds) setBounds(m.bounds);
+          D.motion = m.motion && m.motion.hyeol; if (m.drive_repeat_s) drv.repeatS = m.drive_repeat_s;
+          if (D.layoutRev !== undefined && m.layout_revision !== D.layoutRev) loadSolids();   // walls / windows moved (전시 배치)
+          D.layoutRev = m.layout_revision; };
+        ws.onclose = () => { D.simWs = null; if (D.on) setTimeout(sim, 1000); }; };
+      const tof = () => { const ws = D.tofWs = new WebSocket(wsUrl(`/ws?tof=${encodeURIComponent(TOF_KEY)}`)); ws.binaryType = 'arraybuffer';
+        ws.onopen = () => ws.send('next');
+        ws.onmessage = e => { if (typeof e.data !== 'string') { addDepth(e.data); if (ws.readyState === 1) ws.send('next'); } };
+        ws.onclose = () => { D.tofWs = null; if (D.on) setTimeout(tof, 1000); }; };
+      sim(); tof();
+      if (!D.solids) loadSolids();
+      D.poll = setInterval(async () => {
+        try { const r = await (await fetch('/inputs')).json(), c = r.channels || {}, mic = c.maek_mic, ft = c.maek_features;
+          D.level = mic && mic.connected && Array.isArray(mic.value) ? mic.value.reduce((a, b) => a + b, 0) / mic.value.length : 0;
+          D.dir = ft && ft.connected && ft.value && ft.value.direction_deg !== null ? ft.value.direction_deg : null; D.inputsAt = performance.now(); } catch (_) {}
+      }, 150);
+    }
+    function loadSolids() {
+      fetch('/api/venue', {cache: 'no-store'}).then(r => r.json()).then(v => { D.solids = (v.solids || []).filter(o => ROOM_KINDS[o.kind] && Array.isArray(o.poly) && o.poly.length > 1); D.ceiling = v.ceiling; D.stripCache = null; }).catch(() => {});
+    }
+    function dataClose() {
+      D.on = false; clearInterval(D.poll);
+      for (const k of ['simWs', 'tofWs']) if (D[k]) { D[k].onclose = null; D[k].close(); D[k] = null; }
+    }
+    function setBounds(b) {
+      if (D.bounds && D.bounds.x0 === b.x0 && D.bounds.x1 === b.x1 && D.bounds.y0 === b.y0 && D.bounds.y1 === b.y1) return;
+      D.bounds = Object.assign({}, b);
+      D.nx = Math.max(1, Math.ceil((b.x1 - b.x0) / 1000 / VOX)); D.ny = Math.max(1, Math.ceil((b.y1 - b.y0) / 1000 / VOX)); D.nh = Math.round(VOX_H / VOX);
+      D.grid = new Float32Array(D.nx * D.ny * D.nh);
+    }
+    function addDepth(buf) {
+      if (!D.grid || !D.tof || buf.byteLength < 40) return;
+      const v = new DataView(buf), w = v.getUint16(6, true), h = v.getUint16(8, true);
+      if (buf.byteLength < 40 + w * h * 2) return;
+      const depth = new Uint16Array(buf, 40, w * h), now = performance.now();
+      D.frames.push(now); if (D.frames.length > 30) D.frames.shift();
+      if (D.lastDecay) { const k = Math.exp(-(now - D.lastDecay) / 1000 / VOX_TAU); for (let i = 0; i < D.grid.length; i++) D.grid[i] *= k; }
+      D.lastDecay = now;
+      const b = D.bounds, p = D.tof, hd = p.heading * Math.PI / 180, fx = Math.sin(hd), fz = Math.cos(hd), rx = Math.cos(hd), rz = -Math.sin(hd);
+      for (let y = 0; y < h; y += 3) for (let x = 0; x < w; x += 3) {
+        const r = depth[y * w + x];
+        if (!r) continue;
+        const xn = (x - (w - 1) / 2) / TOF_FX, yn = -(y - (h - 1) / 2) / TOF_FX, Z = r / 1000 / Math.sqrt(1 + xn * xn + yn * yn);
+        const X = xn * Z, ht = CAM_H + yn * Z;
+        const vx = (p.x / 1000 + X * rx + Z * fx) - b.x0 / 1000, vy = (p.y / 1000 + X * rz + Z * fz) - b.y0 / 1000;
+        const ix = Math.floor(vx / VOX), iy = Math.floor(vy / VOX), ih = Math.floor(ht / VOX);
+        if (ix < 0 || iy < 0 || ih < 0 || ix >= D.nx || iy >= D.ny || ih >= D.nh) continue;
+        const o = (ih * D.ny + iy) * D.nx + ix;
+        D.grid[o] = Math.min(1, D.grid[o] + 0.3);
+      }
+      D.dirty = true;
+    }
+    // The venue shrinks ~13× into the tower, so one LED gap covers many 20 cm cells: pool the grid (max) to about the
+    // LED spacing in plan (POOL_M in the tower) so a LED never falls between the cells it stands for; drawn with
+    // trilinear interpolation of the pooled grid.
+    const POOL_M = 0.11;
+    function pooled(S) {
+      const k = Math.max(1, Math.round(POOL_M / S / VOX)), key = `${k}|${D.nx}|${D.ny}`;
+      if (D.pool && D.poolKey === key && !D.dirty) return D.pool;
+      const px = Math.ceil(D.nx / k), py = Math.ceil(D.ny / k), nh = D.nh, g = new Float32Array(px * py * nh);
+      for (let h = 0; h < nh; h++) for (let y = 0; y < D.ny; y++) { const row = (h * D.ny + y) * D.nx, prow = (h * py + Math.floor(y / k)) * px;
+        for (let x = 0; x < D.nx; x++) { const v = D.grid[row + x]; if (v > g[prow + Math.floor(x / k)]) g[prow + Math.floor(x / k)] = v; } }
+      D.pool = {g, px, py, nh, cell: k * VOX}; D.poolKey = key; D.dirty = false;
+      return D.pool;
+    }
+    function sampleMass(P, vx, vy, vh) {   // venue metres from the grid corner → pooled value, trilinear
+      const fx = vx / P.cell - 0.5, fy = vy / P.cell - 0.5, fh = vh / VOX - 0.5;
+      const x0 = Math.floor(fx), y0 = Math.floor(fy), h0 = Math.floor(fh), tx = fx - x0, ty = fy - y0, th = fh - h0;
+      const at = (x, y, h) => (x < 0 || y < 0 || h < 0 || x >= P.px || y >= P.py || h >= P.nh) ? 0 : P.g[(h * P.py + y) * P.px + x];
+      const L = (a, b, t) => a + (b - a) * t;
+      return L(L(L(at(x0, y0, h0), at(x0 + 1, y0, h0), tx), L(at(x0, y0 + 1, h0), at(x0 + 1, y0 + 1, h0), tx), ty),
+               L(L(at(x0, y0, h0 + 1), at(x0 + 1, y0, h0 + 1), tx), L(at(x0, y0 + 1, h0 + 1), at(x0 + 1, y0 + 1, h0 + 1), tx), ty), th);
+    }
+    // per strip (again when 혈 moves): its point in the venue and the solids within 1.5 m of it: distance (m), weight,
+    // bottom z0 and top (m, cut at ROOM_CUT) — hanging things (blinds, the 심 plate itself at 2.95 m) start at z0
+    function roomCache(cx, cy, hd) {
+      const hr = hd * Math.PI / 180, fx = Math.sin(hr), fy = Math.cos(hr), rx = Math.cos(hr), ry = -Math.sin(hr);
+      const segDist = (px, py, ax, ay, bx, by) => { const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy, t = l ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / l)) : 0; return Math.hypot(px - ax - t * dx, py - ay - t * dy); };
+      const inside = (px, py, poly) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const [xi, yi] = poly[i], [xj, yj] = poly[j]; if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) c = !c; } return c; };
+      const b = D.bounds;
+      D.stripCache = strips.map(st => {
+        const right = st.x / ROOM_S, fwd = -st.z / ROOM_S, vx = cx + right * rx + fwd * fx, vy = cy + right * ry + fwd * fy;   // inverse of toTower
+        const near = [];
+        for (const o of D.solids) {
+          const poly = o.poly.map(([x, y]) => [x / 1000, y / 1000]);
+          let d = inside(vx, vy, poly) ? 0 : Infinity;
+          for (let i = 0; i < poly.length; i++) { const [ax, ay] = poly[i], [bx, by] = poly[(i + 1) % poly.length]; d = Math.min(d, segDist(vx, vy, ax, ay, bx, by)); }
+          const z0 = (o.z0 || 0) / 1000, top = Math.min(ROOM_CUT, (o.top || o.z1 || 4200) / 1000);
+          if (d < 1.5 && z0 < top) near.push({d, w: ROOM_KINDS[o.kind], z0, top});
+        }
+        const inVenue = vx >= b.x0 / 1000 && vx <= b.x1 / 1000 && vy >= b.y0 / 1000 && vy <= b.y1 / 1000;
+        return {vx, vy, near, inVenue};
+      });
+      D.cacheAt = [cx, cy, hd];
+    }
+    // 맥 sound as waves from a point (11-02): the mics give only a direction from 맥, not a position. In the simulator the
+    // visitors are the talkers, so the source is taken as the visitor closest to that direction from 맥 (within
+    // SRC_CONE°, SRC_MAX m); with nobody there, a point SRC_FALLBACK m out along the direction. Mouth height. An estimate.
+    // While there is sound, a ring starts every RING_EVERY s and grows at RING_SPEED m/s for RING_LIFE s.
+    const SRC_CONE = 25, SRC_MAX = 8, SRC_FALLBACK = 2.5, RING_EVERY = 0.5, RING_SPEED = 1.6, RING_LIFE = 2.6;
+    function soundSource(now, dt) {
+      const t = now / 1000;
+      if (D.lobe > 0.3 && D.maek && D.dir !== null) {
+        const mx = D.maek.x / 1000, my = D.maek.y / 1000, a = D.dir * Math.PI / 180, ux = Math.sin(a), uy = Math.cos(a);
+        let best = null;
+        for (const q of D.people) {
+          const dx = q.x / 1000 - mx, dy = q.y / 1000 - my, d = Math.hypot(dx, dy), off = Math.acos(Math.max(-1, Math.min(1, (dx * ux + dy * uy) / (d || 1)))) * 180 / Math.PI;
+          if (d < SRC_MAX && off < SRC_CONE && (!best || off < best.off)) best = {off, x: q.x / 1000, y: q.y / 1000, h: ((q.height || 1700) - 150) / 1000};
+        }
+        const want = best ? [best.x, best.y, best.h] : [mx + ux * SRC_FALLBACK, my + uy * SRC_FALLBACK, 1.5];
+        D.srcWho = best ? '관람객 쪽' : '방향만 (2.5 m 앞으로 둠)';
+        if (!D.src || Math.hypot(want[0] - D.src[0], want[1] - D.src[1]) > 3) D.src = want.slice();   // jumped to another talker
+        else { const k = 1 - Math.exp(-dt / 0.3); for (let i = 0; i < 3; i++) D.src[i] += (want[i] - D.src[i]) * k; }
+        if (t - D.ringAt >= RING_EVERY) { D.rings.push({t0: t, amp: 0.3 + 0.7 * Math.max(0, Math.min(1, (D.level - 0.06) / 0.2)), at: D.src.slice()}); D.ringAt = t; }
+      } else D.srcWho = '';
+      D.rings = D.rings.filter(r => t - r.t0 < RING_LIFE);
+    }
+    // per frame: where the venue sits in the tower, the smoothed sound direction and how strong the glow is
+    function dataStep() {
+      const now = performance.now(), dt = D.lastStep ? Math.min(0.2, (now - D.lastStep) / 1000) : 0; D.lastStep = now;
+      const fresh = now - D.inputsAt < 1500, want = fresh && D.dir !== null ? 1 : 0;
+      D.lobe += (want - D.lobe) * (1 - Math.exp(-dt / 0.5));
+      if (want) {
+        if (D.shown === null) D.shown = D.dir;
+        const diff = ((D.dir - D.shown + 540) % 360) - 180;   // shortest way round
+        D.shown = (D.shown + diff * (1 - Math.exp(-dt / 0.35)) + 360) % 360;
+      }
+      const b = D.bounds;
+      if (!b || !D.pose) return null;
+      soundSource(now, dt);
+      const cx = D.pose.x / 1000, cy = D.pose.y / 1000, hd = D.pose.heading;
+      // turns with 혈 (11-02): 혈's forward always points to the tower's row A side (−z, away from the usual viewer),
+      // its right to +x. venue offset → (right, forward) → tower x = right·S, z = −forward·S
+      const hr = hd * Math.PI / 180, fx = Math.sin(hr), fy = Math.cos(hr), rx = Math.cos(hr), ry = -Math.sin(hr);
+      const toTower = (vx, vy) => { const dx = vx - cx, dy = vy - cy; return [(dx * rx + dy * ry) * ROOM_S, -(dx * fx + dy * fy) * ROOM_S]; };
+      if (D.solids && (!D.stripCache || Math.hypot(cx - D.cacheAt[0], cy - D.cacheAt[1]) > 0.05 || Math.abs(((hd - D.cacheAt[2] + 540) % 360) - 180) > 0.5)) roomCache(cx, cy, hd);
+      return {S: ROOM_S, cx, cy, pool: D.grid ? pooled(ROOM_S) : null, t: now / 1000, toTower,
+              people: D.people.map(q => [...toTower(q.x / 1000, q.y / 1000), (q.height || 1700) / 1000]),
+              hy: D.pose ? toTower(D.pose.x / 1000, D.pose.y / 1000) : null, mk: D.maek ? toTower(D.maek.x / 1000, D.maek.y / 1000) : null,
+              loud: Math.max(0, Math.min(1, ((fresh ? D.level : 0) - 0.06) / 0.2))};
+    }
+    function dataStatus() {
+      const on = $('pattern').value === 'data'; $('datast').hidden = $('datanote').hidden = !on; if (!on) return;
+      const now = performance.now(), recent = D.frames.filter(t => now - t < 2000), fps = recent.length > 1 ? (recent.length - 1) / ((recent.at(-1) - recent[0]) / 1000) : 0;
+      let cells = 0; if (D.grid) for (const g of D.grid) if (g > 0.15) cells++;
+      $('datast').textContent = `혈 ToF ${D.tofWs && D.tofWs.readyState === 1 ? `${fps.toFixed(1)} fps` : '연결 중'} · ${D.pose ? `혈 (${(D.pose.x / 1000).toFixed(1)}, ${(D.pose.y / 1000).toFixed(1)}) m` : '혈 위치 기다리는 중'} · 쌓인 칸 ${cells}`
+        + ` · 맥 소리 ${performance.now() - D.inputsAt < 1500 ? (D.dir === null ? `방향 없음(레벨 차 작음), 크기 ${D.level.toFixed(2)}` : `방향 ${Math.round(D.dir)}°, 크기 ${D.level.toFixed(2)}${D.srcWho ? `, 소리 나는 곳 추정 = ${D.srcWho}` : ''}`) : '입력 없음'}`;
+    }
+    // 혈 조종 (11-02): hold-to-move like /simulator (RipplesSim.bindDrivePad): {"op": "drive", device: "hyeol", move, turn,
+    // strafe} over /ws/simulator, repeated every drive_repeat_s while held, all 0 on release / blur / hidden page /
+    // pattern change. Speeds, inertia, collisions and people stepping aside are the server's (simulator_store.py).
+    // Only in mock mode (/status mock), like the 작업실 joystick.
+    const KEYS = {KeyW: 'fwd', ArrowUp: 'fwd', KeyS: 'back', ArrowDown: 'back', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyQ: 'sleft', KeyE: 'sright'};
+    const drv = {held: new Map(), repeat: null, mock: null, client: Math.random().toString(36).slice(2, 10), seq: 0, repeatS: 0.2};
+    function driveSend(final) {
+      const k = new Set(drv.held.values()), op = {op: 'drive', device: 'hyeol', move: (k.has('fwd') ? 1 : 0) - (k.has('back') ? 1 : 0),
+        turn: (k.has('right') ? 1 : 0) - (k.has('left') ? 1 : 0), strafe: (k.has('sright') ? 1 : 0) - (k.has('sleft') ? 1 : 0)};
+      if (drv.mock && D.simWs && D.simWs.readyState === 1) D.simWs.send(JSON.stringify({type: 'op', client: drv.client, seq: ++drv.seq, final: !!final, op}));
+      return op.move || op.turn || op.strafe;
+    }
+    function driveChanged() {
+      document.querySelectorAll('#drive [data-drive]').forEach(b => b.classList.toggle('held', [...drv.held.values()].includes(b.dataset.drive)));
+      clearInterval(drv.repeat); drv.repeat = null;
+      if (driveSend(false)) drv.repeat = setInterval(() => driveSend(false), 1000 * drv.repeatS);
+    }
+    function driveRelease(id) { if (drv.held.has(id)) { drv.held.delete(id); driveChanged(); } }
+    function driveStop() { if (drv.held.size || drv.repeat) { drv.held.clear(); driveChanged(); } }
+    document.querySelectorAll('#drive [data-drive]').forEach(b => {
+      b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} drv.held.set(e.pointerId, b.dataset.drive); driveChanged(); });
+      for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(type, e => driveRelease(e.pointerId));
+    });
+    addEventListener('keydown', e => {
+      const k = KEYS[e.code];
+      if (!k || $('pattern').value !== 'data' || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+      e.preventDefault();
+      if (!e.repeat && !drv.held.has(e.code)) { drv.held.set(e.code, k); driveChanged(); }
+    });
+    addEventListener('keyup', e => driveRelease(e.code));
+    addEventListener('blur', driveStop);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) driveStop(); });
+    $('pattern').addEventListener('change', () => { if ($('pattern').value !== 'data') driveStop(); });
+    async function driveStatus() {
+      const on = $('pattern').value === 'data'; $('drive').hidden = !on; if (!on) return;
+      try { const st = await (await fetch('/status', {cache: 'no-store'})).json(); drv.mock = Boolean(st.mock); } catch (_) { drv.mock = null; }
+      if (!drv.mock) driveStop();
+      const m = D.motion;
+      $('drivest').textContent = drv.mock === false ? '실제 장치 모드 — 이동은 mock 시뮬레이션에서만' : drv.mock === null || !D.simWs || D.simWs.readyState !== 1 ? '서버 연결 중'
+        : m && m.blocked ? `막힘 (${m.blocked})` : m && m.moving ? `움직이는 중 ${Math.round(Math.abs(m.v))} mm/s` : '멈춤';
+    }
+    setInterval(driveStatus, 500);
+    setInterval(dataStatus, 500);
+    $('pattern').addEventListener('change', () => { if ($('pattern').value === 'data') dataConnect(); else dataClose(); dataStatus(); });
+    const BALLS = [[0.31, 0.23, 0.27, 0.0, 0.45], [0.19, 0.29, 0.33, 1.7, 0.38], [0.27, 0.17, 0.21, 3.1, 0.5], [0.37, 0.31, 0.15, 4.4, 0.33], [0.23, 0.13, 0.35, 5.6, 0.42]];
+    function pattern(t) {
+      const pat = $('pattern').value, br = Number($('bright').value), sp = Number($('speed').value), base = $('color').value, pal = $('palette').value;
+      const cb = [1, 3, 5].map(i => parseInt(base.slice(i, i + 2), 16) / 255);
+      if (external) { for (let i = 0; i < TOTAL; i++) for (let c = 0; c < 3; c++) ledCol[i * 3 + c] = ledIdx[i] === 0 ? 0 : external[i * 3 + c] * br; return; }
+      const yMin = Math.min(...strips.map(s => s.bottom)), yMax = Math.max(...strips.map(topY)), T = t * sp;
+      // per-frame setup
+      const balls = BALLS.map(([a, b, c, ph, r]) => [0.75 * Math.sin(T * a + ph), Y0 + 1.6 + 1.0 * Math.sin(T * b + ph * 1.3), 0.65 * Math.sin(T * c + ph * 0.7), r * r]);
+      const th = T * 0.45, ti = 0.9 + 0.3 * Math.sin(T * 0.37), nrm = [Math.sin(ti) * Math.cos(th), Math.cos(ti), Math.sin(ti) * Math.sin(th)];
+      const wk = [1.25 * Math.sin(T * 0.3), 0.45 * Math.cos(T * 0.21)];
+      const BP = 3, bk = Math.floor(T / BP), bursts = [bk, bk - 1].map(k => { const ph = T / BP - k; return [Math.sin(k * 12.9898) * 0.7, Y0 + 1.6 + Math.sin(k * 78.233) * 0.9, Math.sin(k * 37.719) * 0.6, ph * 1.4 * BP / 3, 1 - ph / 2]; });
+      const eye = eyePos(), ed = Math.hypot(...eye), warm = [1, 0.55, 0.22], cool = [0.15, 0.42, 1];
+      const dm = pat === 'data' ? dataStep() : null, dirRad = D.shown === null ? 0 : D.shown * Math.PI / 180;
+      for (let i = 0; i < TOTAL; i++) {
+        const s = strips[ledStrip[i]], j = ledIdx[i], x = s.x, y = ledPos[i * 3 + 1], z = s.z;
+        if (j === 0) { ledCol[i * 3] = ledCol[i * 3 + 1] = ledCol[i * 3 + 2] = 0; continue; }   // LED 1 (in the hole): never lit
+        let a = 0, c = null;
+        if (pat === 'ai') { const k = j - 1, o = (((s.zone - 1) * 16 + s.port - 1) * 64 + k) * 3; c = aiFrame && k < 64 ? [aiFrame[o] / 255, aiFrame[o + 1] / 255, aiFrame[o + 2] / 255] : [0, 0, 0]; }
+        else if (pat === 'data') {
+          // room model: floor layer, walls / columns from the venue geometry (brighter where 혈's ToF has seen them),
+          // people as light pillars, 혈 (cool) and 맥 (warm) dots, 맥's sound as a warm fan on the floor
+          c = [0, 0, 0];
+          const rc = D.stripCache && D.stripCache[ledStrip[i]];
+          if (dm && rc && rc.inVenue) {
+            const h = (y - ROOM_FLOOR) / ROOM_VS;   // venue height (m) of this LED
+            const seen = dm.pool && h > -0.3 && h < VOX_H ? smooth(0.05, 0.5, sampleMass(dm.pool, rc.vx - D.bounds.x0 / 1000, rc.vy - D.bounds.y0 / 1000, Math.max(0.05, h))) : 0;
+            let cool = 0, warm = 0;
+            const floorK = Math.exp(-(((y - ROOM_FLOOR) / 0.03) ** 2));
+            if (floorK > 0.05) {
+              const grid = Math.max(Math.exp(-((((rc.vx % 1) + 1) % 1 - 0.5) ** 2) / 0.01), Math.exp(-((((rc.vy % 1) + 1) % 1 - 0.5) ** 2) / 0.01));   // 1 m grid
+              cool += floorK * (0.16 + 0.3 * grid + 0.45 * seen);
+            }
+            for (const o of rc.near) if (h >= o.z0 && h <= o.top) cool += o.w * Math.exp(-((o.d / 0.45) ** 2)) * (0.45 + 0.55 * seen) * (h > o.top - 0.3 ? 1.5 : 1);   // top edge brighter
+            for (const q of dm.people) {   // [tower x, tower z, height m]
+              const d = Math.hypot(x - q[0], z - q[1]);
+              if (d < 0.12 && h >= 0 && h <= q[2]) cool += Math.exp(-((d / 0.07) ** 2)) * (h > q[2] - 0.25 ? 1 : 0.75);
+            }
+            const dotAt = (p, ht, r) => p ? Math.exp(-((Math.hypot(x - p[0], z - p[1]) / r) ** 2) - ((h - ht) / 0.35) ** 2) : 0;
+            cool += dotAt(dm.hy, 1.5, 0.08) * (0.7 + 0.3 * Math.sin(dm.t * 4));
+            warm += dotAt(dm.mk, 1.0, 0.08);
+            // sound: spherical waves from the estimated source point (venue metres), fading as they grow
+            for (const r of D.rings) {
+              const age = dm.t - r.t0, R = age * RING_SPEED, d = Math.hypot(rc.vx - r.at[0], rc.vy - r.at[1], h - r.at[2]);
+              warm += r.amp * Math.exp(-(((d - R) / 0.3) ** 2)) * (1 - age / RING_LIFE) ** 1.5;
+            }
+            if (D.src && D.srcWho) warm += 0.8 * D.lobe * Math.exp(-((Math.hypot(rc.vx - D.src[0], rc.vy - D.src[1]) / 0.5) ** 2) - ((h - D.src[2]) / 0.25) ** 2);
+            c = [0, 1, 2].map(q => Math.min(1, MASS_COL[q] * Math.min(1, cool) + SOUND_COL[q] * Math.min(1, warm)));
+          }
+        }
+        else if (pat === 'rows') c = hsv((s.r / 17) % 1, 0.75, parseInt(s.name.slice(1), 10) % 2 ? 1 : 0.5);   // row = hue, odd / even strips brighter / dimmer
+        else if (pat === 'white') a = 1;
+        else if (pat === 'plane') { const h = yMin + (yMax - yMin) * (0.5 + 0.5 * Math.sin(T * 0.6)); a = Math.max(0, 1 - Math.abs(y - h) / 0.05); }
+        else if (pat === 'ripple') { const w = 0.5 + 0.5 * Math.cos((Math.hypot(x, z) * 6 - T * 2) * Math.PI + (y - 2) * 4); a = w ** 6; }
+        else if (pat === 'fall') { const ph = (T * 0.5 + (s.first * 0.6180339) % 1) % 1, head = ph * (s.n + 12) - 6, d = j - head; a = d < 0 && d > -10 ? (1 + d / 10) ** 2 : d >= 0 && d < 1 ? 1 : 0; }
+        else if (pat === 'mass' || pat === 'massfill') {
+          let f = 0; for (const b of balls) { const dx = x - b[0], dy = y - b[1], dz = z - b[2]; f += b[3] / (dx * dx + dy * dy + dz * dz + 1e-4); }
+          a = pat === 'mass' ? Math.exp(-(((f - 1) / 0.14) ** 2)) + (f > 1 ? 0.04 : 0) : smooth(0.75, 1.25, f) * (0.55 + 0.45 * smooth(1, 3, f));
+        }
+        else if (pat === 'sheet') { const h = Y0 + 1.55 + 0.35 * Math.sin(2.2 * x + 0.9 * T) + 0.28 * Math.sin(2.8 * z - 1.1 * T + 1.3 * x) + 0.15 * Math.sin(4.5 * (x + z) + 1.7 * T); a = Math.exp(-(((y - h) / 0.06) ** 2)) + (y < h ? 0.05 : 0); }
+        else if (pat === 'slice') { const d = x * nrm[0] + (y - Y0 - 1.6) * nrm[1] + z * nrm[2]; a = Math.exp(-((d / 0.05) ** 2)); }
+        else if (pat === 'cloud') { const n = 0.65 * noise3(x * 2.2, y * 2.2 - T * 0.35, z * 2.2 + T * 0.1) + 0.35 * noise3(x * 4.5 + T * 0.2, y * 4.5 - T * 0.6, z * 4.5); a = smooth(0.5, 0.78, n) ** 1.5; }
+        else if (pat === 'walker') { const r0 = 0.22, dxz = Math.hypot(x - wk[0], z - wk[1]), dy = y < r0 ? r0 - y : y > 1.75 - r0 ? y - (1.75 - r0) : 0, d = Math.hypot(dxz, dy) - r0; a = d < 0 ? 0.3 : Math.exp(-((d / 0.07) ** 2)); }
+        else if (pat === 'spiral') { const r = Math.hypot(x, z), ph = 2 * Math.atan2(z, x) + 3.2 * y - 1.2 * T; a = r < 0.2 ? 0 : Math.max(0, (Math.cos(ph) - 0.82) / 0.18) ** 1.5; }
+        else if (pat === 'burst') { for (const b of bursts) { const d = Math.hypot(x - b[0], y - b[1], z - b[2]) - b[3]; a += Math.exp(-((d / 0.07) ** 2)) * Math.max(0, b[4]); } }
+        if (!c) {
+          a = Math.min(1, a);
+          if (pal === 'height') c = hsv((0.62 - 0.6 * (y - yMin) / (yMax - yMin) + 1) % 1, 0.8, a);
+          else if (pal === 'depth') { const k = smooth(-1.2, 1.2, Math.hypot(x - eye[0], y - eye[1], z - eye[2]) - ed); c = [0, 1, 2].map(q => (warm[q] + (cool[q] - warm[q]) * k) * a); }
+          else c = [cb[0] * a, cb[1] * a, cb[2] * a];
+        }
+        const g = pat === 'ai' ? 1 : br;
+        ledCol[i * 3] = c[0] * g; ledCol[i * 3 + 1] = c[1] * g; ledCol[i * 3 + 2] = c[2] * g;
+      }
+    }
+    $('pattern').addEventListener('change', () => { external = null; });
+
+    // --- hover: the strip nearest the mouse on screen -----------------------------------------------------------------
+    let hoverStrip = null;
+    // --- frame ---------------------------------------------------------------------------------------------------------
+    const t0 = performance.now(), ORBIT = 0.2;   // auto orbit rad/s (about 31 s a turn)
+    let busy = false, last = t0;   // busy: a GIF is being made (it drives render itself)
+    function frame() {
+      requestAnimationFrame(frame);
+      const now = performance.now(), dt = Math.min(0.1, (now - last) / 1000); last = now;
+      if (busy) return;
+      if ($('orbit').checked && !ptrs.size) cam.yaw += dt * ORBIT;
+      render((now - t0) / 1000);
+    }
+    function render(t) {
+      if (!gl) return;
+      const dpr = window.devicePixelRatio || 1, w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
+      if (!w || !h) return;
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+      const VP = viewProj(w, h);
+      pattern(t);
+      const amb = Number($('amb').value), bg = 0.006 + 0.2 * amb;   // room light: 0 = dark gallery, 1 = lights fully on
+      gl.viewport(0, 0, w, h); gl.clearColor(bg, bg, bg * 1.03, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      // mean colour of the lit LEDs (structure tint) and of each strip (floor light)
+      const mean = [0, 0, 0], perStrip = new Float32Array(strips.length * 3);
+      strips.forEach((st, si) => { let r = 0, g = 0, b = 0; for (let j = 1; j < st.n; j++) { const o = (st.first + j) * 3; r += ledCol[o]; g += ledCol[o + 1]; b += ledCol[o + 2]; }
+        const m = st.n - 1; perStrip.set([r / m, g / m, b / m], si * 3); mean[0] += r; mean[1] += g; mean[2] += b; });
+      const lit = TOTAL - strips.length, glow = mean.map(v => v / lit * 0.3);
+      const S = P.solid; gl.useProgram(S.p); gl.uniformMatrix4fv(S.u.uVP, false, VP); gl.uniform1f(S.u.uAmb, amb);
+      const aP = S.a('aPos'), aN = S.a('aNorm');
+      const solid = (buf, mode, n, col, g) => { gl.bindBuffer(gl.ARRAY_BUFFER, buf); gl.enableVertexAttribArray(aP); gl.vertexAttribPointer(aP, 3, gl.FLOAT, false, 24, 0);
+        gl.enableVertexAttribArray(aN); gl.vertexAttribPointer(aN, 3, gl.FLOAT, false, 24, 12); gl.uniform4fv(S.u.uCol, col); gl.uniform3fv(S.u.uGlow, g); gl.drawArrays(mode, 0, n); };
+      gl.enable(gl.DEPTH_TEST); gl.depthMask(true); gl.disable(gl.BLEND);
+      solid(floorBuf, gl.TRIANGLES, floorN, [0.3, 0.3, 0.31, 1], [0, 0, 0]);
+      solid(gridBuf, gl.LINES, gridN, [0.1, 0.1, 0.11, 1], [0, 0, 0]);
+      gl.disableVertexAttribArray(aN);
+      // floor light under the strips (added, does not hide anything)
+      const G = P.glow, gv = [], rr = 0.55;
+      strips.forEach((st, si) => { const c = [0, 1, 2].map(k => perStrip[si * 3 + k] * 0.1 / (1 + 2.5 * Math.max(0, st.bottom)));
+        for (const [u, v] of [[-1, -1], [1, -1], [1, 1], [-1, -1], [1, 1], [-1, 1]]) gv.push(st.x + u * rr, 0.003, st.z + v * rr, u, v, ...c); });
+      gl.useProgram(G.p); gl.uniformMatrix4fv(G.u.uVP, false, VP);
+      gl.bindBuffer(gl.ARRAY_BUFFER, glowBuf); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(gv), gl.DYNAMIC_DRAW);
+      const gP = G.a('aPos'), gU = G.a('aUV'), gC = G.a('aCol');
+      gl.enableVertexAttribArray(gP); gl.vertexAttribPointer(gP, 3, gl.FLOAT, false, 32, 0); gl.enableVertexAttribArray(gU); gl.vertexAttribPointer(gU, 2, gl.FLOAT, false, 32, 12);
+      gl.enableVertexAttribArray(gC); gl.vertexAttribPointer(gC, 3, gl.FLOAT, false, 32, 20);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); gl.drawArrays(gl.TRIANGLES, 0, gv.length / 8);
+      gl.disableVertexAttribArray(gU); gl.disableVertexAttribArray(gC);
+      // structure: translucent black, but it writes depth, so the LEDs behind it stay hidden
+      gl.useProgram(S.p); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(true);
+      solid(towerBuf, gl.TRIANGLES, towerN, [0.09, 0.09, 0.1, 0.94], glow);
+      solid(plateBuf, gl.TRIANGLES, plateN, [0.08, 0.08, 0.09, 1], glow);   // the plate and rim are opaque (11-01: nothing below shows through) solid(plateLines, gl.LINES, plateLineN, [0.25, 0.25, 0.27, 0.7], glow);
+      gl.disable(gl.BLEND);
+      solid(cableBuf, gl.TRIANGLES, cableN, [0.06, 0.06, 0.065, 1], glow.map(v => v * 0.6));   // black strip cables
+      gl.disableVertexAttribArray(aN);
+      // LEDs (added light), depth-tested against the structure
+      const L = P.led; gl.useProgram(L.p); gl.uniformMatrix4fv(L.u.uVP, false, VP); gl.uniform1f(L.u.uH, h / 2 / Math.tan(FOV / 2 * Math.PI / 180));
+      gl.bindBuffer(gl.ARRAY_BUFFER, posBuf); const ap = L.a('aPos'); gl.enableVertexAttribArray(ap); gl.vertexAttribPointer(ap, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, colBuf); gl.bufferSubData(gl.ARRAY_BUFFER, 0, ledCol); const ac = L.a('aCol'); gl.enableVertexAttribArray(ac); gl.vertexAttribPointer(ac, 3, gl.FLOAT, false, 0, 0);
+      const bead = 0.012;   // LED bead diameter (m, fixed)
+      gl.uniform1f(L.u.uAmb, amb);
+      gl.uniform3fv(L.u.uEye, eyePos());
+      gl.disable(gl.BLEND); gl.depthMask(true); gl.uniform1f(L.u.uBead, 1); gl.uniform1f(L.u.uSize, bead); gl.drawArrays(gl.POINTS, 0, TOTAL);   // the beads themselves
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); gl.uniform1f(L.u.uBead, 0); gl.uniform1f(L.u.uSize, bead * 7); gl.uniform1f(L.u.uAlpha, 0.16); gl.drawArrays(gl.POINTS, 0, TOTAL);   // halos (always on, 11-01)
+      gl.disableVertexAttribArray(ac);
+      gl.depthMask(true); gl.disable(gl.BLEND);
+    }
+
+    // --- GIF: render 75 frames (5 s × 15 fps) from now, one 256-colour palette (median cut) for all frames, LZW ---------------
+    async function makeGif() {
+      if (busy || !gl || !canvas.width) return;
+      const FPS = 15, N = 75, OW = Number($('gifw').value), OH = Math.round(OW * canvas.height / canvas.width / 2) * 2, st = $('gifst');
+      busy = true; $('gif').disabled = true;
+      const pause = () => new Promise(r => setTimeout(r));
+      try {
+        const oc = document.createElement('canvas'); oc.width = OW; oc.height = OH; const ox = oc.getContext('2d', {willReadFrequently: true});
+        const tStart = (performance.now() - t0) / 1000, orbit = $('orbit').checked, keys = [], hist = new Uint32Array(32768);
+        const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v / 16 - 0.5) * 8);
+        for (let k = 0; k < N; k++) {
+          if (orbit && k) cam.yaw += ORBIT / FPS;
+          render(tStart + k / FPS); ox.drawImage(canvas, 0, 0, OW, OH);   // read in the same task, before the canvas is cleared
+          const d = ox.getImageData(0, 0, OW, OH).data, q = new Uint16Array(OW * OH);
+          for (let y = 0, o = 0; y < OH; y++) for (let x = 0; x < OW; x++, o++) {
+            const b = BAYER[(y & 3) * 4 + (x & 3)], cl = v => Math.max(0, Math.min(255, v + b)) >> 3;
+            const key = cl(d[o * 4]) << 10 | cl(d[o * 4 + 1]) << 5 | cl(d[o * 4 + 2]); q[o] = key; hist[key]++;
+          }
+          keys.push(q);
+          if (k % 5 === 4) { st.textContent = `그리는 중 ${k + 1}/${N}`; await pause(); }
+        }
+        st.textContent = '색 고르는 중'; await pause();
+        const pal = medianCut(hist, 256), lut = new Int16Array(32768).fill(-1);
+        const near = key => { const r = (key >> 10 << 3) + 4, g = ((key >> 5 & 31) << 3) + 4, b = ((key & 31) << 3) + 4; let bi = 0, bd = 1e9;
+          for (let i = 0; i < pal.length; i++) { const c = pal[i], dd = (c[0] - r) ** 2 + (c[1] - g) ** 2 + (c[2] - b) ** 2; if (dd < bd) { bd = dd; bi = i; } } return bi; };
+        const out = [];
+        const put = (...b) => { for (const v of b) out.push(v); }, str = t => { for (const ch of t) out.push(ch.charCodeAt(0)); };
+        str('GIF89a'); put(OW & 255, OW >> 8, OH & 255, OH >> 8, 0xF7, 0, 0);
+        for (let i = 0; i < 256; i++) put(...(pal[i] || [0, 0, 0]));
+        put(0x21, 0xFF, 11); str('NETSCAPE2.0'); put(3, 1, 0, 0, 0);   // loop forever
+        const DELAY = [7, 7, 6];   // centiseconds: 20 cs per 3 frames = 15 fps, 75 frames = 5.00 s
+        for (let k = 0; k < N; k++) {
+          const q = keys[k], idx = new Uint8Array(q.length);
+          for (let i = 0; i < q.length; i++) { let v = lut[q[i]]; if (v < 0) v = lut[q[i]] = near(q[i]); idx[i] = v; }
+          put(0x21, 0xF9, 4, 0x04, DELAY[k % 3], 0, 0, 0);
+          put(0x2C, 0, 0, 0, 0, OW & 255, OW >> 8, OH & 255, OH >> 8, 0, 8);
+          const data = lzw(idx); for (let o = 0; o < data.length; o += 255) { const n = Math.min(255, data.length - o); out.push(n); for (let m = 0; m < n; m++) out.push(data[o + m]); }
+          out.push(0);
+          if (k % 5 === 4) { st.textContent = `압축 중 ${k + 1}/${N}`; await pause(); }
+        }
+        out.push(0x3B);
+        const blob = new Blob([new Uint8Array(out)], {type: 'image/gif'}), a = document.createElement('a'), stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '');
+        a.href = URL.createObjectURL(blob); a.download = `sim-${$('pattern').value}-${stamp}.gif`; document.body.append(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+        st.textContent = `저장함 ${OW}×${OH} · 5초 · ${(blob.size / 1048576).toFixed(1)} MB`;
+        return {w: OW, h: OH, bytes: blob.size, frames: N};
+      } finally { busy = false; $('gif').disabled = false; }
+    }
+    // median cut over a 15-bit colour histogram: split the box with the widest channel (weighted by pixel count) until n boxes
+    function medianCut(hist, n) {
+      const ch = (k, c) => c === 0 ? k >> 10 : c === 1 ? k >> 5 & 31 : k & 31;
+      const stat = keys => { let cnt = 0, best = -1, bc = 0; for (let c = 0; c < 3; c++) { let lo = 31, hi = 0; for (const k of keys) { const v = ch(k, c); if (v < lo) lo = v; if (v > hi) hi = v; } if (hi - lo > best) { best = hi - lo; bc = c; } }
+        for (const k of keys) cnt += hist[k]; return {keys, cnt, range: best, c: bc}; };
+      const used = []; for (let k = 0; k < 32768; k++) if (hist[k]) used.push(k);
+      const boxes = [stat(used)];
+      while (boxes.length < n) {
+        let bi = -1, bs = 0; boxes.forEach((b, i) => { const sc = b.range * Math.sqrt(b.cnt); if (b.keys.length > 1 && sc > bs) { bs = sc; bi = i; } });
+        if (bi < 0) break;
+        const b = boxes[bi]; b.keys.sort((u, v) => ch(u, b.c) - ch(v, b.c));
+        let acc = 0, m = 1; for (; m < b.keys.length - 1; m++) { acc += hist[b.keys[m - 1]]; if (acc >= b.cnt / 2) break; }
+        boxes.splice(bi, 1, stat(b.keys.slice(0, m)), stat(b.keys.slice(m)));
+      }
+      return boxes.map(b => { let r = 0, g = 0, bl = 0; for (const k of b.keys) { const w = hist[k]; r += w * ((ch(k, 0) << 3) + 4); g += w * ((ch(k, 1) << 3) + 4); bl += w * ((ch(k, 2) << 3) + 4); }
+        return [r / b.cnt, g / b.cnt, bl / b.cnt].map(v => Math.round(v)); });
+    }
+    // GIF LZW, 8-bit indices (min code size 8), codes packed LSB first
+    function lzw(idx) {
+      const out = []; let cur = 0, bits = 0, size = 9, next = 258, dict = new Map();
+      const emit = code => { cur |= code << bits; bits += size; while (bits >= 8) { out.push(cur & 255); cur >>>= 8; bits -= 8; } };
+      emit(256); let pre = idx[0];
+      for (let i = 1; i < idx.length; i++) {
+        const k = idx[i], key = pre << 8 | k, v = dict.get(key);
+        if (v !== undefined) { pre = v; continue; }
+        emit(pre);
+        if (next === 4096) { emit(256); size = 9; next = 258; dict = new Map(); }
+        else { if (next >= 1 << size) size++; dict.set(key, next++); }
+        pre = k;
+      }
+      emit(pre); emit(257); if (bits > 0) out.push(cur & 255);
+      return out;
+    }
+    $('gif').addEventListener('click', () => { makeGif(); });
+    $('lens').addEventListener('change', () => { FOV = Number($('lens').value); });
+
+    // --- controls --------------------------------------------------------------------------------------------------------
+    const show = (id, f) => { const upd = () => { $(id + '-v').textContent = f(Number($(id).value)); }; $(id).addEventListener('input', upd); upd(); };
+    show('bright', v => v.toFixed(2)); show('speed', v => `${v.toFixed(2)}×`); show('amb', v => v === 0 ? '꺼짐' : `${Math.round(v * 100)}%`);
+    buildGeometry(); setView('eye'); frame();
+    // for checks and future content: strips (name, row, x, z, LED count, first LED index) and setColors(rgb 0–1 × 10,350 × 3)
+    window.sim = {data: D, strips, total: TOTAL, geo, ledPos, ledCol, ledIdx, setColors(rgb) { if (rgb.length !== TOTAL * 3) throw new Error(`need ${TOTAL * 3} values`); external = Float32Array.from(rgb); }, setView, cam, makeGif};
+  </script>
+  <script src="/testui.js"></script>
+</body>
+</html>

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ripples · 출력</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #000; color: #eee; overflow: hidden; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+    #navarea { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #333;
+      padding: calc(env(safe-area-inset-top, 0px) + 8px) calc(env(safe-area-inset-right, 0px) + 8px) 8px calc(env(safe-area-inset-left, 0px) + 8px); }
+    #navarea h1 { margin: 0; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #ripples-nav-slot { display: flex; flex-direction: column; align-items: flex-end; }
+    body.embed #navarea, html.ripples-clean #navarea, body.blind #navarea { display: none; }
+    #work { flex: 1 1 auto; min-height: 0; display: flex; gap: 8px; padding: 8px; }
+    .panel { position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 4px; }
+    #tof { flex: 1 1 auto; }
+    #up { flex: 0 0 96px; }
+    .head { font-size: 14px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .state { font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .state.bad { color: #ff8a7a; }
+    /* the narrow up-distance column: let its rate line wrap instead of cutting the number ("mock · 갱신 10 Hz") */
+    #up .state, #tof-state { white-space: normal; overflow-wrap: anywhere; }
+    canvas { display: block; width: 100%; flex: 1 1 auto; min-height: 0; }
+    #upvalue { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; text-align: center; }
+    #upvalue.none { font-size: 14px; font-weight: 600; color: #ff8a7a; }
+    #level { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    #level.none { font-size: 18px; color: #ff8a7a; }
+    .row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    /* 혈 in use / idling (simulator attach switch) */
+    #hyeol-state { flex: none; margin: 8px 8px 0; padding: 6px 10px; border: 1px solid #555; border-radius: 6px; font-size: 14px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #hyeol-state.idle { border-color: #ff8a7a; color: #ff8a7a; }
+    body.idle #tof canvas, body.idle #up canvas { opacity: .25; }
+    /* ?debug only: frame path measurements (server generation / receive / render / WebSocket round trip) */
+    #tof-diag { display: none; font-size: 12px; color: #9cf; white-space: normal; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    body.debug #tof-diag { display: block; }
+    /* 맥 기구 화면: the composition fills the panel, the audio input state stays as an overlay line */
+    body.maek #work { flex-direction: column; gap: 6px; }
+    /* 블라인드 출력: one full-screen canvas (the master canvas when the booth mapping is applied) */
+    body.blind #work { padding: 0; }
+    body.blind #tof { gap: 0; }
+    #diag { display: none; position: fixed; left: 0; top: 0; z-index: 3; background: rgba(0,0,0,.75); color: #fff; font: 13px ui-monospace, Menlo, monospace;
+      padding: 8px 12px; white-space: pre; pointer-events: none; }
+    body.blind #diag { display: block; }
+    html.ripples-test body.blind #diag { top: calc(env(safe-area-inset-top, 0px) + 60px); }
+    body.blind.stale #diag { color: #ff6b6b; }
+    html.ripples-clean #diag { display: none !important; }
+    /* 점검 칸 (2026-11-10, Pi 설치 확인용): bottom-right, D key or ?panel; above everything, never takes clicks */
+    #panel { position: fixed; right: calc(env(safe-area-inset-right, 0px) + 12px); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); z-index: 9;
+      display: grid; grid-template-columns: auto auto; gap: .15em .9em; padding: .6em .8em; border-radius: 8px; pointer-events: none;
+      background: rgba(0,0,0,.78); border: 1px solid #444; color: #ddd; font: clamp(13px, 1.05vw, 20px)/1.35 ui-monospace, Menlo, monospace;
+      font-variant-numeric: tabular-nums; max-width: min(46em, calc(100vw - 24px)); }
+    #panel .k { color: #999; white-space: nowrap; }
+    #panel .v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .ok { color: #9fe39a; } #panel .bad { color: #ff8a7a; } #panel .warn { color: #ffd27a; }
+    #panel .t { grid-column: 1 / -1; color: #fff; font-weight: 700; }
+    /* inside the simulator (?embed): no diagnostic label; the unmapped 시각화 view keeps the booth's picture shape */
+    body.embed.blind #diag { display: none; }
+    body.embed.blind.fitted #tof { align-items: center; justify-content: center; }
+    body.embed.blind.fitted #tof canvas { flex: none; }
+    /* Simulator-only inspection zoom: enlarge the picture, not the iframe, so labels and the device-screen layout stay
+       readable. Real display/projector URLs do not have ?simpreview and are unchanged. */
+    body.sim-preview #tof { overflow: hidden; }
+    body.sim-preview #tof canvas { transform: scale(1.18); transform-origin: 50% 50%; }
+    body.sim-preview.device #tof > .head, body.sim-preview.device #tof > .state, body.sim-preview.device #tof > .row,
+    body.sim-preview.device #tof > #tof-diag { position: relative; z-index: 1; background: #000; }
+    body.sim-preview #mapout { transform: scale(1.18); transform-origin: 50% 50%; }
+  </style>
+</head>
+<body>
+  <div id="navarea"><h1 id="title">출력</h1><div id="ripples-nav-slot"></div></div>
+  <div id="hyeol-state" role="status" aria-live="polite" hidden>혈 상태 확인 중…</div>
+  <div id="work">
+    <section class="panel" id="tof" aria-label="출력 화면">
+      <div class="row" id="maek-head" hidden><span class="head">마이크 입력 레벨 (0–1)</span><span id="level">--</span></div>
+      <div class="head" id="tof-head">ToF 정면 깊이</div>
+      <div class="state" id="legend">밝을수록 가까움 · 검정 = 측정 없음 · 0.2–4 m</div>
+      <canvas id="depth"></canvas>
+      <div class="state" id="tof-state" aria-live="polite">연결 중…</div>
+      <div class="state" id="state" aria-live="polite" hidden>확인 중…</div>
+      <div id="tof-diag" aria-live="off"></div>
+    </section>
+    <section class="panel" id="up" aria-label="상향 거리센서 입력" hidden>
+      <div class="head">위쪽 거리</div>
+      <div id="upvalue">--</div>
+      <canvas id="uphist" aria-label="최근 10초 거리 변화"></canvas>
+      <div class="state" id="up-state" aria-live="polite">확인 중…</div>
+    </section>
+  </div>
+  <div id="diag"></div>
+  <div id="panel" hidden aria-live="off"></div>
+  <script>
+    // blind outputs have no navigation bar: the shared test UI floats over the picture instead of docking (testui.js)
+    if (/^\/(output\/(hyeol|maek)|display\/blind)\/?$/.test(location.pathname)) document.getElementById('ripples-nav-slot').remove();
+  </script>
+  <script src="/tofrender.js"></script>
+  <script src="/mapout.js"></script>
+  <script src="/testui.js"></script>
+  <script>
+    // Every real output, one page (2026-10-15). The output profile comes from the address:
+    //   /display/hyeol, /monitor/hyeol (compat)  혈 기구 화면: slot hyeol_device + ToF state, up distance, in use / idling
+    //   /display/maek,  /monitor/maek  (compat)  맥 기구 화면: slot maek_device + the audio input state
+    //   /display/blind?space=a|b, /output/<role>?space=a|b (compat)  블라인드 출력: the blind slot of the role the mapping
+    //       assignment gives that space; with &clean it is mapped onto the booth's blinds (mapout.js)
+    //   /output/hyeol, /output/maek without space (compat)  that role's blind composition, unmapped
+    // What is drawn always comes from the assigned composition through the shared compositor (tofrender.js); the profile
+    // only adds overlays (sensor state text), the booth mapping and the request pacing. ?embed = inside the simulator; ?debug = frame path line.
+    const $ = id => document.getElementById(id);
+    const q = new URLSearchParams(location.search);
+    const path = location.pathname.replace(/\/+$/, '');
+    const m = path.match(/^\/(display|monitor|output)\/(hyeol|maek|blind)$/) || [];
+    const space = ['a', 'b'].includes(q.get('space')) ? q.get('space') : null;
+    const profile = m[1] === 'output' || m[2] === 'blind' ? 'blind' : 'device';
+    const fixedRole = m[2] === 'blind' ? null : m[2];   // device role, or the role of /output/<role> without a space
+    if (q.has('embed')) document.body.classList.add('embed');
+    if (q.has('clean')) document.documentElement.style.cursor = document.body.style.cursor = 'none';   // 전시 화면: 마우스 포인터 숨김 (2026-11-11)
+    if (q.has('simpreview')) document.body.classList.add('sim-preview');
+    document.body.classList.add(profile);
+    if (profile === 'device') document.body.classList.add(fixedRole);
+    const SPACE_NAMES = {a: 'A', b: 'B'}, ROLE_NAMES = {hyeol: '혈', maek: '맥'};
+    let role = profile === 'blind' && space ? null : fixedRole;   // a mapped space waits for the assignment
+    const slotOf = r => r && (profile === 'device' ? `${r}_device` : `${r}_blind`);
+    function title() {
+      if (profile === 'device') return `${ROLE_NAMES[role]} 기구 화면`;
+      return `블라인드 출력${space ? ` · 공간 ${SPACE_NAMES[space]}` : ''}${role ? ` · ${ROLE_NAMES[role]}` : ''}`;
+    }
+    document.title = `Ripples · ${title()}`; $('title').textContent = title();
+    if (profile === 'device' && role === 'hyeol') { $('hyeol-state').hidden = false; $('up').hidden = false; }
+    if (profile === 'device' && role === 'maek') {
+      $('maek-head').hidden = false; $('state').hidden = false; $('tof-state').hidden = true; $('legend').hidden = true; $('tof-head').hidden = true;
+    }
+    if (profile === 'blind') {
+      for (const id of ['tof-head', 'legend', 'tof-state']) $(id).hidden = true;
+      $('depth').id = 'view';   // mapout.js maps the canvas with id "view" (the master canvas)
+    }
+    const canvas = document.querySelector('#tof canvas');
+
+    // --- the assigned composition, drawn by the shared compositor (tofrender.js) ------------------------------------
+    // Device screens request ToF frames like the old sensing monitor (option A, 15 frames/s); blind outputs ask for the
+    // next frame as soon as one arrives (up to 30 fps).
+    const paced = profile === 'device';
+    const diagOn = q.has('debug');
+    const view = RipplesRender.createComposition(canvas, {paced, debug: diagOn});
+    let comp = null, visual = null;
+    function choose() {
+      if (!visual || !role) return;
+      const id = visual.slots[slotOf(role)];
+      const next = visual.compositions[id];
+      if (!next) return;
+      if (!comp || comp.id !== id) { window.displayLast = null; }
+      comp = next; view.set(comp);
+      showComposition();
+      $('title').textContent = title(); document.title = `Ripples · ${title()}`;
+    }
+    function showComposition() {
+      const tofLayers = comp.layers.filter(l => l.visible && RipplesRender.RENDERERS[l.renderer] && RipplesRender.RENDERERS[l.renderer].tofMode);
+      if (profile === 'device' && role === 'hyeol') {
+        $('tof-head').textContent = `ToF 정면 깊이 · ${comp.name}`;
+        const first = tofLayers[0];
+        $('legend').textContent = first ? `${['tof_sensor', 'tof_side'].includes(first.renderer) ? '밝을수록 가까움 · ' : ''}검정 = 측정 없음 · ${first.params.near / 1000}–${first.params.far / 1000} m`
+          : `${comp.name} (ToF 레이어 없음)`;
+      }
+      window.displayOutput = {profile, space, role, slot: slotOf(role), composition: comp.id, layers: comp.layers.length, hasTof: tofLayers.length > 0};
+      window.ripplesOutput = space ? {space, role} : undefined;
+    }
+    RipplesRender.connectVisual(v => { visual = v; choose(); });
+    if (profile === 'blind' && space && q.has('clean')) {
+      // ?mapcheck (simulator 맵핑 확인 only): the assigned composition is mapped even when the booth's 출력 내용 is the
+      // test pattern; the real projector window (no mapcheck) follows 출력 내용 as before
+      RipplesMap.startSpaceOutput({space, source: canvas, onRole: r => { role = r; choose(); }, forceSource: q.has('mapcheck')});
+    } else if (profile === 'blind' && space) {
+      // not mapped (?test or no query): still follow the assignment for which blind composition this space shows
+      let aspect = null;
+      RipplesMap.connect(msg => {
+        const r = msg.assignment && msg.assignment[space]; if (r && r !== role) { role = r; choose(); }
+        aspect = msg.booths && msg.booths[space] ? msg.booths[space].aspect : null;
+      });
+      // simulator 시각화 view (?embed): the space's master picture at its booth aspect, as large as fits (contain)
+      if (q.has('embed')) {
+        document.body.classList.add('fitted');
+        const fit = () => {
+          requestAnimationFrame(fit);
+          const box = $('tof').getBoundingClientRect();
+          if (!aspect || !box.width || !box.height) return;
+          const w = Math.min(box.width, box.height * aspect), h = w / aspect;
+          if (canvas.style.width !== `${w}px` || canvas.style.height !== `${h}px`) { canvas.style.width = `${w}px`; canvas.style.height = `${h}px`; }
+        };
+        requestAnimationFrame(fit);
+      }
+    }
+
+    // ToF state line of the 혈 기구 화면 (displayed fps = new ToF frames drawn), last frame for checks
+    const fmt = mm => !Number.isFinite(mm) ? '--' : mm < 1000 ? `${Math.round(mm)} mm` : `${(mm / 1000).toFixed(2)} m`;
+    let shownFrames = 0, fpsSince = performance.now(), fps = 0, lastId = null;
+    // 코드가 바뀌면 스스로 새로고침 (2026-11-11): the server reports the newest .js/.html time; a change → reload
+    (() => { let first = null;
+      setInterval(async () => {
+        try { const v = (await (await fetch('/api/code-version', {cache: 'no-store'})).json()).v;
+          if (first === null) first = v; else if (v !== first) location.reload(); } catch (e) { /* server restarting */ }
+      }, 3000); })();
+    setInterval(() => {
+      const f = view.stats.lastF;
+      if (f && f.id !== lastId) { lastId = f.id; window.displayLast = {mode: f.mode, id: f.id, w: f.w, h: f.h}; }
+      const now = performance.now();
+      if (now - fpsSince >= 1000) { fps = (view.stats.frames - shownFrames) * 1000 / (now - fpsSince); shownFrames = view.stats.frames; fpsSince = now; }
+      const idle = Boolean(hyeol && hyeol.applied && !hyeol.attached);   // the 1 s check below shows the idling text then
+      if (profile === 'device' && role === 'hyeol' && f && !idle && now - view.stats.lastFrameAt < 3000) {
+        let valid = null;
+        if (f.depth) { valid = 0; for (const d of f.depth) if (d) valid++; }
+        $('tof-state').textContent = `입력 있음 · 표시 ${fps.toFixed(0)} fps · 중앙 ${fmt(f.center)}${valid === null ? '' : ` · 유효 ${Math.round(100 * valid / f.depth.length)}%`}`;
+        $('tof-state').className = 'state';
+      }
+    }, 250);
+
+    // --- overlays -------------------------------------------------------------------------------------------------
+    const timeoutSignal = ms => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+    // 맥 기구 화면: the audio input state (the single audio level the server has now, mock) — overlay, not a layer
+    function showAudio() {
+      const a = RipplesRender.hub.sample('audio.level'), lvl = $('level'), st = $('state');
+      if (!RipplesRender.hub.serverOk) { lvl.textContent = '서버 끊김'; lvl.className = 'none'; st.textContent = '서버 연결 끊김 · 다시 연결 시도'; st.className = 'state bad'; }
+      else if (!a.connected) { lvl.textContent = '입력 없음'; lvl.className = 'none'; st.textContent = `마이크 입력 없음 (${a.mode})`; st.className = 'state bad'; }
+      else { lvl.textContent = a.value.toFixed(2); lvl.className = ''; st.textContent = `입력 있음 · ${a.mode} · 갱신 ${a.rate_hz} Hz · #${a.seq}`; st.className = 'state'; }
+    }
+    if (profile === 'device' && role === 'maek') setInterval(showAudio, 100);
+    // 혈 기구 화면: in use / idling, ToF input state, straight-up distance (20 m sensor)
+    const hist = [], HISTORY_S = 10, upCanvas = $('uphist'), uctx = upCanvas.getContext('2d');
+    let lastSeq = -1, inflight = false, upInfo = null, hyeol = null;
+    function showHyeol() {
+      const el = $('hyeol-state');
+      const idle = Boolean(hyeol && hyeol.applied && !hyeol.attached);
+      document.body.classList.toggle('idle', idle);
+      el.className = idle ? 'idle' : '';
+      el.textContent = !hyeol ? '혈 상태 모름' : !hyeol.applied ? `혈 ${hyeol.label} (시뮬레이션 전환 · 실제 장치 모드에는 적용 안 됨)`
+        : hyeol.attached ? '사용 중 · 혈 기구 접속 (시뮬레이션) · 센서값 수집 중' : '아이들링 · 혈 기구 해제 (시뮬레이션) · 센서값 수집 멈춤';
+    }
+    async function poll() {
+      if (inflight) return;
+      inflight = true;
+      try {
+        const d = await fetch('/inputs', {cache: 'no-store', signal: timeoutSignal(2000)}).then(r => r.json());
+        upInfo = d.channels.distance;
+        hyeol = d.hyeol || null;
+        showHyeol();
+        if (upInfo.connected && upInfo.seq !== lastSeq) { lastSeq = upInfo.seq; hist.push({t: performance.now(), v: upInfo.value}); }
+      } catch (_) { upInfo = null; }
+      finally { inflight = false; }
+    }
+    function drawUp() {
+      const now = performance.now();
+      while (hist.length && now - hist[0].t > HISTORY_S * 1000) hist.shift();
+      const a = upInfo;
+      const val = $('upvalue'), st = $('up-state');
+      if (!a) { val.textContent = '--'; val.className = 'none'; st.textContent = '서버 연결 끊김'; st.className = 'state bad'; }
+      else if (a.paused) { val.textContent = '수집 멈춤'; val.className = 'none'; st.textContent = '아이들링'; st.className = 'state bad'; }
+      else if (!a.connected) { val.textContent = '입력 없음'; val.className = 'none'; st.textContent = `source ${a.source}`; st.className = 'state bad'; }
+      else if (a.value === null) { val.textContent = '측정값 없음'; val.className = 'none'; st.textContent = `갱신 ${a.rate_hz} Hz · 천장 미확인`; st.className = 'state'; }
+      else { val.textContent = `${a.value.toFixed(2)} m`; val.className = ''; st.textContent = `${a.source} · 갱신 ${a.rate_hz} Hz`; st.className = 'state'; }
+      // last 10 s: time runs downward, distance to the right (auto range around the recent values)
+      const dpr = window.devicePixelRatio || 1;
+      const cw = Math.round(upCanvas.clientWidth * dpr), ch = Math.round(upCanvas.clientHeight * dpr);
+      if (upCanvas.width !== cw || upCanvas.height !== ch) { upCanvas.width = cw; upCanvas.height = ch; }
+      uctx.fillStyle = '#0b0b0b'; uctx.fillRect(0, 0, cw, ch);
+      const vals = hist.filter(p => p.v !== null).map(p => p.v);
+      if (vals.length > 1) {
+        let lo = Math.min(...vals), hi = Math.max(...vals);
+        // at least 0.5 m across, so sensor noise (a few mm) stays small and real changes stand out
+        const mid = (lo + hi) / 2, half = Math.max(0.25, (hi - lo) * 0.6); lo = mid - half; hi = mid + half;
+        uctx.strokeStyle = '#fff'; uctx.lineWidth = 2 * dpr; uctx.beginPath();
+        let first = true;
+        for (const p of hist) {
+          if (p.v === null) { first = true; continue; }
+          const x = (p.v - lo) / (hi - lo) * cw, y = (now - p.t) / (HISTORY_S * 1000) * ch;
+          if (first) uctx.moveTo(x, y); else uctx.lineTo(x, y);
+          first = false;
+        }
+        uctx.stroke();
+        uctx.fillStyle = '#ccc'; uctx.font = `${12 * dpr}px -apple-system, system-ui, sans-serif`;
+        uctx.fillText('지금', 4 * dpr, 14 * dpr); uctx.fillText('10초 전', 4 * dpr, ch - 4 * dpr);
+      }
+      requestAnimationFrame(drawUp);
+    }
+    if (profile === 'device' && role === 'hyeol') { poll(); setInterval(poll, 100); requestAnimationFrame(drawUp); }
+
+    // ToF input lost / idling (device screen), diagnostic label (blind output, not in ?clean)
+    let diagLastId = null, status = null;
+    setInterval(async () => {
+      const hasTof = window.displayOutput && window.displayOutput.hasTof;
+      if (profile === 'device' && role === 'hyeol') {
+        if (hyeol && hyeol.applied && !hyeol.attached) { $('tof-state').textContent = 'ToF 수집 멈춤 (아이들링) · 마지막 프레임'; $('tof-state').className = 'state bad'; }
+        else if (!hasTof) { $('tof-state').textContent = '이 composition에는 ToF 레이어가 없음'; $('tof-state').className = 'state'; }
+        else if (performance.now() - view.stats.lastFrameAt > 3000) { $('tof-state').textContent = 'ToF 입력 없음 (3초 이상 프레임 없음)'; $('tof-state').className = 'state bad'; }
+      }
+      if (profile !== 'blind') return;
+      try { status = await fetch('/status', {cache: 'no-store'}).then(r => r.json()); } catch (_) { status = null; }
+      const s = status, f = view.stats.lastF, id = f ? f.id : null, moving = id !== null && id !== diagLastId;
+      diagLastId = id;
+      const tofOk = s && s.connected && moving;
+      const ok = hasTof ? tofOk : Boolean(s);
+      document.body.classList.toggle('stale', !ok);
+      $('diag').textContent = [
+        `${title()} · ${role ? `${ROLE_NAMES[role]} 블라인드 슬롯` : '배정 확인 중'} · ${comp ? `${comp.name} (레이어 ${comp.layers.length})` : '--'}${s && s.mock ? ' · MOCK' : ''}`,
+        !s ? '서버 연결 끊김' : !hasTof ? 'ToF 레이어 없음' : `ToF ${s.connected ? '연결됨' : '끊김'} · ${s.resolution} · frame #${id ?? '--'} ${tofOk ? '갱신 중' : '정지'} · 표시 ${fps.toFixed(1)} fps`,
+        ...(s && s.mock && s.hyeol ? [`혈 ${s.hyeol.label}${s.hyeol.collecting ? '' : ' · ToF 수집 멈춤'} (시뮬레이션 전환)`] : []),
+        '더블클릭: 전체 화면',
+      ].join('\n');
+    }, 1000);
+    if (profile === 'blind') {
+      document.addEventListener('dblclick', () => {
+        if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+        else {
+          const el = document.documentElement, request = el.requestFullscreen || el.webkitRequestFullscreen;
+          const p = request && request.call(el);
+          if (p && p.catch) p.catch(() => {});
+        }
+      });
+    }
+
+    // ?debug: frame path line under the picture and window.monitorDiag (same values as the old sensing monitor)
+    const median = a => { if (!a.length) return null; const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+    if (diagOn) {
+      document.body.classList.add('debug');
+      const diag = {out: {}};
+      let since = performance.now(), recv0 = 0, frames0 = 0, bytes0 = 0;
+      setInterval(async () => {
+        let serverFps = null;
+        try { serverFps = (await fetch('/status', {cache: 'no-store'}).then(r => r.json())).fps; } catch (_) {}
+        const st = view.stats, now = performance.now(), sec = (now - since) / 1000; since = now;
+        const o = diag.out = {server_generation_fps: serverFps, client_receive_fps: (st.received - recv0) / sec, client_render_fps: (st.frames - frames0) / sec,
+          websocket_rtt_ms: median(st.rtt), request_to_frame_ms: median(st.wait), frame_bytes: st.frameBytes, kbytes_per_s: (st.bytes - bytes0) / 1000 / sec,
+          decode_ms: median(st.decode), draw_ms: 0, target_fps: paced ? 15 : null, target_cycle_ms: paced ? 1000 / 15 : null,
+          applied_wait_ms: median(st.pause), composition: comp && comp.id};
+        recv0 = st.received; frames0 = st.frames; bytes0 = st.bytes; st.rtt.length = st.wait.length = st.pause.length = st.decode.length = 0;
+        const n = (v, d = 1) => v === null || v === undefined ? '--' : v.toFixed(d);
+        $('tof-diag').textContent = `진단 · 서버 생성 ${n(o.server_generation_fps)} fps · 수신 ${n(o.client_receive_fps)} fps · 표시 ${n(o.client_render_fps)} fps · `
+          + `RTT ${n(o.websocket_rtt_ms, 0)} ms · 요청→도착 ${n(o.request_to_frame_ms, 0)} ms · ${paced ? '목표 15 fps' : '바로 다음 요청'} · 실제 대기 ${n(o.applied_wait_ms, 0)} ms · `
+          + `${(o.frame_bytes / 1000).toFixed(1)} kB/프레임 · ${n(o.kbytes_per_s, 0)} kB/s · 해석·그리기 ${n(o.decode_ms)} ms · composition ${o.composition || '--'}`;
+      }, 2000);
+      window.monitorDiag = diag;
+    }
+
+    // --- 점검 칸 (2026-11-10, user: "라즈베리파이에서 잘 돌아가는지 확인 … 우측 아래에 작게 프레임이라던지 상태라던지"):
+    // D key (any keyboard layout) or ?panel shows it; remembered in this browser. Polls the server only while shown.
+    const panel = $('panel');
+    // ?panel = shown, ?panel=0 = hidden (the Pi's settings.sh TEST_PANEL), neither = as last left in this browser
+    let panelOn = q.has('panel') && q.get('panel') !== '0';
+    try { if (!q.has('panel') && localStorage.getItem('ripples-panel') === '1') panelOn = true; } catch (_) {}
+    let pFrames = view.stats.frames, pAt = performance.now();
+    const esc = t => String(t).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'})[c]);
+    const row = (k, v, cls = '') => `<span class="k">${esc(k)}</span><span class="v ${cls}">${esc(v)}</span>`;
+    const getJson = url => fetch(url, {cache: 'no-store'}).then(r => r.ok ? r.json() : null).catch(() => null);
+    async function showPanel() {
+      if (!panelOn) return;
+      const [st, inp, odo, host] = await Promise.all([getJson('/status'), getJson('/inputs'), getJson('/api/odometry'), getJson('/api/host')]);
+      const now = performance.now(), shown = (view.stats.frames - pFrames) * 1000 / Math.max(1, now - pAt);
+      pFrames = view.stats.frames; pAt = now;
+      const w = Math.round(innerWidth * devicePixelRatio), h = Math.round(innerHeight * devicePixelRatio);
+      const cv = comp && comp.canvas && comp.canvas.width ? `${comp.canvas.width}×${comp.canvas.height}` : null;
+      const rows = [`<span class="t">점검 · D 키로 숨김</span>`];
+      rows.push(row('화면', `${w}×${h}${cv ? (cv === `${w}×${h}` ? ' · 맞음' : ` · 이 화면은 ${cv}용`) : ''}`, cv && cv !== `${w}×${h}` ? 'warn' : 'ok'));
+      rows.push(row('시각화', comp ? `${comp.name}${visual ? ` · r${visual.revision}` : ''}` : '불러오는 중', comp ? '' : 'warn'));
+      const fresh = now - view.stats.lastFrameAt < 3000;
+      rows.push(row('표시', `${shown.toFixed(0)} fps`, fresh && shown >= 10 ? 'ok' : 'bad'));
+      rows.push(!st ? row('ToF 카메라', '서버 연결 끊김', 'bad')
+        : row('ToF 카메라', st.connected ? `${st.resolution} · 수집 ${Number(st.fps || 0).toFixed(0)} fps` : `안 열림 · ${st.error || '--'}`, st.connected ? 'ok' : 'bad'));
+      const d = inp && inp.channels && inp.channels.distance;
+      rows.push(!d ? row('천장 거리', '--', 'bad') : d.connected && typeof d.value === 'number'
+        ? row('천장 거리', `${d.value.toFixed(2)} m · ${d.rate_hz} Hz · ${d.source}`, 'ok')
+        : row('천장 거리', d.connected ? '연결됨 · 측정값 없음' : (d.error || (d.source === 'none' ? '센서 사용 안 함' : '값 없음')), d.connected ? 'warn' : 'bad'));
+      if (odo && odo.on && odo.estimate) {
+        const e = odo.estimate, q2 = e.quality;
+        const m2 = v => (Math.abs(v) < 5 ? 0 : v / 1000).toFixed(2);
+        rows.push(row('혈 움직임', `방향 ${Math.round(e.heading) % 360}° · 이동 ${m2(e.x)}, ${m2(e.y)} m · 맞춤 ${Math.round(q2 * 100)}% · ${Math.round(odo.ms)} ms`,
+          q2 >= 0.5 ? 'ok' : 'warn'));
+        if (q2 < 0.5) rows.push(row('', q2 === 0 ? '맞출 윤곽 없음 (4 m 안에 벽 · 물건이 보여야 함)' : '윤곽이 적음', 'warn'));
+      } else rows.push(row('혈 움직임', odo ? '추정 꺼짐' : '--', 'warn'));
+      if (host) {
+        const parts = [host.cpu === null || host.cpu === undefined ? 'CPU --' : `CPU ${host.cpu}%`];
+        if (host.temp_c !== null && host.temp_c !== undefined) parts.push(`${host.temp_c}°C`);
+        const th = host.throttled;
+        const power = th === null || th === undefined ? '' : th & 0x1 ? ' · 전원 부족!' : th & 0x4 ? ' · 열로 느려짐!' : th & 0x50000 ? ' · 전에 전원 부족 · 느려짐 있었음' : ' · 전원 정상';
+        rows.push(row('Pi', parts.join(' · ') + power, th & 0x5 ? 'bad' : (host.temp_c > 80 || th & 0x50000) ? 'warn' : 'ok'));
+      }
+      rows.push(row('시각', new Date().toLocaleTimeString('ko-KR', {hour12: false})));
+      panel.innerHTML = rows.join('');
+    }
+    function setPanel(on) {
+      panelOn = on; panel.hidden = !on;
+      try { localStorage.setItem('ripples-panel', on ? '1' : '0'); } catch (_) {}
+      if (on) { pFrames = view.stats.frames; pAt = performance.now(); showPanel(); }
+    }
+    addEventListener('keydown', e => { if (e.code === 'KeyD' && !e.ctrlKey && !e.metaKey && !e.altKey) setPanel(!panelOn); });
+    setPanel(panelOn);
+    setInterval(showPanel, 1000);
+  </script>
+</body>
+</html>

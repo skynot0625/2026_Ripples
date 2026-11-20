@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ripples · Output B</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #000; color: #eee; overflow: hidden; }
+    #view { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #diag { position: fixed; left: 0; top: 0; background: rgba(0,0,0,.75); color: #fff; font-size: 13px; padding: 8px 12px; white-space: pre; pointer-events: none; }
+    body.stale #diag { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <div id="diag">OUTPUT B · audio level 진단 화면</div>
+  <script>
+    // Diagnostic only: shows whether the audio level input arrives and changes over time.
+    // The server keeps only the latest value; this page polls it with one request in flight and draws the newest sample.
+    const $ = id => document.getElementById(id);
+    const canvas = $('view'), ctx = canvas.getContext('2d');
+    const HISTORY_S = 10;
+    const history = [];  // {t, level}
+    let latest = null, lastSeq = -1, serverOk = false, inflight = false, drawPending = false;
+    let retryAt = 0;
+    const timeoutSignal = ms => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+
+    async function poll() {
+      if (inflight || Date.now() < retryAt) return;  // after a failure, retry once per second
+      inflight = true;
+      try {
+        const d = await fetch('/inputs', {cache: 'no-store', signal: timeoutSignal(2000)}).then(r => r.json());
+        serverOk = true;
+        latest = {mock: d.mock, audio: d.channels.audio};
+        if (latest.audio.connected && latest.audio.seq !== lastSeq) {
+          lastSeq = latest.audio.seq;
+          history.push({t: performance.now(), level: latest.audio.value});
+        }
+      } catch (_) {
+        retryAt = Date.now() + 1000;
+        serverOk = false;
+      } finally {
+        inflight = false;
+        if (!drawPending) { drawPending = true; requestAnimationFrame(draw); }
+      }
+    }
+
+    function draw() {
+      drawPending = false;
+      const dpr = window.devicePixelRatio || 1;
+      const cw = Math.round(canvas.clientWidth * dpr), ch = Math.round(canvas.clientHeight * dpr);
+      if (canvas.width !== cw || canvas.height !== ch) { canvas.width = cw; canvas.height = ch; }
+      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, cw, ch);
+
+      const now = performance.now();
+      while (history.length && now - history[0].t > HISTORY_S * 1000) history.shift();
+      const a = latest && latest.audio;
+      const ok = serverOk && a && a.connected;
+      document.body.classList.toggle('stale', !ok);
+      const level = ok ? a.value : 0;
+
+      // Level bar (0–1) and a 10 s trace of received values.
+      const m = 40 * dpr, top = ch * 0.3, barH = ch * 0.08, w = cw - 2 * m;
+      ctx.strokeStyle = '#555'; ctx.lineWidth = dpr;
+      ctx.strokeRect(m, top, w, barH);
+      ctx.fillStyle = '#fff'; ctx.fillRect(m, top, w * level, barH);
+
+      const gy = top + barH + 40 * dpr, gh = ch - gy - m;
+      ctx.strokeRect(m, gy, w, gh);
+      ctx.beginPath();
+      history.forEach((p, i) => {
+        const x = m + w * (1 - (now - p.t) / (HISTORY_S * 1000)), y = gy + gh * (1 - p.level);
+        // A gap over 0.5 s (no samples received) stays visible as a break in the line.
+        i && p.t - history[i - 1].t < 500 ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.strokeStyle = '#fff'; ctx.stroke();
+
+      ctx.fillStyle = '#888'; ctx.font = `${12 * dpr}px ui-monospace, Menlo, monospace`;
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('level 0–1', m, top - 6 * dpr);
+      ctx.fillText(`최근 ${HISTORY_S}초`, m, gy - 6 * dpr);
+
+      $('diag').textContent = [
+        `OUTPUT B · audio level 진단 화면${latest && latest.mock ? ' · MOCK' : ''}`,
+        !serverOk ? '서버 연결 끊김' : !a || !a.connected ? `audio 입력 없음 (source ${a ? a.source : '--'})` : `audio ${a.source} · ${a.rate_hz} Hz · #${a.seq}`,
+        `level ${ok ? level.toFixed(3) : '--'}`,
+        '더블클릭: 전체 화면',
+      ].join('\n');
+    }
+
+    document.addEventListener('dblclick', () => {
+      if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else {
+        const el = document.documentElement, request = (el.requestFullscreen || el.webkitRequestFullscreen);
+        const p = request && request.call(el);
+        if (p && p.catch) p.catch(() => {});
+      }
+    });
+    window.addEventListener('resize', () => { if (!drawPending) { drawPending = true; requestAnimationFrame(draw); } });
+
+    poll();
+    setInterval(poll, 50);
+  </script>
+  <script src="/mapout.js"></script>
+  <script src="/testui.js"></script>
+</body>
+</html>

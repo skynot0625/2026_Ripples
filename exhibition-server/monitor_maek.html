@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ripples · 맥 센싱 모니터</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; background: #000; color: #eee; overflow: hidden; display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+    #navarea { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid #333;
+      padding: calc(env(safe-area-inset-top, 0px) + 8px) calc(env(safe-area-inset-right, 0px) + 8px) 8px calc(env(safe-area-inset-left, 0px) + 8px); }
+    #navarea h1 { margin: 0; font-size: 17px; font-weight: 700; }
+    #ripples-nav-slot { display: flex; flex-direction: column; align-items: flex-end; }
+    body.embed #navarea, html.ripples-clean #navarea { display: none; }
+    #work { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px; }
+    .head { font-size: 14px; font-weight: 600; color: #fff; }
+    .row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+    #level { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    #level.none { font-size: 18px; color: #ff8a7a; }
+    #meter { flex: none; height: 28px; }
+    #history { flex: 1 1 auto; min-height: 0; }
+    canvas { display: block; width: 100%; }
+    .state { font-size: 13px; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+    .state.bad { color: #ff8a7a; }
+  </style>
+</head>
+<body>
+  <div id="navarea"><h1>맥 센싱 모니터</h1><div id="ripples-nav-slot"></div></div>
+  <div id="work" aria-label="마이크 입력">
+    <div class="row"><span class="head">마이크 입력 레벨 (0–1)</span><span id="level">--</span></div>
+    <canvas id="meter" aria-label="현재 레벨과 최근 2초 최대값"></canvas>
+    <div class="head">최근 10초</div>
+    <canvas id="history" aria-label="최근 10초 레벨 변화"></canvas>
+    <div class="state" id="state" aria-live="polite">확인 중…</div>
+  </div>
+  <script src="/testui.js"></script>
+  <script>
+    // 맥 sensing monitor: shows whether the microphone input arrives and how it changes. It reads only what the
+    // server already has (/inputs → channels.audio: a level 0–1; mock for now). Input check only — separate from the
+    // 맥 role screen and from any 맥 AI visualisation; no learning representation or exhibition styling.
+    // ?embed = inside the simulator controller (no navigation area).
+    const $ = id => document.getElementById(id);
+    if (new URLSearchParams(location.search).has('embed')) document.body.classList.add('embed');
+    const HISTORY_S = 10, PEAK_S = 2;
+    const hist = [];  // {t, v}
+    let info = null, lastSeq = -1, inflight = false, serverOk = false;
+    const timeoutSignal = ms => (AbortSignal.timeout ? AbortSignal.timeout(ms) : undefined);
+
+    async function poll() {
+      if (inflight) return;
+      inflight = true;
+      try {
+        const d = await fetch('/inputs', {cache: 'no-store', signal: timeoutSignal(2000)}).then(r => r.json());
+        serverOk = true;
+        info = d.channels.audio;
+        if (info.connected && info.seq !== lastSeq && typeof info.value === 'number') { lastSeq = info.seq; hist.push({t: performance.now(), v: info.value}); }
+      } catch (_) { serverOk = false; }
+      finally { inflight = false; }
+    }
+
+    function sizeOf(c) {
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr);
+      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+      return [w, h, dpr];
+    }
+
+    function draw() {
+      const now = performance.now();
+      while (hist.length && now - hist[0].t > HISTORY_S * 1000) hist.shift();
+      const live = serverOk && info && info.connected;
+      const cur = live && hist.length ? hist[hist.length - 1].v : null;
+      const lvl = $('level'), st = $('state');
+      if (!serverOk) { lvl.textContent = '서버 끊김'; lvl.className = 'none'; st.textContent = '서버 연결 끊김 · 다시 연결 시도'; st.className = 'state bad'; }
+      else if (!live) { lvl.textContent = '입력 없음'; lvl.className = 'none'; st.textContent = `마이크 입력 없음 (source ${info ? info.source : '--'})`; st.className = 'state bad'; }
+      else { lvl.textContent = cur === null ? '--' : cur.toFixed(2); lvl.className = ''; st.textContent = `입력 있음 · ${info.source} · ${info.rate_hz} Hz · #${info.seq}`; st.className = 'state'; }
+
+      // meter: current level bar + peak of the last 2 s
+      const m = $('meter'), mc = m.getContext('2d');
+      const [mw, mh, dpr] = sizeOf(m);
+      mc.fillStyle = '#1a1a1a'; mc.fillRect(0, 0, mw, mh);
+      if (cur !== null) {
+        mc.fillStyle = '#fff'; mc.fillRect(0, 0, mw * cur, mh);
+        const peak = Math.max(...hist.filter(p => now - p.t <= PEAK_S * 1000).map(p => p.v));
+        mc.fillStyle = '#ff8a7a'; mc.fillRect(Math.min(mw - 3 * dpr, mw * peak), 0, 3 * dpr, mh);
+      }
+      for (let i = 1; i < 10; i++) { mc.fillStyle = i === 5 ? '#666' : '#333'; mc.fillRect(mw * i / 10, 0, dpr, mh * (i === 5 ? 1 : 0.35)); }
+
+      // history: time runs left (10 s ago) → right (now), level 0 at the bottom, 1 at the top
+      const c = $('history'), hc = c.getContext('2d');
+      const [w, h] = sizeOf(c);
+      hc.fillStyle = '#0b0b0b'; hc.fillRect(0, 0, w, h);
+      hc.fillStyle = '#333'; for (const f of [0.25, 0.5, 0.75]) hc.fillRect(0, h * (1 - f), w, dpr);
+      if (hist.length > 1) {
+        hc.strokeStyle = '#fff'; hc.lineWidth = 2 * dpr; hc.beginPath();
+        hist.forEach((p, i) => { const x = w - (now - p.t) / (HISTORY_S * 1000) * w, y = h * (1 - p.v); i ? hc.lineTo(x, y) : hc.moveTo(x, y); });
+        hc.stroke();
+      }
+      hc.fillStyle = '#ccc'; hc.font = `${12 * dpr}px -apple-system, system-ui, sans-serif`;
+      hc.fillText('10초 전', 4 * dpr, h - 4 * dpr); hc.textAlign = 'right'; hc.fillText('지금', w - 4 * dpr, h - 4 * dpr); hc.textAlign = 'left';
+      requestAnimationFrame(draw);
+    }
+    poll(); setInterval(poll, 50); requestAnimationFrame(draw);
+  </script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>맥 소리 설정</title>
+<style>
+  :root { color-scheme: light dark; --line: #8884; --muted: #888; --accent: #2a7; }
+  body { font: 15px/1.5 -apple-system, "Apple SD Gothic Neo", system-ui, sans-serif; margin: 0; padding: 20px; max-width: 560px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+  .row { display: grid; grid-template-columns: 1fr 64px; gap: 4px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .row label { grid-column: 1 / 3; font-size: 14px; }
+  .row input[type=range] { width: 100%; }
+  .row output { text-align: right; font-variant-numeric: tabular-nums; }
+  .mic { display: grid; grid-template-columns: 100px 1fr 48px 64px; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .mic output { text-align: right; font-variant-numeric: tabular-nums; }
+  h2 { font-size: 14px; margin: 22px 0 4px; }
+  .status { font: 12px/1.6 ui-monospace, Menlo, monospace; color: var(--muted); white-space: pre-wrap; margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line); }
+  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line); background: none; cursor: pointer; }
+  .msg { min-height: 20px; font-size: 13px; color: var(--accent); margin-top: 8px; }
+  .msg.err { color: #d33; }
+</style>
+</head>
+<body>
+<h1>맥 소리 설정</h1>
+<div class="sub">손을 떼면 바로 반영되고 Pi에 저장돼요. 바뀔 때 소리가 아주 잠깐 줄었다 돌아와요.</div>
+<div id="tuning"></div>
+<h2>마이크별 음량 (0 = 끔)</h2>
+<div id="mics"></div>
+<div class="msg" id="msg"></div>
+<button id="reset">처음 값으로</button>
+<div class="status" id="status">연결 중…</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let built = false;
+function fmt(v, step) { const d = step >= 1 ? 0 : Math.ceil(-Math.log10(step) - 1e-9); return Number(v).toFixed(d); }
+function say(text, err) { const m = $('msg'); m.textContent = text; m.className = 'msg' + (err ? ' err' : ''); }
+async function post(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+  const data = await r.json();
+  if (!r.ok) { say('안 바뀜: ' + data.error, true); load(); return; }
+  say('반영됨 ' + new Date().toLocaleTimeString()); render(data);
+}
+function build(state) {
+  for (const [key, f] of Object.entries(state.fields)) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<label for="${key}">${f.label}</label><input type="range" id="${key}" min="${f.min}" max="${f.max}" step="${f.step}"><output id="${key}-v"></output>`;
+    $('tuning').append(row);
+    const input = row.querySelector('input');
+    input.addEventListener('input', () => { $(key + '-v').textContent = fmt(input.value, f.step); });
+    input.addEventListener('change', () => post('/api/set', { [key]: Number(input.value) }));
+  }
+  state.mics.forEach((name, i) => {
+    const row = document.createElement('div'); row.className = 'mic';
+    row.innerHTML = `<span>${name}</span><input type="range" id="mic${i}" min="0" max="2" step="0.05"><button id="mute${i}">끔</button><output id="mic${i}-v"></output>`;
+    $('mics').append(row);
+    const input = row.querySelector('input');
+    const send = () => { const g = state.mics.map((_, j) => Number($('mic' + j).value)); post('/api/set', { mic_gains: g }); };
+    input.addEventListener('input', () => { $('mic' + i + '-v').textContent = Number(input.value).toFixed(2); });
+    input.addEventListener('change', send);
+    row.querySelector('button').addEventListener('click', () => { input.value = Number(input.value) > 0 ? 0 : 1; send(); });
+  });
+  built = true;
+}
+function render(state) {
+  if (!built) build(state);
+  for (const [key, f] of Object.entries(state.fields)) {
+    const input = $(key);
+    if (document.activeElement !== input) input.value = state.values[key];
+    $(key + '-v').textContent = fmt(state.values[key], f.step);
+  }
+  state.mic_gains.forEach((g, i) => {
+    if (document.activeElement !== $('mic' + i)) $('mic' + i).value = g;
+    $('mic' + i + '-v').textContent = Number(g).toFixed(2);
+    $('mute' + i).textContent = g > 0 ? '끔' : '켬';
+  });
+  const s = state.status;
+  $('status').textContent = s.rms ? `마이크 레벨 L/C/R  ${s.rms}\n모터 L/R  ${s.motors || '-'}\n심 전송 ${s.sim || '-'}\n입력 ${s.in_rate}  보정 ${s.ratio}  큐 ${s.queue}\n끊김 ${s.gaps}  늦음 ${s.underrun}  버림 ${s.queue_drop}  CRC ${s.crc_bad}  재연결 ${s.reconnect}` : '오디오 대기 중 (USB 입력 없음?)';
+}
+async function load() {
+  try { render(await (await fetch('/api/state')).json()); }
+  catch (e) { $('status').textContent = 'Pi와 연결이 끊김'; }
+}
+$('reset').addEventListener('click', () => post('/api/reset'));
+load(); setInterval(load, 1000);
+</script>
+</body>
+</html>

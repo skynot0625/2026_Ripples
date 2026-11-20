@@ -1,0 +1,26 @@
+{
+  "serial_port": "auto",
+  "alsa_device": "auto",
+  "mic_gains": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "max_queue_packets": 24,
+  "max_packet_age_seconds": 0.15,
+  "usb_timeout_seconds": 5.0,
+  "target_queue_packets": 6,
+  "control_port": 8090,
+  "max_batch_packets": 8,
+  "motors": true,
+  "motor_pwm_hz": 20000,
+  "motor_swap": false,
+  "alsa_buffer_ms": 120,
+  "alsa_period_ms": 20,
+  "sim_url": "http://192.168.0.2:8000/api/maek",
+  "sim_hz": 10,
+  "sim_level_db": [
+    -70,
+    -20
+  ]
+}

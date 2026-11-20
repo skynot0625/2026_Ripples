@@ -1,0 +1,52 @@
+{
+  "_comment": "전시 실행 설정. 설치 당일 window 값(x, y, width, height)과 browser.path만 채운다. null이면 브라우저가 정한 위치에 연다.",
+  "server": {
+    "port": 8000,
+    "mock": false,
+    "_mock_comment": "혈 Pi 실시간(2026-11-18): mock 끔. ToF·천장 거리는 혈 Pi sender.py 가 TCP 9500 으로 보냄(extra_args·env). 되돌리려면 mock true, extra_args·env 지움.",
+    "venue": "m30",
+    "_venue_comment": "전시장 고정: m30(11월 문래 갤러리 M30). 실행 중에는 바꾸지 않는다. 파워플랜트 설정은 아직 없음(미구현).",
+    "mapping_file": "data/m30/mapping.json",
+    "simulator_file": "data/m30/simulator.json",
+    "legacy_mapping_file": "data/mapping.json",
+    "_legacy_comment": "data/m30/mapping.json이 아직 없을 때만 예전 공용 data/mapping.json을 복사해 시작한다(원본은 그대로 둠).",
+    "extra_args": [
+      "--source",
+      "collector",
+      "--distance",
+      "collector"
+    ],
+    "env": {
+      "COLLECTOR_LISTEN": "9500"
+    }
+  },
+  "browser": {
+    "path": "auto",
+    "_path_comment": "auto = Edge 또는 Chrome을 표준 설치 경로에서 찾음. 다른 위치면 실행 파일 전체 경로를 적는다.",
+    "kiosk": true
+  },
+  "outputs": [
+    {
+      "name": "booth-a",
+      "url": "/display/blind?space=a&clean",
+      "enabled": true,
+      "window": {
+        "x": null,
+        "y": null,
+        "width": null,
+        "height": null
+      }
+    },
+    {
+      "name": "booth-b",
+      "url": "/display/blind?space=b&clean",
+      "enabled": true,
+      "window": {
+        "x": null,
+        "y": null,
+        "width": null,
+        "height": null
+      }
+    }
+  ]
+}
