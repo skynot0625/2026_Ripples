@@ -67,6 +67,7 @@ GUIDE = """리플즈 M30 공간 시뮬레이터 웹판 ({made})
 - state.json        내려받은 때의 배치와 장치 위치
 - person_mesh.bin, person_anim.bin   사람 모델과 걷기 동작
 - ripples-example.js/json, ripples-activate.rgb.gz, ripples-sleep.rgb.gz   심탑 감각 예시
+- tower-audio/      심탑 소리 뱅크·시간표·스테레오 미리듣기 (소리 시작 버튼)
 - 읽어주세요.txt     이 글 (올리지 않아도 됩니다)
 
 
@@ -76,6 +77,8 @@ GUIDE = """리플즈 M30 공간 시뮬레이터 웹판 ({made})
 - 바뀐 배치는 저장되지 않습니다. 새로고침하면 처음 배치로 돌아갑니다.
   남기려면 화면의 「배치 저장」으로 파일을 받아 두고 「배치 불러오기」로 엽니다.
 - 실제 센서(ToF) 데이터와 충돌 계산은 들어 있지 않습니다.
+- 소리는 자동 재생하지 않습니다. 소리 시작을 누르면 LED의 Activate/Sleep과 연동합니다.
+  브라우저는 스테레오 미리듣기이며, Sleep 원음은 합성 예시입니다. 실제 4출력 장치는 별도입니다.
 - 배치를 바꿔서 다시 올리려면 전시 서버 /venue3d 화면의 「웹판 내려받기」로 새로 받아 파일을 모두 바꿉니다.
   (static-sim.js 주소에 버전이 붙어 있어 방문자 브라우저도 새 파일을 받습니다.)
 """
@@ -99,6 +102,7 @@ def build(venue, state, default_layout):
     html = (ROOT / "venue3d.html").read_text(encoding="utf-8")
     for a, b in (('<script src="/simulator.js"></script>', f'<script src="static-sim.js?v={ver}"></script>'),
                  ('<script src="/static/ripples-example.js"></script>', '<script src="ripples-example.js"></script>'),
+                 ('<script src="/static/tower-audio/player.js"></script>', '<script src="tower-audio/player.js"></script>'),
                  ('  <script src="/testui.js"></script>\n', ''),
                  ("fetch('/api/venue', {cache: 'no-store'})", "fetch('venue.json', {cache: 'no-store'})"),
                  ("fetch('/static/person_mesh.bin'", "fetch('person_mesh.bin'"),
@@ -118,6 +122,9 @@ def build(venue, state, default_layout):
     files["ripples-example.js"] = (ROOT / "static" / "ripples-example.js").read_text(encoding="utf-8").replace(
         "const root = '/static/'", "const root = './'"
     ).encode("utf-8")
+    for path in (ROOT / "static" / "tower-audio").rglob("*"):
+        if path.is_file() and path.suffix in (".json", ".js", ".wav"):
+            files["tower-audio/" + path.relative_to(ROOT / "static" / "tower-audio").as_posix()] = path.read_bytes()
     files["읽어주세요.txt"] = GUIDE.format(made=time.strftime("%Y-%m-%d %H:%M"), venue=venue.get("id"),
                                        solids=len(venue.get("solids", []))).encode("utf-8")
     return files
@@ -138,6 +145,7 @@ def main(out, server="http://127.0.0.1:8000"):
     import venue as V
     files = build(venue, state, V.load_venue(venue["id"]).default_layout())
     for name, data in files.items():
+        (out / name).parent.mkdir(parents=True, exist_ok=True)
         (out / name).write_bytes(data)
     print(f"{out}: {', '.join(files)} ({len(venue['solids'])} solids)")
 

@@ -1,0 +1,11 @@
+{
+  "device": null,
+  "sample_rate": 48000,
+  "channel_map": [0, 1, 2, 3],
+  "speaker_labels": ["OUT 1", "OUT 2", "OUT 3", "OUT 4"],
+  "physical_orientation": "unconfirmed",
+  "master": 0.22,
+  "state_mode": "scheduled",
+  "state_file": null,
+  "notes": "One interface with 4+ independent outputs. Separate jack devices require explicit routing/aggregation; do not assume HDMI or stereo provides 4 outputs."
+}

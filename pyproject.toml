@@ -22,6 +22,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=7"]
+audio = ["sounddevice>=0.5.6,<1", "soundfile>=0.14,<1", "imageio-ffmpeg>=0.8,<1"]
 
 [project.scripts]
 ripples = "ripples.run:main"
@@ -30,6 +31,8 @@ ripples-reservoir = "ripples.reservoir:main"
 ripples-spikes = "ripples.spikes:main"
 ripples-live = "ripples.live:main"
 ripples-receive = "ripples.receive:main"
+ripples-audio-build = "ripples.audio_build:main"
+ripples-audio = "ripples.audio_play:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

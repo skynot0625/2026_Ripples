@@ -1,0 +1,9 @@
+{
+  "device_id": "SYNTHETIC-MAEK",
+  "session_id": "tower-audio-demo-v1",
+  "chunk_id": "synthetic-48s",
+  "start_frame": 0,
+  "frames": 2116800,
+  "demo": true,
+  "sha256": "cccb4b4f081c40dcaad38ac2c28a445225df2a446841c6a30be8cfc5069ffbb4"
+}

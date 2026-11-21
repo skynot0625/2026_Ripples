@@ -22,6 +22,7 @@ import cv2
 import numpy as np
 
 import pi_bundle
+import audio_assets
 from odometry import Odometry, OdometryWorker
 from host_stats import HostStats
 from inputs import InputChannel, create_channels, start_mock_sources
@@ -1162,6 +1163,8 @@ class ViewerHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+        elif parsed.path.startswith("/static/tower-audio/"):
+            audio_assets.serve(self, parsed.path)
         elif parsed.path in ("/static/ripples-example.js", "/static/ripples-example.json",
                              "/static/ripples-activate.rgb.gz", "/static/ripples-sleep.rgb.gz"):
             # Fixed allowlist: view-only example assets, no sensor or LED feed writes.

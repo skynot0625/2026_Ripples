@@ -128,6 +128,8 @@ sequenceDiagram
 
 ## 코드에서 찾기
 
+심탑 오디오는 이 수신·통계 경로와 별도로 [네 스피커 소리 흐름](TOWER_AUDIO.md)을 따릅니다. Active는 작업음 풀, Sleep은 **WAV 원음에서 선별한 구간**을 재생합니다. 현재 맥의 `mics/rms` 요약만으로는 Sleep 원음을 만들 수 없으며, 원음 송신·보관 경로를 연결해야 합니다. 현재 3D의 소리는 합성 예시이고 실제 수신·누적 설정을 바꾸지 않습니다. LED와 같은 한국 시각 20분/10분 주기를 쓰며, 전체 동시 소리는 최대 두 개입니다.
+
 | 책임 | 코드 |
 |---|---|
 | 혈 획득·포장·송신 | `sensors/hyeol-pi/collector`, `sensors/hyeol-pi/app/sender.py` |

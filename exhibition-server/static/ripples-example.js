@@ -248,6 +248,10 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
   function changed() { uiAt = -Infinity; update(); if (api.onUpdate) api.onUpdate(); }
   const api = window.RipplesExample = {
     onUpdate: null,
+    audioState: () => {
+      const state=phase(), p=(Date.now()/1000+9*3600)%1800;
+      return {state, mode, paused, offset:mode==='clock'?p-(state==='sleep'?1200:0):null};
+    },
     enabled: () => mode !== 'off',
     setSimulation(msg) {
       pendingSimulation={devices:msg.devices,venue:msg.venue&&msg.venue.id,now:performance.now()};
