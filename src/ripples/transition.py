@@ -6,6 +6,34 @@ SWEEP = 1.4
 PEAK = 96.0
 MEAN = 18.0
 TINT = np.array([96., 84., 64.])
+BEZIER = (.42, 0., 1., 1.)
+
+
+def _bezier_table():
+    # CSS cubic-bezier(.42, 0, 1, 1); solve time, not merely a cubic in time.
+    values=np.linspace(0,1,1025)
+    lo,hi=np.zeros_like(values),np.ones_like(values)
+    for _ in range(24):
+        u=(lo+hi)/2
+        x=3*.42*(1-u)**2*u+3*(1-u)*u*u+u**3
+        before=x<values
+        lo=np.where(before,u,lo);hi=np.where(before,hi,u)
+    u=(lo+hi)/2
+    result=3*(1-u)*u*u+u**3
+    result[0],result[-1]=0,1
+    return result
+
+
+_BEZIER_TABLE=_bezier_table()
+
+
+def bezier_ease_in(x, inverse=False):
+    """Shared lookup avoids solving cubics per LED per frame."""
+    x=np.clip(x,0,1)
+    if inverse:
+        u=.5+np.sin(np.arcsin(2*x-1)/3)
+        return 3*.42*(1-u)**2*u+3*(1-u)*u*u+u**3
+    return np.interp(x,np.linspace(0,1,1025),_BEZIER_TABLE)
 
 
 def smooth(x):
@@ -34,16 +62,16 @@ def pulse_field(height, age, direction="up", radius=None):
     r = np.zeros_like(h) if radius is None else np.clip(np.asarray(radius), 0, 1)
     if direction == "up":
         # Start at the previous mid-height width, then flare above halfway.
-        local = age-(SWEEP*np.sqrt(h)+.20*r)
+        local = age-(SWEEP*bezier_ease_in(h,inverse=True)+.20*r)
         start_width = .12+1.02*.5**.8
         width = start_width+(1.14-start_width)*smooth((h-.5)/.35)
         aperture = smooth((width-r)/.16)
         gain = .12+.88*h**1.4
-        return (aperture*gain*smooth(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)
+        return (aperture*gain*bezier_ease_in(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)
                 *(1-smooth((local-2.2)/1.2)))
     delay = h if direction == "up_flat" else 1-h
-    local = age-SWEEP*delay
-    return smooth(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)*(1-smooth((local-2.4)/1.2))
+    local = age-SWEEP*bezier_ease_in(delay,inverse=True)
+    return bezier_ease_in(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)*(1-smooth((local-2.4)/1.2))
 
 
 def composite(old, target, height, age, direction="up", weights=None, radius=None):
@@ -53,7 +81,7 @@ def composite(old, target, height, age, direction="up", weights=None, radius=Non
     if age >= DURATION:
         return target
     pulse = pulse_field(height, age, direction, radius)
-    mix = smooth(age/2.6)
+    mix = bezier_ease_in(age/2.6)
     base = np.asarray(old)*(1-mix)+target*mix
     return limit_rgb(base*(1-.45*pulse[..., None])+TINT*pulse[..., None], weights)
 

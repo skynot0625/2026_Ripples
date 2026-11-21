@@ -13,6 +13,7 @@
     previews.forEach(b=>b.disabled=busy||pending);
     $('speaker-real-stop').disabled=!configured;
     $('tower-audio-start').disabled=busy||pending;
+    $('tower-cue-compare').disabled=busy||pending;
   }
   function apply(state) {
     token=state.token; configured=state.configured; busy=state.state==='running';

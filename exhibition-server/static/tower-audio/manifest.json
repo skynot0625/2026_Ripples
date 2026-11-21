@@ -3,7 +3,7 @@
   "sample_rate": 24000,
   "channels": 4,
   "max_voices": 2,
-  "master": 0.22,
+  "master": 0.26,
   "max_master": 0.3,
   "peak_limit": 0.16,
   "stereo_matrix": [
@@ -24,6 +24,8 @@
       0.550000011920929
     ]
   ],
+  "active_profile": "dream-work-v3",
+  "speech_playback": false,
   "sleep_source": "synthetic_demo",
   "schedule": {
     "timezone": "Asia/Seoul",
@@ -41,16 +43,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "servo_breath",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/servo_breath.wav",
-      "duration": 3.3,
-      "sha256": "304300217aa377c34367ea79f4f7552f965411fd0688b998d370e5ee5000c1aa"
+      "duration": 5.7,
+      "sha256": "9881e899205d0273f026843381a9cbfac627740ede42276bc9ffe0f1bb5ccd96"
     },
     {
       "id": "soft_relay",
@@ -61,16 +63,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "soft_relay",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/soft_relay.wav",
-      "duration": 4.05,
-      "sha256": "b0d7b3b82de3a07402a091bfd73c1aeacf2f5eef1ac4254be35e8a20bda3385a"
+      "duration": 6.45,
+      "sha256": "b6b3a7840eaa84e09404cbea50ccd7e787bd5c436875eae85d0ee2bf731a510d"
     },
     {
       "id": "calculation",
@@ -81,16 +83,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "calculation",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/calculation.wav",
-      "duration": 4.8,
-      "sha256": "cabfe35efeac2ed08766a9dc2cfec204403b02875fb4e84dc4921661aa72a98c"
+      "duration": 7.2,
+      "sha256": "61a9090afea1c58a4424d10119a2e9c2c13bca16d11c89053c12c586f0a24f0b"
     },
     {
       "id": "air_valve",
@@ -101,16 +103,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "air_valve",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/air_valve.wav",
-      "duration": 5.55,
-      "sha256": "a5b28b0b5dc3219a2d044298a7588668b2e7121ce88fb772d6dbaee49e14bb3e"
+      "duration": 7.95,
+      "sha256": "35b9f5d1b4618ccb85b2a270d39a14c02197a64369f9610dd41e7df1bdcb4f32"
     },
     {
       "id": "metabolic_pulse",
@@ -121,16 +123,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "metabolic_pulse",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/metabolic_pulse.wav",
-      "duration": 3.3,
-      "sha256": "18f9d8dbec9ff283eeea898b40b2fca80ee52c372e8695983fa5f33bc4e9cdc9"
+      "duration": 5.7,
+      "sha256": "678ebc0beeafec35fc78d41f26adcd222e874f75512d4756641c785f12e31b6d"
     },
     {
       "id": "telemetry",
@@ -141,16 +143,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "telemetry",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/telemetry.wav",
-      "duration": 4.05,
-      "sha256": "dc4753a9dfcdd5ddca21ba0c34b916693fd17caa93347b511f0d8edc724041cf"
+      "duration": 6.45,
+      "sha256": "724ba4a6b68794802a579ced9f0e80fe2e8708fefc8ce0992e8e72af0a232462"
     },
     {
       "id": "paper_motor",
@@ -161,16 +163,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "paper_motor",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/paper_motor.wav",
-      "duration": 4.8,
-      "sha256": "6f5a3daf6a48615b6f2ea8c7211e8dacec8224fb383aaf48f4c3066b1e7be383"
+      "duration": 7.2,
+      "sha256": "e13abed94003c692b32a8856203b1ba178ea7e4eec8911887f5e045dfe64b20e"
     },
     {
       "id": "liquid_circuit",
@@ -181,16 +183,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "liquid_circuit",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/liquid_circuit.wav",
-      "duration": 5.55,
-      "sha256": "31fc593bf257c8b539eaf09b26b3a4d0a1df4e8e6f200940dddd4be7c0cc4191"
+      "duration": 7.95,
+      "sha256": "101ce0d21c04d9011f5d9a68dea436b8d7ae4b54fbb0c7ff1de149e33b640e7c"
     },
     {
       "id": "rotor_rest",
@@ -201,16 +203,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "rotor_rest",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/rotor_rest.wav",
-      "duration": 3.3,
-      "sha256": "8aab2733aa4901d67082232d174be263fe0f6abc988cad7434cfc9a5bf9eec59"
+      "duration": 5.7,
+      "sha256": "1fb1c5342172b4e02e333537dc8978c01b13d1cd4fea6b86448cff25b12467a1"
     },
     {
       "id": "memory_keys",
@@ -221,16 +223,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "memory_keys",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/memory_keys.wav",
-      "duration": 4.05,
-      "sha256": "a5d2d2298cc7a13fdcdf35c4d40b205fa2cd9c287709ff319901cbf1b06bf711"
+      "duration": 6.45,
+      "sha256": "381fa8ac236389b7356f7f4555fc3a99d44cf02e5b5faddac456adee9ed080b5"
     },
     {
       "id": "orbital_hum",
@@ -241,16 +243,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "orbital_hum",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/orbital_hum.wav",
-      "duration": 4.8,
-      "sha256": "1f382f0e38f818452715d195c79d3c12a4ba84e5c8531cde0e6a2644ad9b817c"
+      "duration": 7.2,
+      "sha256": "14b36ad3289cbc2176cc6c2d0150bbe3e91a6002a2ba8276752250b2e2ddae9b"
     },
     {
       "id": "tiny_gears",
@@ -261,16 +263,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "tiny_gears",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/tiny_gears.wav",
-      "duration": 5.55,
-      "sha256": "f95971f180da1923318e2c6192dba207cc2ad856f58748c694f007a66fd344e1"
+      "duration": 7.95,
+      "sha256": "183a212954193d58204090d95e85d8b3d8bc74ddaf50f9024674c8725d3ff72d"
     },
     {
       "id": "keyboard_mechanical",
@@ -281,16 +283,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "keyboard_mechanical",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/keyboard_mechanical.wav",
-      "duration": 4.2,
-      "sha256": "2bdee343b155a1e5a1096f56f94d1443f3b5de3ba6d5cc54118f01e1c86571da"
+      "duration": 6.6,
+      "sha256": "6024e862f8c375caffb74076bda3dcc5b24178200ffe0b88d5a962a18dacbdda"
     },
     {
       "id": "keyboard_spacebar",
@@ -301,16 +303,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "keyboard_spacebar",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/keyboard_spacebar.wav",
-      "duration": 4.5,
-      "sha256": "0bac14c9c5e45eb9b65f3e01b1d887c0b9c18f3824dcaf2dc09409dfb52f5486"
+      "duration": 6.9,
+      "sha256": "ae6051da393387f7a125e2b861a72cbffdd4ceaf1e61ce8a745ceb8e1e284fc9"
     },
     {
       "id": "scanner_steps",
@@ -321,16 +323,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "scanner_steps",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/scanner_steps.wav",
-      "duration": 4.8,
-      "sha256": "5fdcf58903f57088aab09781d34fdb3bf0fdb42e73feb8346c44692510388c0c"
+      "duration": 7.2,
+      "sha256": "d74b2399bc5bfef6193b56a274c41a169e841e718dfe54ca9356a8ee18ab6213"
     },
     {
       "id": "soft_latch",
@@ -341,16 +343,16 @@
         "origin": {
           "type": "procedural_synthesis",
           "generator": "src/ripples/tower_audio.py::active_bank",
-          "profile": "work-v2-low-hiss",
+          "profile": "dream-work-v3",
           "seed": 214,
           "design": "soft_latch",
           "external_audio_samples": false
         },
-        "processing": "oscillators + damped resonances + small friction texture; filtered and faded"
+        "processing": "soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech"
       },
       "file": "bank/soft_latch.wav",
-      "duration": 5.1,
-      "sha256": "6274ad55230a9ee1c870061e72f57852213dd5075131672045677fc422da23bf"
+      "duration": 7.5,
+      "sha256": "7cc4e8ea247815a11947a5639a590bc49cceccfb6d86f921dde43ef7d49404ce"
     },
     {
       "id": "sleep_voice_00",
@@ -850,1536 +852,1160 @@
       {
         "id": "telemetry",
         "start": 1.0,
-        "duration": 4.05,
+        "duration": 6.45,
         "speaker": 3,
         "gain": 0.6927,
         "category": "environment"
       },
       {
         "id": "orbital_hum",
-        "start": 8.3822,
-        "duration": 4.8,
+        "start": 10.7822,
+        "duration": 7.2,
         "speaker": 0,
         "gain": 0.8419,
         "category": "environment"
       },
       {
         "id": "tiny_gears",
-        "start": 15.0147,
-        "duration": 5.55,
+        "start": 19.8147,
+        "duration": 7.95,
         "speaker": 1,
         "gain": 0.7561,
         "category": "environment"
       },
       {
         "id": "soft_relay",
-        "start": 23.8941,
-        "duration": 4.05,
+        "start": 31.0941,
+        "duration": 6.45,
         "speaker": 2,
         "gain": 0.7227,
         "category": "environment"
       },
       {
         "id": "memory_keys",
-        "start": 32.194,
-        "duration": 4.05,
+        "start": 41.794,
+        "duration": 6.45,
         "speaker": 3,
         "gain": 0.7475,
         "category": "environment"
       },
       {
-        "id": "calculation",
-        "start": 37.6871,
-        "duration": 4.8,
+        "id": "soft_relay",
+        "start": 49.6871,
+        "duration": 6.45,
         "speaker": 0,
         "gain": 0.8152,
         "category": "environment"
       },
       {
         "id": "liquid_circuit",
-        "start": 45.0063,
-        "duration": 5.55,
+        "start": 58.6563,
+        "duration": 7.95,
         "speaker": 1,
         "gain": 0.8357,
         "category": "environment"
       },
       {
         "id": "metabolic_pulse",
-        "start": 48.878,
-        "duration": 3.3,
+        "start": 64.2023,
+        "duration": 5.7,
         "speaker": 2,
         "gain": 0.813,
         "category": "environment"
       },
       {
-        "id": "air_valve",
-        "start": 51.2832,
-        "duration": 5.55,
+        "id": "calculation",
+        "start": 68.3566,
+        "duration": 7.2,
         "speaker": 0,
         "gain": 0.7287,
         "category": "environment"
       },
       {
         "id": "soft_relay",
-        "start": 54.3976,
-        "duration": 4.05,
+        "start": 72.3969,
+        "duration": 6.45,
         "speaker": 2,
         "gain": 0.8325,
         "category": "environment"
       },
       {
-        "id": "calculation",
-        "start": 60.3612,
-        "duration": 4.8,
+        "id": "air_valve",
+        "start": 80.7605,
+        "duration": 7.95,
         "speaker": 1,
         "gain": 0.8406,
         "category": "environment"
       },
       {
-        "id": "orbital_hum",
-        "start": 63.2741,
-        "duration": 4.8,
+        "id": "memory_keys",
+        "start": 85.5851,
+        "duration": 6.45,
         "speaker": 3,
         "gain": 0.7929,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 72.4931,
-        "duration": 4.8,
+        "start": 96.4541,
+        "duration": 7.2,
         "speaker": 3,
         "gain": 0.7532,
         "category": "environment"
       },
       {
         "id": "orbital_hum",
-        "start": 80.8039,
-        "duration": 4.8,
+        "start": 107.1649,
+        "duration": 7.2,
         "speaker": 1,
         "gain": 0.6915,
         "category": "environment"
       },
       {
         "id": "metabolic_pulse",
-        "start": 89.2292,
-        "duration": 3.3,
+        "start": 117.9901,
+        "duration": 5.7,
         "speaker": 0,
         "gain": 0.8461,
         "category": "environment"
       },
       {
-        "id": "liquid_circuit",
-        "start": 94.8135,
-        "duration": 5.55,
+        "id": "rotor_rest",
+        "start": 125.9745,
+        "duration": 5.7,
         "speaker": 2,
         "gain": 0.7425,
         "category": "environment"
       },
       {
         "id": "keyboard_mechanical",
-        "start": 98.9141,
-        "duration": 4.2,
+        "start": 130.1858,
+        "duration": 6.6,
         "speaker": 1,
         "gain": 0.8205,
         "category": "environment"
       },
       {
         "id": "soft_relay",
-        "start": 106.2902,
-        "duration": 4.05,
+        "start": 139.962,
+        "duration": 6.45,
         "speaker": 0,
         "gain": 0.7035,
         "category": "environment"
       },
       {
-        "id": "rotor_rest",
-        "start": 111.8648,
-        "duration": 3.3,
+        "id": "memory_keys",
+        "start": 147.9366,
+        "duration": 6.45,
         "speaker": 3,
         "gain": 0.8729,
         "category": "environment"
       },
       {
-        "id": "calculation",
-        "start": 118.5099,
-        "duration": 4.8,
+        "id": "soft_relay",
+        "start": 157.7317,
+        "duration": 6.45,
         "speaker": 2,
         "gain": 0.7697,
         "category": "environment"
       },
       {
         "id": "telemetry",
-        "start": 125.3028,
-        "duration": 4.05,
+        "start": 166.1746,
+        "duration": 6.45,
         "speaker": 0,
         "gain": 0.7521,
         "category": "environment"
       },
       {
         "id": "soft_relay",
-        "start": 133.9716,
-        "duration": 4.05,
+        "start": 177.2434,
+        "duration": 6.45,
         "speaker": 1,
         "gain": 0.7922,
         "category": "environment"
       },
       {
         "id": "servo_breath",
-        "start": 141.6493,
-        "duration": 3.3,
+        "start": 187.3211,
+        "duration": 5.7,
         "speaker": 2,
         "gain": 0.8437,
         "category": "environment"
       },
       {
         "id": "rotor_rest",
-        "start": 144.1833,
-        "duration": 3.3,
+        "start": 191.6979,
+        "duration": 5.7,
         "speaker": 3,
         "gain": 0.7285,
         "category": "environment"
       },
       {
         "id": "tiny_gears",
-        "start": 152.1933,
-        "duration": 5.55,
+        "start": 202.1079,
+        "duration": 7.95,
         "speaker": 0,
         "gain": 0.714,
         "category": "environment"
       },
       {
         "id": "soft_latch",
-        "start": 155.455,
-        "duration": 5.1,
+        "start": 206.7801,
+        "duration": 7.5,
         "speaker": 1,
         "gain": 0.732,
         "category": "environment"
       },
       {
-        "id": "calculation",
-        "start": 159.3705,
-        "duration": 4.8,
+        "id": "air_valve",
+        "start": 212.5382,
+        "duration": 7.95,
         "speaker": 2,
         "gain": 0.8617,
         "category": "environment"
       },
       {
-        "id": "memory_keys",
-        "start": 167.2174,
-        "duration": 4.05,
+        "id": "tiny_gears",
+        "start": 223.5351,
+        "duration": 7.95,
         "speaker": 3,
         "gain": 0.699,
         "category": "environment"
       },
       {
-        "id": "rotor_rest",
-        "start": 175.1929,
-        "duration": 3.3,
+        "id": "liquid_circuit",
+        "start": 235.4105,
+        "duration": 7.95,
         "speaker": 0,
         "gain": 0.6873,
         "category": "environment"
       },
       {
         "id": "servo_breath",
-        "start": 179.821,
-        "duration": 3.3,
+        "start": 244.6886,
+        "duration": 5.7,
         "speaker": 1,
         "gain": 0.6874,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 186.9201,
-        "duration": 4.8,
+        "start": 254.1878,
+        "duration": 7.2,
         "speaker": 3,
         "gain": 0.7706,
         "category": "environment"
       },
       {
         "id": "telemetry",
-        "start": 195.553,
-        "duration": 4.05,
+        "start": 265.2207,
+        "duration": 6.45,
         "speaker": 2,
         "gain": 0.7541,
         "category": "environment"
       },
       {
         "id": "orbital_hum",
-        "start": 203.987,
-        "duration": 4.8,
+        "start": 276.0547,
+        "duration": 7.2,
         "speaker": 3,
         "gain": 0.7542,
         "category": "environment"
       },
       {
         "id": "keyboard_spacebar",
-        "start": 213.0293,
-        "duration": 4.5,
+        "start": 287.497,
+        "duration": 6.9,
         "speaker": 0,
         "gain": 0.7787,
         "category": "environment"
       },
       {
         "id": "air_valve",
-        "start": 222.2685,
-        "duration": 5.55,
+        "start": 299.1362,
+        "duration": 7.95,
         "speaker": 2,
         "gain": 0.6863,
         "category": "environment"
       },
       {
         "id": "liquid_circuit",
-        "start": 232.2722,
-        "duration": 5.55,
+        "start": 311.5399,
+        "duration": 7.95,
         "speaker": 1,
         "gain": 0.8538,
         "category": "environment"
       },
       {
         "id": "memory_keys",
-        "start": 240.4424,
-        "duration": 4.05,
+        "start": 322.1101,
+        "duration": 6.45,
         "speaker": 3,
         "gain": 0.7066,
         "category": "environment"
       },
       {
         "id": "calculation",
-        "start": 248.5621,
-        "duration": 4.8,
+        "start": 332.6298,
+        "duration": 7.2,
         "speaker": 0,
         "gain": 0.7359,
         "category": "environment"
       },
       {
         "id": "telemetry",
-        "start": 255.6092,
-        "duration": 4.05,
+        "start": 342.0769,
+        "duration": 6.45,
         "speaker": 2,
         "gain": 0.7166,
         "category": "environment"
       },
       {
         "id": "orbital_hum",
-        "start": 261.2704,
-        "duration": 4.8,
+        "start": 350.1381,
+        "duration": 7.2,
         "speaker": 1,
         "gain": 0.6813,
         "category": "environment"
       },
       {
         "id": "metabolic_pulse",
-        "start": 269.6803,
-        "duration": 3.3,
+        "start": 360.948,
+        "duration": 5.7,
         "speaker": 2,
         "gain": 0.7968,
         "category": "environment"
       },
       {
         "id": "soft_latch",
-        "start": 275.2623,
-        "duration": 5.1,
+        "start": 368.93,
+        "duration": 7.5,
         "speaker": 0,
         "gain": 0.8571,
         "category": "environment"
       },
       {
         "id": "rotor_rest",
-        "start": 278.9822,
-        "duration": 3.3,
+        "start": 374.4005,
+        "duration": 5.7,
         "speaker": 1,
         "gain": 0.7167,
         "category": "environment"
       },
       {
         "id": "calculation",
-        "start": 286.1464,
-        "duration": 4.8,
+        "start": 383.9647,
+        "duration": 7.2,
         "speaker": 3,
         "gain": 0.7234,
         "category": "environment"
       },
       {
         "id": "servo_breath",
-        "start": 293.362,
-        "duration": 3.3,
+        "start": 393.5803,
+        "duration": 5.7,
         "speaker": 2,
         "gain": 0.8178,
         "category": "environment"
       },
       {
         "id": "rotor_rest",
-        "start": 295.5564,
-        "duration": 3.3,
+        "start": 397.3706,
+        "duration": 5.7,
         "speaker": 3,
         "gain": 0.7282,
         "category": "environment"
       },
       {
         "id": "telemetry",
-        "start": 303.3411,
-        "duration": 4.05,
+        "start": 407.5553,
+        "duration": 6.45,
         "speaker": 0,
         "gain": 0.8049,
         "category": "environment"
       },
       {
         "id": "orbital_hum",
-        "start": 311.0763,
-        "duration": 4.8,
+        "start": 417.6905,
+        "duration": 7.2,
         "speaker": 1,
         "gain": 0.6822,
         "category": "environment"
       },
       {
         "id": "air_valve",
-        "start": 319.1498,
-        "duration": 5.55,
+        "start": 428.164,
+        "duration": 7.95,
         "speaker": 2,
         "gain": 0.7415,
         "category": "environment"
       },
       {
         "id": "keyboard_mechanical",
-        "start": 329.3644,
-        "duration": 4.2,
+        "start": 440.7786,
+        "duration": 6.6,
         "speaker": 0,
         "gain": 0.7216,
         "category": "environment"
       },
       {
         "id": "liquid_circuit",
-        "start": 335.8244,
-        "duration": 5.55,
+        "start": 449.6386,
+        "duration": 7.95,
         "speaker": 3,
         "gain": 0.7328,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 345.6274,
-        "duration": 4.8,
+        "start": 461.8416,
+        "duration": 7.2,
         "speaker": 1,
         "gain": 0.8445,
         "category": "environment"
       },
       {
         "id": "air_valve",
-        "start": 348.8706,
-        "duration": 5.55,
+        "start": 466.7064,
+        "duration": 7.95,
         "speaker": 0,
         "gain": 0.6937,
         "category": "environment"
       },
       {
         "id": "soft_latch",
-        "start": 359.201,
-        "duration": 5.1,
+        "start": 479.4368,
+        "duration": 7.5,
         "speaker": 3,
         "gain": 0.7117,
         "category": "environment"
       },
       {
         "id": "telemetry",
-        "start": 365.8488,
-        "duration": 4.05,
+        "start": 488.4846,
+        "duration": 6.45,
         "speaker": 1,
         "gain": 0.7276,
         "category": "environment"
       },
       {
         "id": "keyboard_spacebar",
-        "start": 368.2298,
-        "duration": 4.5,
+        "start": 492.2765,
+        "duration": 6.9,
         "speaker": 2,
         "gain": 0.8374,
         "category": "environment"
       },
       {
-        "id": "scanner_steps",
-        "start": 374.1579,
-        "duration": 4.8,
+        "id": "soft_latch",
+        "start": 500.6047,
+        "duration": 7.5,
         "speaker": 2,
         "gain": 0.8268,
         "category": "environment"
       },
       {
         "id": "metabolic_pulse",
-        "start": 383.7012,
-        "duration": 3.3,
+        "start": 512.848,
+        "duration": 5.7,
         "speaker": 0,
         "gain": 0.7325,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 391.2332,
-        "duration": 4.8,
+        "start": 522.78,
+        "duration": 7.2,
         "speaker": 1,
         "gain": 0.7581,
         "category": "environment"
       },
       {
         "id": "servo_breath",
-        "start": 393.9234,
-        "duration": 3.3,
+        "start": 526.8152,
+        "duration": 5.7,
         "speaker": 3,
         "gain": 0.818,
         "category": "environment"
       },
       {
         "id": "keyboard_spacebar",
-        "start": 397.2564,
-        "duration": 4.5,
+        "start": 531.2032,
+        "duration": 6.9,
         "speaker": 0,
         "gain": 0.8359,
         "category": "environment"
       },
       {
         "id": "tiny_gears",
-        "start": 400.1534,
-        "duration": 5.55,
+        "start": 535.6453,
+        "duration": 7.95,
         "speaker": 3,
         "gain": 0.8459,
         "category": "environment"
       },
       {
         "id": "metabolic_pulse",
-        "start": 409.3735,
-        "duration": 3.3,
+        "start": 547.2654,
+        "duration": 5.7,
         "speaker": 1,
         "gain": 0.7884,
         "category": "environment"
       },
       {
         "id": "calculation",
-        "start": 416.9525,
-        "duration": 4.8,
+        "start": 557.2444,
+        "duration": 7.2,
         "speaker": 2,
         "gain": 0.838,
         "category": "environment"
       },
       {
         "id": "liquid_circuit",
-        "start": 420.4698,
-        "duration": 5.55,
+        "start": 562.5204,
+        "duration": 7.95,
         "speaker": 0,
         "gain": 0.7811,
         "category": "environment"
       },
       {
         "id": "keyboard_spacebar",
-        "start": 424.4367,
-        "duration": 4.5,
+        "start": 568.2027,
+        "duration": 6.9,
         "speaker": 3,
         "gain": 0.7863,
         "category": "environment"
       },
       {
         "id": "memory_keys",
-        "start": 427.7282,
-        "duration": 4.05,
+        "start": 573.2496,
+        "duration": 6.45,
         "speaker": 2,
         "gain": 0.8245,
         "category": "environment"
       },
       {
         "id": "paper_motor",
-        "start": 435.5129,
-        "duration": 4.8,
+        "start": 583.4343,
+        "duration": 7.2,
         "speaker": 1,
         "gain": 0.776,
         "category": "environment"
       },
       {
         "id": "servo_breath",
-        "start": 444.2786,
-        "duration": 3.3,
+        "start": 594.6,
+        "duration": 5.7,
         "speaker": 2,
         "gain": 0.7816,
         "category": "environment"
       },
       {
         "id": "soft_relay",
-        "start": 451.0884,
-        "duration": 4.05,
+        "start": 603.8098,
+        "duration": 6.45,
         "speaker": 1,
         "gain": 0.7224,
         "category": "environment"
       },
       {
         "id": "calculation",
-        "start": 456.9097,
-        "duration": 4.8,
+        "start": 612.0311,
+        "duration": 7.2,
         "speaker": 3,
         "gain": 0.8314,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 463.9194,
-        "duration": 4.8,
+        "start": 621.4408,
+        "duration": 7.2,
         "speaker": 0,
         "gain": 0.7737,
         "category": "environment"
       },
       {
         "id": "metabolic_pulse",
-        "start": 467.4692,
-        "duration": 3.3,
+        "start": 626.7655,
+        "duration": 5.7,
         "speaker": 1,
         "gain": 0.7863,
         "category": "environment"
       },
       {
         "id": "servo_breath",
-        "start": 474.6078,
-        "duration": 3.3,
+        "start": 636.3042,
+        "duration": 5.7,
         "speaker": 0,
         "gain": 0.7524,
         "category": "environment"
       },
       {
         "id": "liquid_circuit",
-        "start": 476.6303,
-        "duration": 5.55,
+        "start": 639.7975,
+        "duration": 7.95,
         "speaker": 2,
         "gain": 0.7335,
         "category": "environment"
       },
       {
         "id": "tiny_gears",
-        "start": 480.1861,
-        "duration": 5.55,
+        "start": 644.8909,
+        "duration": 7.95,
         "speaker": 3,
         "gain": 0.8213,
         "category": "environment"
       },
       {
         "id": "keyboard_spacebar",
-        "start": 483.5505,
-        "duration": 4.5,
+        "start": 649.7103,
+        "duration": 6.9,
         "speaker": 1,
         "gain": 0.6956,
         "category": "environment"
       },
       {
         "id": "memory_keys",
-        "start": 491.2616,
-        "duration": 4.05,
+        "start": 659.8214,
+        "duration": 6.45,
         "speaker": 2,
         "gain": 0.8714,
         "category": "environment"
       },
       {
-        "id": "scanner_steps",
-        "start": 493.5794,
-        "duration": 4.8,
+        "id": "keyboard_mechanical",
+        "start": 663.5126,
+        "duration": 6.6,
         "speaker": 0,
         "gain": 0.7918,
         "category": "environment"
       },
       {
         "id": "orbital_hum",
-        "start": 500.6722,
-        "duration": 4.8,
+        "start": 672.4055,
+        "duration": 7.2,
         "speaker": 3,
         "gain": 0.7573,
         "category": "environment"
       },
       {
-        "id": "paper_motor",
-        "start": 508.8153,
-        "duration": 4.8,
+        "id": "liquid_circuit",
+        "start": 682.9485,
+        "duration": 7.95,
         "speaker": 0,
         "gain": 0.8501,
         "category": "environment"
       },
       {
         "id": "rotor_rest",
-        "start": 511.5845,
-        "duration": 3.3,
+        "start": 687.535,
+        "duration": 5.7,
         "speaker": 1,
         "gain": 0.7923,
         "category": "environment"
       },
       {
-        "id": "calculation",
-        "start": 515.1034,
-        "duration": 4.8,
-        "speaker": 2,
-        "gain": 0.8475,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 518.5318,
-        "duration": 5.55,
+        "id": "orbital_hum",
+        "start": 691.0374,
+        "duration": 7.2,
         "speaker": 3,
-        "gain": 0.8007,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_mechanical",
-        "start": 527.9857,
-        "duration": 4.2,
-        "speaker": 3,
-        "gain": 0.7125,
-        "category": "environment"
-      },
-      {
-        "id": "servo_breath",
-        "start": 534.1069,
-        "duration": 3.3,
-        "speaker": 2,
-        "gain": 0.7519,
+        "gain": 0.724,
         "category": "environment"
       },
       {
         "id": "memory_keys",
-        "start": 540.6077,
-        "duration": 4.05,
+        "start": 702.4679,
+        "duration": 6.45,
+        "speaker": 2,
+        "gain": 0.692,
+        "category": "environment"
+      },
+      {
+        "id": "scanner_steps",
+        "start": 713.3521,
+        "duration": 7.2,
         "speaker": 0,
-        "gain": 0.7218,
+        "gain": 0.7155,
         "category": "environment"
       },
       {
         "id": "tiny_gears",
-        "start": 548.5317,
-        "duration": 5.55,
+        "start": 718.2628,
+        "duration": 7.95,
+        "speaker": 1,
+        "gain": 0.7383,
+        "category": "environment"
+      },
+      {
+        "id": "metabolic_pulse",
+        "start": 728.7711,
+        "duration": 5.7,
+        "speaker": 2,
+        "gain": 0.8652,
+        "category": "environment"
+      },
+      {
+        "id": "rotor_rest",
+        "start": 736.5034,
+        "duration": 5.7,
+        "speaker": 3,
+        "gain": 0.8042,
+        "category": "environment"
+      },
+      {
+        "id": "tiny_gears",
+        "start": 740.4414,
+        "duration": 7.95,
+        "speaker": 1,
+        "gain": 0.8292,
+        "category": "environment"
+      },
+      {
+        "id": "air_valve",
+        "start": 746.7599,
+        "duration": 7.95,
+        "speaker": 2,
+        "gain": 0.8794,
+        "category": "environment"
+      },
+      {
+        "id": "keyboard_mechanical",
+        "start": 756.9884,
+        "duration": 6.6,
+        "speaker": 3,
+        "gain": 0.7159,
+        "category": "environment"
+      },
+      {
+        "id": "telemetry",
+        "start": 767.9879,
+        "duration": 6.45,
+        "speaker": 0,
+        "gain": 0.7269,
+        "category": "environment"
+      },
+      {
+        "id": "metabolic_pulse",
+        "start": 779.0873,
+        "duration": 5.7,
+        "speaker": 3,
+        "gain": 0.6946,
+        "category": "environment"
+      },
+      {
+        "id": "paper_motor",
+        "start": 783.4051,
+        "duration": 7.2,
+        "speaker": 2,
+        "gain": 0.7041,
+        "category": "environment"
+      },
+      {
+        "id": "soft_latch",
+        "start": 792.7282,
+        "duration": 7.5,
+        "speaker": 1,
+        "gain": 0.7708,
+        "category": "environment"
+      },
+      {
+        "id": "telemetry",
+        "start": 804.482,
+        "duration": 6.45,
+        "speaker": 0,
+        "gain": 0.8285,
+        "category": "environment"
+      },
+      {
+        "id": "memory_keys",
+        "start": 808.2133,
+        "duration": 6.45,
+        "speaker": 1,
+        "gain": 0.8478,
+        "category": "environment"
+      },
+      {
+        "id": "scanner_steps",
+        "start": 812.6906,
+        "duration": 7.2,
+        "speaker": 0,
+        "gain": 0.6875,
+        "category": "environment"
+      },
+      {
+        "id": "keyboard_mechanical",
+        "start": 817.4651,
+        "duration": 6.6,
+        "speaker": 3,
+        "gain": 0.8642,
+        "category": "environment"
+      },
+      {
+        "id": "paper_motor",
+        "start": 821.7103,
+        "duration": 7.2,
+        "speaker": 2,
+        "gain": 0.7251,
+        "category": "environment"
+      },
+      {
+        "id": "liquid_circuit",
+        "start": 826.2688,
+        "duration": 7.95,
+        "speaker": 0,
+        "gain": 0.849,
+        "category": "environment"
+      },
+      {
+        "id": "soft_latch",
+        "start": 836.9666,
+        "duration": 7.5,
+        "speaker": 2,
+        "gain": 0.7938,
+        "category": "environment"
+      },
+      {
+        "id": "paper_motor",
+        "start": 841.2327,
+        "duration": 7.2,
+        "speaker": 3,
+        "gain": 0.8442,
+        "category": "environment"
+      },
+      {
+        "id": "metabolic_pulse",
+        "start": 852.0626,
+        "duration": 5.7,
+        "speaker": 1,
+        "gain": 0.8311,
+        "category": "environment"
+      },
+      {
+        "id": "tiny_gears",
+        "start": 862.215,
+        "duration": 7.95,
+        "speaker": 0,
+        "gain": 0.8376,
+        "category": "environment"
+      },
+      {
+        "id": "rotor_rest",
+        "start": 872.6783,
+        "duration": 5.7,
+        "speaker": 2,
+        "gain": 0.6878,
+        "category": "environment"
+      },
+      {
+        "id": "telemetry",
+        "start": 880.272,
+        "duration": 6.45,
+        "speaker": 3,
+        "gain": 0.8561,
+        "category": "environment"
+      },
+      {
+        "id": "rotor_rest",
+        "start": 888.9822,
+        "duration": 5.7,
         "speaker": 1,
         "gain": 0.7927,
         "category": "environment"
       },
       {
-        "id": "air_valve",
-        "start": 552.5904,
-        "duration": 5.55,
-        "speaker": 3,
-        "gain": 0.8758,
-        "category": "environment"
-      },
-      {
-        "id": "paper_motor",
-        "start": 559.6898,
-        "duration": 4.8,
-        "speaker": 0,
-        "gain": 0.7552,
-        "category": "environment"
-      },
-      {
-        "id": "scanner_steps",
-        "start": 565.8201,
-        "duration": 4.8,
-        "speaker": 1,
-        "gain": 0.7455,
-        "category": "environment"
-      },
-      {
         "id": "liquid_circuit",
-        "start": 574.5935,
-        "duration": 5.55,
-        "speaker": 2,
-        "gain": 0.7399,
-        "category": "environment"
-      },
-      {
-        "id": "servo_breath",
-        "start": 578.1071,
-        "duration": 3.3,
+        "start": 897.9392,
+        "duration": 7.95,
         "speaker": 1,
-        "gain": 0.846,
+        "gain": 0.6903,
         "category": "environment"
       },
       {
-        "id": "keyboard_mechanical",
-        "start": 586.0622,
-        "duration": 4.2,
+        "id": "soft_relay",
+        "start": 908.3705,
+        "duration": 6.45,
         "speaker": 3,
-        "gain": 0.7571,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 593.3576,
-        "duration": 5.1,
-        "speaker": 0,
-        "gain": 0.7039,
-        "category": "environment"
-      },
-      {
-        "id": "servo_breath",
-        "start": 596.8578,
-        "duration": 3.3,
-        "speaker": 2,
-        "gain": 0.7028,
-        "category": "environment"
-      },
-      {
-        "id": "memory_keys",
-        "start": 602.2168,
-        "duration": 4.05,
-        "speaker": 2,
-        "gain": 0.7819,
-        "category": "environment"
-      },
-      {
-        "id": "paper_motor",
-        "start": 610.3724,
-        "duration": 4.8,
-        "speaker": 0,
-        "gain": 0.8692,
-        "category": "environment"
-      },
-      {
-        "id": "orbital_hum",
-        "start": 618.5065,
-        "duration": 4.8,
-        "speaker": 3,
-        "gain": 0.8592,
-        "category": "environment"
-      },
-      {
-        "id": "scanner_steps",
-        "start": 621.4258,
-        "duration": 4.8,
-        "speaker": 1,
-        "gain": 0.8239,
-        "category": "environment"
-      },
-      {
-        "id": "metabolic_pulse",
-        "start": 625.08,
-        "duration": 3.3,
-        "speaker": 2,
-        "gain": 0.6809,
-        "category": "environment"
-      },
-      {
-        "id": "tiny_gears",
-        "start": 631.6715,
-        "duration": 5.55,
-        "speaker": 0,
-        "gain": 0.8535,
-        "category": "environment"
-      },
-      {
-        "id": "orbital_hum",
-        "start": 635.8632,
-        "duration": 4.8,
-        "speaker": 3,
-        "gain": 0.7525,
-        "category": "environment"
-      },
-      {
-        "id": "rotor_rest",
-        "start": 639.41,
-        "duration": 3.3,
-        "speaker": 1,
-        "gain": 0.6934,
+        "gain": 0.7677,
         "category": "environment"
       },
       {
         "id": "keyboard_spacebar",
-        "start": 645.0203,
-        "duration": 4.5,
-        "speaker": 3,
-        "gain": 0.8487,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_mechanical",
-        "start": 653.2188,
-        "duration": 4.2,
-        "speaker": 0,
-        "gain": 0.7804,
-        "category": "environment"
-      },
-      {
-        "id": "tiny_gears",
-        "start": 660.5598,
-        "duration": 5.55,
+        "start": 917.251,
+        "duration": 6.9,
         "speaker": 2,
-        "gain": 0.792,
+        "gain": 0.7467,
         "category": "environment"
       },
       {
-        "id": "paper_motor",
-        "start": 670.3449,
-        "duration": 4.8,
-        "speaker": 1,
-        "gain": 0.8637,
+        "id": "soft_latch",
+        "start": 927.0707,
+        "duration": 7.5,
+        "speaker": 0,
+        "gain": 0.8578,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 673.293,
-        "duration": 4.8,
-        "speaker": 0,
-        "gain": 0.8084,
-        "category": "environment"
-      },
-      {
-        "id": "rotor_rest",
-        "start": 682.7766,
-        "duration": 3.3,
-        "speaker": 3,
-        "gain": 0.8672,
+        "start": 931.8362,
+        "duration": 7.2,
+        "speaker": 1,
+        "gain": 0.7651,
         "category": "environment"
       },
       {
         "id": "telemetry",
-        "start": 689.7861,
-        "duration": 4.05,
-        "speaker": 1,
-        "gain": 0.7793,
-        "category": "environment"
-      },
-      {
-        "id": "air_valve",
-        "start": 696.4654,
-        "duration": 5.55,
-        "speaker": 2,
-        "gain": 0.7519,
-        "category": "environment"
-      },
-      {
-        "id": "soft_relay",
-        "start": 705.4595,
-        "duration": 4.05,
-        "speaker": 3,
-        "gain": 0.7353,
-        "category": "environment"
-      },
-      {
-        "id": "orbital_hum",
-        "start": 711.7247,
-        "duration": 4.8,
+        "start": 941.3616,
+        "duration": 6.45,
         "speaker": 0,
-        "gain": 0.8059,
+        "gain": 0.7,
         "category": "environment"
       },
       {
-        "id": "telemetry",
-        "start": 720.7211,
-        "duration": 4.05,
-        "speaker": 1,
-        "gain": 0.8659,
-        "category": "environment"
-      },
-      {
-        "id": "air_valve",
-        "start": 723.1867,
-        "duration": 5.55,
-        "speaker": 2,
-        "gain": 0.7893,
+        "id": "liquid_circuit",
+        "start": 951.0885,
+        "duration": 7.95,
+        "speaker": 3,
+        "gain": 0.6983,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 732.7355,
-        "duration": 4.8,
+        "start": 955.9448,
+        "duration": 7.2,
         "speaker": 2,
-        "gain": 0.7733,
+        "gain": 0.727,
         "category": "environment"
       },
       {
         "id": "servo_breath",
-        "start": 740.6998,
-        "duration": 3.3,
-        "speaker": 1,
-        "gain": 0.8472,
-        "category": "environment"
-      },
-      {
-        "id": "memory_keys",
-        "start": 747.5617,
-        "duration": 4.05,
+        "start": 967.4863,
+        "duration": 5.7,
         "speaker": 3,
-        "gain": 0.716,
+        "gain": 0.7654,
         "category": "environment"
       },
       {
-        "id": "soft_relay",
-        "start": 755.0788,
-        "duration": 4.05,
-        "speaker": 0,
-        "gain": 0.7056,
-        "category": "environment"
-      },
-      {
-        "id": "rotor_rest",
-        "start": 757.7934,
-        "duration": 3.3,
+        "id": "liquid_circuit",
+        "start": 975.3272,
+        "duration": 7.95,
         "speaker": 2,
-        "gain": 0.8087,
+        "gain": 0.7311,
         "category": "environment"
       },
       {
         "id": "scanner_steps",
-        "start": 762.7939,
-        "duration": 4.8,
+        "start": 981.1844,
+        "duration": 7.2,
         "speaker": 1,
-        "gain": 0.6858,
+        "gain": 0.6876,
+        "category": "environment"
+      },
+      {
+        "id": "soft_latch",
+        "start": 990.7766,
+        "duration": 7.5,
+        "speaker": 0,
+        "gain": 0.8038,
+        "category": "environment"
+      },
+      {
+        "id": "air_valve",
+        "start": 996.6922,
+        "duration": 7.95,
+        "speaker": 2,
+        "gain": 0.7762,
+        "category": "environment"
+      },
+      {
+        "id": "rotor_rest",
+        "start": 1008.4783,
+        "duration": 5.7,
+        "speaker": 0,
+        "gain": 0.7029,
+        "category": "environment"
+      },
+      {
+        "id": "soft_relay",
+        "start": 1015.8064,
+        "duration": 6.45,
+        "speaker": 3,
+        "gain": 0.7119,
+        "category": "environment"
+      },
+      {
+        "id": "paper_motor",
+        "start": 1025.3034,
+        "duration": 7.2,
+        "speaker": 1,
+        "gain": 0.8069,
         "category": "environment"
       },
       {
         "id": "calculation",
-        "start": 765.4345,
-        "duration": 4.8,
+        "start": 1029.382,
+        "duration": 7.2,
         "speaker": 3,
-        "gain": 0.772,
+        "gain": 0.8303,
         "category": "environment"
       },
       {
-        "id": "air_valve",
-        "start": 773.1192,
-        "duration": 5.55,
-        "speaker": 0,
-        "gain": 0.7876,
-        "category": "environment"
-      },
-      {
-        "id": "paper_motor",
-        "start": 780.6979,
-        "duration": 4.8,
+        "id": "telemetry",
+        "start": 1038.361,
+        "duration": 6.45,
         "speaker": 1,
-        "gain": 0.7941,
+        "gain": 0.8655,
         "category": "environment"
       },
       {
-        "id": "keyboard_mechanical",
-        "start": 790.0441,
-        "duration": 4.2,
+        "id": "rotor_rest",
+        "start": 1048.0566,
+        "duration": 5.7,
         "speaker": 2,
-        "gain": 0.691,
+        "gain": 0.8465,
         "category": "environment"
       },
       {
-        "id": "air_valve",
-        "start": 796.0533,
-        "duration": 5.55,
-        "speaker": 3,
-        "gain": 0.6895,
+        "id": "metabolic_pulse",
+        "start": 1056.7676,
+        "duration": 5.7,
+        "speaker": 0,
+        "gain": 0.8119,
         "category": "environment"
       },
       {
         "id": "keyboard_spacebar",
-        "start": 805.2107,
-        "duration": 4.5,
-        "speaker": 0,
-        "gain": 0.8594,
+        "start": 1065.1621,
+        "duration": 6.9,
+        "speaker": 3,
+        "gain": 0.8483,
         "category": "environment"
       },
       {
-        "id": "tiny_gears",
-        "start": 813.2365,
-        "duration": 5.55,
+        "id": "metabolic_pulse",
+        "start": 1075.8275,
+        "duration": 5.7,
+        "speaker": 0,
+        "gain": 0.7185,
+        "category": "environment"
+      },
+      {
+        "id": "calculation",
+        "start": 1079.5789,
+        "duration": 7.2,
         "speaker": 2,
-        "gain": 0.8659,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_mechanical",
-        "start": 820.7595,
-        "duration": 4.2,
-        "speaker": 0,
-        "gain": 0.8118,
+        "gain": 0.8591,
         "category": "environment"
       },
       {
         "id": "memory_keys",
-        "start": 829.3934,
-        "duration": 4.05,
+        "start": 1088.6785,
+        "duration": 6.45,
         "speaker": 1,
-        "gain": 0.7285,
+        "gain": 0.7453,
         "category": "environment"
       },
       {
-        "id": "orbital_hum",
-        "start": 838.0136,
-        "duration": 4.8,
-        "speaker": 3,
-        "gain": 0.6846,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 846.3341,
-        "duration": 5.1,
-        "speaker": 3,
-        "gain": 0.8244,
-        "category": "environment"
-      },
-      {
-        "id": "scanner_steps",
-        "start": 853.5389,
-        "duration": 4.8,
-        "speaker": 0,
-        "gain": 0.71,
+        "id": "telemetry",
+        "start": 1097.036,
+        "duration": 6.45,
+        "speaker": 2,
+        "gain": 0.8069,
         "category": "environment"
       },
       {
         "id": "liquid_circuit",
-        "start": 860.8164,
-        "duration": 5.55,
-        "speaker": 2,
+        "start": 1107.9347,
+        "duration": 7.95,
+        "speaker": 1,
+        "gain": 0.8297,
+        "category": "environment"
+      },
+      {
+        "id": "air_valve",
+        "start": 1113.32,
+        "duration": 7.95,
+        "speaker": 3,
+        "gain": 0.7878,
+        "category": "environment"
+      },
+      {
+        "id": "orbital_hum",
+        "start": 1124.3554,
+        "duration": 7.2,
+        "speaker": 0,
         "gain": 0.7083,
         "category": "environment"
       },
       {
-        "id": "rotor_rest",
-        "start": 869.6944,
-        "duration": 3.3,
-        "speaker": 1,
-        "gain": 0.7746,
-        "category": "environment"
-      },
-      {
-        "id": "servo_breath",
-        "start": 871.8739,
-        "duration": 3.3,
-        "speaker": 3,
-        "gain": 0.823,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_spacebar",
-        "start": 874.1782,
-        "duration": 4.5,
-        "speaker": 1,
-        "gain": 0.7783,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 882.6637,
-        "duration": 5.1,
-        "speaker": 2,
-        "gain": 0.8388,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 889.5352,
-        "duration": 5.55,
-        "speaker": 0,
-        "gain": 0.8473,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_mechanical",
-        "start": 898.0746,
-        "duration": 4.2,
-        "speaker": 3,
-        "gain": 0.8259,
-        "category": "environment"
-      },
-      {
-        "id": "air_valve",
-        "start": 904.7138,
-        "duration": 5.55,
-        "speaker": 0,
-        "gain": 0.8329,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_spacebar",
-        "start": 908.6859,
-        "duration": 4.5,
-        "speaker": 2,
-        "gain": 0.8039,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 911.181,
-        "duration": 5.1,
-        "speaker": 1,
-        "gain": 0.6939,
-        "category": "environment"
-      },
-      {
-        "id": "orbital_hum",
-        "start": 914.817,
-        "duration": 4.8,
-        "speaker": 2,
-        "gain": 0.7109,
-        "category": "environment"
-      },
-      {
-        "id": "calculation",
-        "start": 922.8102,
-        "duration": 4.8,
-        "speaker": 1,
-        "gain": 0.7475,
-        "category": "environment"
-      },
-      {
-        "id": "soft_relay",
-        "start": 931.5502,
-        "duration": 4.05,
-        "speaker": 0,
-        "gain": 0.725,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 939.5564,
-        "duration": 5.55,
-        "speaker": 3,
-        "gain": 0.7487,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 946.5721,
-        "duration": 5.1,
-        "speaker": 0,
-        "gain": 0.8757,
-        "category": "environment"
-      },
-      {
-        "id": "memory_keys",
-        "start": 949.8122,
-        "duration": 4.05,
-        "speaker": 3,
-        "gain": 0.7152,
-        "category": "environment"
-      },
-      {
-        "id": "air_valve",
-        "start": 958.3974,
-        "duration": 5.55,
-        "speaker": 1,
-        "gain": 0.7461,
-        "category": "environment"
-      },
-      {
-        "id": "tiny_gears",
-        "start": 961.5506,
-        "duration": 5.55,
-        "speaker": 2,
-        "gain": 0.7063,
-        "category": "environment"
-      },
-      {
-        "id": "servo_breath",
-        "start": 968.6084,
-        "duration": 3.3,
-        "speaker": 2,
-        "gain": 0.7846,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 975.8798,
-        "duration": 5.55,
-        "speaker": 0,
-        "gain": 0.7474,
-        "category": "environment"
-      },
-      {
-        "id": "memory_keys",
-        "start": 979.3664,
-        "duration": 4.05,
-        "speaker": 1,
-        "gain": 0.8735,
-        "category": "environment"
-      },
-      {
-        "id": "calculation",
-        "start": 985.7289,
-        "duration": 4.8,
-        "speaker": 3,
-        "gain": 0.7758,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 994.4028,
-        "duration": 5.1,
-        "speaker": 0,
-        "gain": 0.7352,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_mechanical",
-        "start": 1001.9897,
-        "duration": 4.2,
-        "speaker": 3,
-        "gain": 0.8097,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_spacebar",
-        "start": 1007.5567,
-        "duration": 4.5,
-        "speaker": 1,
-        "gain": 0.7379,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 1016.1296,
-        "duration": 5.55,
-        "speaker": 2,
-        "gain": 0.6911,
-        "category": "environment"
-      },
-      {
-        "id": "scanner_steps",
-        "start": 1025.2291,
-        "duration": 4.8,
-        "speaker": 1,
-        "gain": 0.7363,
-        "category": "environment"
-      },
-      {
-        "id": "memory_keys",
-        "start": 1028.2241,
-        "duration": 4.05,
-        "speaker": 0,
-        "gain": 0.6861,
-        "category": "environment"
-      },
-      {
-        "id": "soft_relay",
-        "start": 1034.9317,
-        "duration": 4.05,
-        "speaker": 2,
-        "gain": 0.7115,
-        "category": "environment"
-      },
-      {
-        "id": "servo_breath",
-        "start": 1042.816,
-        "duration": 3.3,
-        "speaker": 3,
-        "gain": 0.7112,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 1047.4883,
-        "duration": 5.1,
-        "speaker": 2,
-        "gain": 0.8336,
-        "category": "environment"
-      },
-      {
-        "id": "orbital_hum",
-        "start": 1053.9801,
-        "duration": 4.8,
-        "speaker": 0,
-        "gain": 0.8173,
-        "category": "environment"
-      },
-      {
-        "id": "soft_relay",
-        "start": 1057.3944,
-        "duration": 4.05,
-        "speaker": 3,
-        "gain": 0.7356,
-        "category": "environment"
-      },
-      {
-        "id": "memory_keys",
-        "start": 1065.4226,
-        "duration": 4.05,
-        "speaker": 1,
-        "gain": 0.7294,
-        "category": "environment"
-      },
-      {
-        "id": "rotor_rest",
-        "start": 1072.1023,
-        "duration": 3.3,
-        "speaker": 0,
-        "gain": 0.8544,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_mechanical",
-        "start": 1073.9306,
-        "duration": 4.2,
-        "speaker": 1,
-        "gain": 0.8164,
-        "category": "environment"
-      },
-      {
-        "id": "soft_latch",
-        "start": 1080.9705,
-        "duration": 5.1,
-        "speaker": 2,
-        "gain": 0.7278,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 1084.9037,
-        "duration": 5.55,
-        "speaker": 3,
-        "gain": 0.818,
-        "category": "environment"
-      },
-      {
-        "id": "air_valve",
-        "start": 1092.6318,
-        "duration": 5.55,
-        "speaker": 3,
-        "gain": 0.8088,
-        "category": "environment"
-      },
-      {
         "id": "metabolic_pulse",
-        "start": 1099.7405,
-        "duration": 3.3,
-        "speaker": 2,
-        "gain": 0.7826,
-        "category": "environment"
-      },
-      {
-        "id": "scanner_steps",
-        "start": 1107.1175,
-        "duration": 4.8,
+        "start": 1134.8835,
+        "duration": 5.7,
         "speaker": 0,
-        "gain": 0.76,
+        "gain": 0.6907,
         "category": "environment"
       },
       {
-        "id": "soft_relay",
-        "start": 1115.9182,
-        "duration": 4.05,
-        "speaker": 1,
-        "gain": 0.813,
+        "id": "memory_keys",
+        "start": 1144.7052,
+        "duration": 6.45,
+        "speaker": 2,
+        "gain": 0.6844,
         "category": "environment"
       },
       {
         "id": "tiny_gears",
-        "start": 1118.6439,
-        "duration": 5.55,
-        "speaker": 0,
-        "gain": 0.7307,
-        "category": "environment"
-      },
-      {
-        "id": "calculation",
-        "start": 1121.7606,
-        "duration": 4.8,
-        "speaker": 2,
-        "gain": 0.7037,
-        "category": "environment"
-      },
-      {
-        "id": "paper_motor",
-        "start": 1129.6582,
-        "duration": 4.8,
-        "speaker": 3,
-        "gain": 0.7658,
-        "category": "environment"
-      },
-      {
-        "id": "orbital_hum",
-        "start": 1132.3001,
-        "duration": 4.8,
+        "start": 1154.1796,
+        "duration": 7.95,
         "speaker": 1,
-        "gain": 0.7349,
+        "gain": 0.7915,
+        "category": "environment"
+      },
+      {
+        "id": "telemetry",
+        "start": 1166.7903,
+        "duration": 6.45,
+        "speaker": 3,
+        "gain": 0.7069,
+        "category": "environment"
+      },
+      {
+        "id": "keyboard_mechanical",
+        "start": 1175.7615,
+        "duration": 6.6,
+        "speaker": 3,
+        "gain": 0.7248,
         "category": "environment"
       },
       {
         "id": "rotor_rest",
-        "start": 1139.0871,
-        "duration": 3.3,
+        "start": 1180.737,
+        "duration": 5.7,
         "speaker": 1,
-        "gain": 0.7655,
-        "category": "environment"
-      },
-      {
-        "id": "keyboard_spacebar",
-        "start": 1145.7371,
-        "duration": 4.5,
-        "speaker": 3,
-        "gain": 0.7916,
+        "gain": 0.8619,
         "category": "environment"
       },
       {
         "id": "soft_relay",
-        "start": 1154.6378,
-        "duration": 4.05,
+        "start": 1189.3127,
+        "duration": 6.45,
         "speaker": 0,
-        "gain": 0.7326,
-        "category": "environment"
-      },
-      {
-        "id": "rotor_rest",
-        "start": 1163.0626,
-        "duration": 3.3,
-        "speaker": 2,
-        "gain": 0.8072,
-        "category": "environment"
-      },
-      {
-        "id": "scanner_steps",
-        "start": 1169.3749,
-        "duration": 4.8,
-        "speaker": 1,
-        "gain": 0.8601,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 1172.9563,
-        "duration": 5.55,
-        "speaker": 2,
-        "gain": 0.7952,
-        "category": "environment"
-      },
-      {
-        "id": "air_valve",
-        "start": 1176.7679,
-        "duration": 5.55,
-        "speaker": 3,
-        "gain": 0.8798,
-        "category": "environment"
-      },
-      {
-        "id": "rotor_rest",
-        "start": 1185.1953,
-        "duration": 3.3,
-        "speaker": 0,
-        "gain": 0.7789,
-        "category": "environment"
-      },
-      {
-        "id": "scanner_steps",
-        "start": 1187.8134,
-        "duration": 4.8,
-        "speaker": 3,
-        "gain": 0.6889,
-        "category": "environment"
-      },
-      {
-        "id": "liquid_circuit",
-        "start": 1190.5143,
-        "duration": 5.55,
-        "speaker": 1,
-        "gain": 0.8777,
+        "gain": 0.8126,
         "category": "environment"
       }
     ],
     "sleep": [
       {
-        "id": "sleep_voice_02",
+        "id": "sleep_04",
         "start": 1.0,
-        "duration": 7.668541666666667,
+        "duration": 4.802458333333333,
         "speaker": 3,
         "gain": 0.8003,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_03",
-        "start": 13.0215,
+        "start": 10.1554,
         "duration": 5.344458333333334,
         "speaker": 0,
         "gain": 0.8674,
@@ -2387,111 +2013,111 @@
       },
       {
         "id": "sleep_10",
-        "start": 16.0077,
+        "start": 13.1416,
         "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.6887,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_00",
-        "start": 22.3523,
-        "duration": 7.731125,
+        "id": "sleep_04",
+        "start": 19.4862,
+        "duration": 4.802458333333333,
         "speaker": 2,
         "gain": 0.7964,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_08",
-        "start": 32.7022,
+        "start": 26.9075,
         "duration": 4.455541666666667,
         "speaker": 0,
         "gain": 0.6914,
         "category": "environment"
       },
       {
-        "id": "sleep_03",
-        "start": 42.5875,
-        "duration": 5.344458333333334,
+        "id": "sleep_04",
+        "start": 36.7927,
+        "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.7404,
         "category": "environment"
       },
       {
         "id": "sleep_10",
-        "start": 54.805,
+        "start": 48.4683,
         "duration": 4.802458333333333,
         "speaker": 2,
         "gain": 0.8395,
         "category": "environment"
       },
       {
-        "id": "sleep_07",
-        "start": 57.511,
-        "duration": 4.802458333333333,
+        "id": "sleep_08",
+        "start": 51.1742,
+        "duration": 4.455541666666667,
         "speaker": 3,
         "gain": 0.7932,
         "category": "environment"
       },
       {
         "id": "sleep_11",
-        "start": 65.3128,
+        "start": 58.6291,
         "duration": 2.011125,
         "speaker": 3,
         "gain": 0.7884,
         "category": "environment"
       },
       {
-        "id": "sleep_03",
-        "start": 70.3944,
-        "duration": 5.344458333333334,
+        "id": "sleep_05",
+        "start": 63.7107,
+        "duration": 4.455541666666667,
         "speaker": 0,
         "gain": 0.7125,
         "category": "environment"
       },
       {
-        "id": "sleep_10",
-        "start": 81.5887,
-        "duration": 4.802458333333333,
+        "id": "sleep_09",
+        "start": 74.0161,
+        "duration": 5.344458333333334,
         "speaker": 2,
         "gain": 0.8585,
         "category": "environment"
       },
       {
-        "id": "sleep_08",
-        "start": 85.3887,
-        "duration": 4.455541666666667,
+        "id": "sleep_10",
+        "start": 78.2449,
+        "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.8043,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_00",
-        "start": 94.0858,
-        "duration": 7.731125,
+        "id": "sleep_03",
+        "start": 87.289,
+        "duration": 5.344458333333334,
         "speaker": 2,
         "gain": 0.8525,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_10",
-        "start": 106.2752,
+        "start": 97.0918,
         "duration": 4.802458333333333,
         "speaker": 0,
         "gain": 0.7831,
         "category": "environment"
       },
       {
-        "id": "sleep_04",
-        "start": 112.5746,
-        "duration": 4.802458333333333,
+        "id": "sleep_05",
+        "start": 103.3912,
+        "duration": 4.455541666666667,
         "speaker": 3,
         "gain": 0.7495,
         "category": "environment"
       },
       {
         "id": "sleep_10",
-        "start": 122.7954,
+        "start": 113.265,
         "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.7599,
@@ -2499,23 +2125,23 @@
       },
       {
         "id": "sleep_08",
-        "start": 131.5538,
+        "start": 122.0234,
         "duration": 4.455541666666667,
         "speaker": 1,
         "gain": 0.7144,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_02",
-        "start": 139.4471,
-        "duration": 7.668541666666667,
+        "id": "sleep_04",
+        "start": 129.9167,
+        "duration": 4.802458333333333,
         "speaker": 2,
         "gain": 0.732,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_03",
-        "start": 150.0058,
+        "start": 137.6093,
         "duration": 5.344458333333334,
         "speaker": 3,
         "gain": 0.7186,
@@ -2523,103 +2149,103 @@
       },
       {
         "id": "sleep_11",
-        "start": 159.2499,
+        "start": 146.8534,
         "duration": 2.011125,
         "speaker": 0,
         "gain": 0.8687,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_00",
-        "start": 160.5704,
-        "duration": 7.731125,
+        "id": "sleep_04",
+        "start": 148.174,
+        "duration": 4.802458333333333,
         "speaker": 3,
         "gain": 0.7988,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
-        "id": "sleep_05",
-        "start": 171.2324,
-        "duration": 4.455541666666667,
+        "id": "sleep_06",
+        "start": 155.9073,
+        "duration": 5.344458333333334,
         "speaker": 1,
         "gain": 0.6944,
         "category": "environment"
       },
       {
-        "id": "sleep_04",
-        "start": 179.08,
-        "duration": 4.802458333333333,
+        "id": "sleep_05",
+        "start": 164.6438,
+        "duration": 4.455541666666667,
         "speaker": 2,
         "gain": 0.7127,
         "category": "environment"
       },
       {
         "id": "sleep_10",
-        "start": 188.7709,
+        "start": 173.9877,
         "duration": 4.802458333333333,
         "speaker": 0,
         "gain": 0.8024,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_01",
-        "start": 191.8117,
-        "duration": 8.106458333333334,
+        "id": "sleep_03",
+        "start": 177.0285,
+        "duration": 5.344458333333334,
         "speaker": 2,
         "gain": 0.711,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_06",
-        "start": 204.641,
+        "start": 187.0959,
         "duration": 5.344458333333334,
         "speaker": 0,
         "gain": 0.7996,
         "category": "environment"
       },
       {
-        "id": "sleep_08",
-        "start": 213.8507,
-        "duration": 4.455541666666667,
+        "id": "sleep_09",
+        "start": 196.3056,
+        "duration": 5.344458333333334,
         "speaker": 1,
         "gain": 0.719,
         "category": "environment"
       },
       {
-        "id": "sleep_10",
-        "start": 224.9244,
-        "duration": 4.802458333333333,
+        "id": "sleep_11",
+        "start": 208.2682,
+        "duration": 2.011125,
         "speaker": 3,
         "gain": 0.7753,
         "category": "environment"
       },
       {
-        "id": "sleep_05",
-        "start": 236.5448,
-        "duration": 4.455541666666667,
+        "id": "sleep_06",
+        "start": 217.0972,
+        "duration": 5.344458333333334,
         "speaker": 1,
         "gain": 0.7743,
         "category": "environment"
       },
       {
-        "id": "sleep_07",
-        "start": 243.4038,
-        "duration": 4.802458333333333,
+        "id": "sleep_08",
+        "start": 224.8451,
+        "duration": 4.455541666666667,
         "speaker": 0,
         "gain": 0.6954,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_01",
-        "start": 246.5057,
-        "duration": 8.106458333333334,
+        "id": "sleep_04",
+        "start": 227.723,
+        "duration": 4.802458333333333,
         "speaker": 3,
         "gain": 0.7223,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_05",
-        "start": 252.6053,
+        "start": 231.3366,
         "duration": 4.455541666666667,
         "speaker": 2,
         "gain": 0.8506,
@@ -2627,239 +2253,239 @@
       },
       {
         "id": "sleep_11",
-        "start": 255.6067,
+        "start": 234.3379,
         "duration": 2.011125,
         "speaker": 1,
         "gain": 0.7128,
         "category": "environment"
       },
       {
-        "id": "sleep_04",
-        "start": 263.5586,
+        "id": "sleep_07",
+        "start": 242.2899,
         "duration": 4.802458333333333,
         "speaker": 3,
         "gain": 0.8355,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_00",
-        "start": 275.0575,
-        "duration": 7.731125,
+        "id": "sleep_03",
+        "start": 253.7887,
+        "duration": 5.344458333333334,
         "speaker": 2,
         "gain": 0.858,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_11",
-        "start": 284.4992,
+        "start": 260.8438,
         "duration": 2.011125,
         "speaker": 0,
         "gain": 0.7924,
         "category": "environment"
       },
       {
-        "id": "sleep_08",
-        "start": 291.0608,
-        "duration": 4.455541666666667,
+        "id": "sleep_09",
+        "start": 267.4053,
+        "duration": 5.344458333333334,
         "speaker": 3,
         "gain": 0.6808,
         "category": "environment"
       },
       {
-        "id": "sleep_06",
-        "start": 301.6178,
-        "duration": 5.344458333333334,
+        "id": "sleep_07",
+        "start": 278.8513,
+        "duration": 4.802458333333333,
         "speaker": 2,
         "gain": 0.8594,
         "category": "environment"
       },
       {
         "id": "sleep_11",
-        "start": 305.2975,
+        "start": 282.1578,
         "duration": 2.011125,
         "speaker": 1,
         "gain": 0.8445,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_02",
-        "start": 312.5917,
-        "duration": 7.668541666666667,
+        "id": "sleep_04",
+        "start": 289.452,
+        "duration": 4.802458333333333,
         "speaker": 0,
         "gain": 0.8575,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
-        "id": "sleep_08",
-        "start": 317.2697,
-        "duration": 4.455541666666667,
+        "id": "sleep_09",
+        "start": 292.3816,
+        "duration": 5.344458333333334,
         "speaker": 2,
         "gain": 0.7147,
         "category": "environment"
       },
       {
-        "id": "sleep_07",
-        "start": 324.4882,
-        "duration": 4.802458333333333,
+        "id": "sleep_08",
+        "start": 300.4891,
+        "duration": 4.455541666666667,
         "speaker": 3,
         "gain": 0.8011,
         "category": "environment"
       },
       {
-        "id": "sleep_06",
-        "start": 334.1822,
-        "duration": 5.344458333333334,
+        "id": "sleep_07",
+        "start": 309.8361,
+        "duration": 4.802458333333333,
         "speaker": 0,
         "gain": 0.7353,
         "category": "environment"
       },
       {
-        "id": "sleep_07",
-        "start": 342.7968,
-        "duration": 4.802458333333333,
+        "id": "sleep_08",
+        "start": 317.9088,
+        "duration": 4.455541666666667,
         "speaker": 1,
         "gain": 0.7402,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_01",
-        "start": 352.3286,
-        "duration": 8.106458333333334,
+        "id": "sleep_04",
+        "start": 327.0936,
+        "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.8495,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_10",
-        "start": 365.9468,
+        "start": 337.4078,
         "duration": 4.802458333333333,
         "speaker": 3,
         "gain": 0.8087,
         "category": "environment"
       },
       {
-        "id": "sleep_05",
-        "start": 369.0692,
-        "duration": 4.455541666666667,
+        "id": "sleep_07",
+        "start": 340.5302,
+        "duration": 4.802458333333333,
         "speaker": 0,
         "gain": 0.6894,
         "category": "environment"
       },
       {
-        "id": "sleep_03",
-        "start": 371.5535,
-        "duration": 5.344458333333334,
+        "id": "sleep_04",
+        "start": 343.208,
+        "duration": 4.802458333333333,
         "speaker": 2,
         "gain": 0.6843,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_00",
-        "start": 381.0894,
-        "duration": 7.731125,
+        "id": "sleep_03",
+        "start": 352.2018,
+        "duration": 5.344458333333334,
         "speaker": 0,
         "gain": 0.7995,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_07",
-        "start": 394.5416,
+        "start": 363.2674,
         "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.7338,
         "category": "environment"
       },
       {
-        "id": "sleep_03",
-        "start": 397.8011,
+        "id": "sleep_06",
+        "start": 366.5269,
         "duration": 5.344458333333334,
         "speaker": 2,
         "gain": 0.7385,
         "category": "environment"
       },
       {
-        "id": "sleep_06",
-        "start": 406.5942,
-        "duration": 5.344458333333334,
+        "id": "sleep_08",
+        "start": 375.3199,
+        "duration": 4.455541666666667,
         "speaker": 3,
         "gain": 0.7027,
         "category": "environment"
       },
       {
-        "id": "sleep_08",
-        "start": 415.4532,
-        "duration": 4.455541666666667,
+        "id": "sleep_09",
+        "start": 383.29,
+        "duration": 5.344458333333334,
         "speaker": 0,
         "gain": 0.7124,
         "category": "environment"
       },
       {
         "id": "sleep_07",
-        "start": 418.2689,
+        "start": 386.6676,
         "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.7488,
         "category": "environment"
       },
       {
-        "id": "sleep_04",
-        "start": 428.9564,
-        "duration": 4.802458333333333,
+        "id": "sleep_06",
+        "start": 397.355,
+        "duration": 5.344458333333334,
         "speaker": 3,
         "gain": 0.8796,
         "category": "environment"
       },
       {
-        "id": "sleep_09",
-        "start": 436.9092,
-        "duration": 5.344458333333334,
+        "id": "sleep_10",
+        "start": 405.8499,
+        "duration": 4.802458333333333,
         "speaker": 2,
         "gain": 0.8294,
         "category": "environment"
       },
       {
-        "id": "sleep_07",
-        "start": 448.1727,
-        "duration": 4.802458333333333,
+        "id": "sleep_08",
+        "start": 416.5713,
+        "duration": 4.455541666666667,
         "speaker": 3,
         "gain": 0.7915,
         "category": "environment"
       },
       {
         "id": "sleep_11",
-        "start": 451.0056,
+        "start": 419.1996,
         "duration": 2.011125,
         "speaker": 2,
         "gain": 0.6896,
         "category": "environment"
       },
       {
-        "id": "sleep_04",
-        "start": 454.8585,
-        "duration": 4.802458333333333,
+        "id": "sleep_06",
+        "start": 422.9102,
+        "duration": 5.344458333333334,
         "speaker": 0,
         "gain": 0.7833,
         "category": "environment"
       },
       {
         "id": "sleep_10",
-        "start": 461.3495,
+        "start": 429.9432,
         "duration": 4.802458333333333,
         "speaker": 1,
         "gain": 0.8381,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_01",
-        "start": 470.6178,
-        "duration": 8.106458333333334,
+        "id": "sleep_04",
+        "start": 439.2115,
+        "duration": 4.802458333333333,
         "speaker": 3,
         "gain": 0.7906,
-        "category": "speech_candidate"
+        "category": "environment"
       },
       {
         "id": "sleep_09",
-        "start": 475.6669,
+        "start": 442.2027,
         "duration": 5.344458333333334,
         "speaker": 0,
         "gain": 0.6898,
@@ -2867,162 +2493,162 @@
       },
       {
         "id": "sleep_03",
-        "start": 478.8563,
+        "start": 445.3921,
         "duration": 5.344458333333334,
         "speaker": 1,
-        "gain": 0.8723,
+        "gain": 0.6896,
         "category": "environment"
       },
       {
-        "id": "sleep_06",
-        "start": 482.1355,
-        "duration": 5.344458333333334,
+        "id": "sleep_07",
+        "start": 449.5695,
+        "duration": 4.802458333333333,
         "speaker": 2,
-        "gain": 0.7931,
+        "gain": 0.7578,
         "category": "environment"
       },
       {
         "id": "sleep_04",
-        "start": 492.0791,
+        "start": 457.0309,
+        "duration": 4.802458333333333,
+        "speaker": 0,
+        "gain": 0.6814,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_10",
+        "start": 463.8994,
+        "duration": 4.802458333333333,
+        "speaker": 2,
+        "gain": 0.718,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_04",
+        "start": 474.7686,
         "duration": 4.802458333333333,
         "speaker": 1,
-        "gain": 0.8376,
+        "gain": 0.7814,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_09",
+        "start": 483.4062,
+        "duration": 5.344458333333334,
+        "speaker": 3,
+        "gain": 0.7639,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_07",
+        "start": 487.0297,
+        "duration": 4.802458333333333,
+        "speaker": 0,
+        "gain": 0.744,
         "category": "environment"
       },
       {
         "id": "sleep_03",
-        "start": 495.3474,
+        "start": 497.4552,
         "duration": 5.344458333333334,
-        "speaker": 0,
-        "gain": 0.6883,
+        "speaker": 3,
+        "gain": 0.7858,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_00",
-        "start": 498.5408,
-        "duration": 7.731125,
-        "speaker": 3,
-        "gain": 0.7293,
-        "category": "speech_candidate"
+        "id": "sleep_09",
+        "start": 505.0525,
+        "duration": 5.344458333333334,
+        "speaker": 2,
+        "gain": 0.7385,
+        "category": "environment"
       },
       {
-        "id": "sleep_07",
-        "start": 512.1455,
-        "duration": 4.802458333333333,
-        "speaker": 2,
-        "gain": 0.7921,
+        "id": "sleep_11",
+        "start": 508.4685,
+        "duration": 2.011125,
+        "speaker": 1,
+        "gain": 0.8264,
         "category": "environment"
       },
       {
         "id": "sleep_10",
-        "start": 514.8334,
+        "start": 517.0498,
         "duration": 4.802458333333333,
         "speaker": 3,
-        "gain": 0.7691,
+        "gain": 0.7249,
         "category": "environment"
       },
       {
-        "id": "sleep_04",
-        "start": 523.8223,
+        "id": "sleep_11",
+        "start": 527.7323,
+        "duration": 2.011125,
+        "speaker": 2,
+        "gain": 0.7381,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_10",
+        "start": 534.1379,
         "duration": 4.802458333333333,
         "speaker": 1,
-        "gain": 0.8078,
+        "gain": 0.7814,
         "category": "environment"
       },
       {
-        "id": "sleep_07",
-        "start": 532.6831,
-        "duration": 4.802458333333333,
-        "speaker": 0,
-        "gain": 0.8786,
-        "category": "environment"
-      },
-      {
-        "id": "sleep_06",
-        "start": 536.0306,
+        "id": "sleep_09",
+        "start": 545.5532,
         "duration": 5.344458333333334,
-        "speaker": 2,
-        "gain": 0.8132,
-        "category": "environment"
-      },
-      {
-        "id": "sleep_10",
-        "start": 545.9954,
-        "duration": 4.802458333333333,
-        "speaker": 3,
-        "gain": 0.864,
+        "speaker": 0,
+        "gain": 0.7229,
         "category": "environment"
       },
       {
         "id": "sleep_08",
-        "start": 553.7819,
+        "start": 557.7659,
         "duration": 4.455541666666667,
-        "speaker": 0,
-        "gain": 0.7446,
-        "category": "environment"
-      },
-      {
-        "id": "sleep_05",
-        "start": 556.6399,
-        "duration": 4.455541666666667,
-        "speaker": 1,
-        "gain": 0.8598,
-        "category": "environment"
-      },
-      {
-        "id": "sleep_voice_02",
-        "start": 559.2015,
-        "duration": 7.668541666666667,
-        "speaker": 2,
-        "gain": 0.8664,
-        "category": "speech_candidate"
-      },
-      {
-        "id": "sleep_10",
-        "start": 564.9658,
-        "duration": 4.802458333333333,
-        "speaker": 1,
-        "gain": 0.8754,
-        "category": "environment"
-      },
-      {
-        "id": "sleep_04",
-        "start": 568.2754,
-        "duration": 4.802458333333333,
         "speaker": 3,
         "gain": 0.8382,
         "category": "environment"
       },
       {
-        "id": "sleep_voice_00",
-        "start": 579.2298,
-        "duration": 7.731125,
-        "speaker": 2,
-        "gain": 0.8182,
-        "category": "speech_candidate"
-      },
-      {
         "id": "sleep_03",
-        "start": 585.2985,
+        "start": 568.3734,
         "duration": 5.344458333333334,
         "speaker": 0,
-        "gain": 0.6898,
+        "gain": 0.7794,
         "category": "environment"
       },
       {
-        "id": "sleep_04",
-        "start": 589.2376,
+        "id": "sleep_09",
+        "start": 576.0442,
+        "duration": 5.344458333333334,
+        "speaker": 2,
+        "gain": 0.6971,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_11",
+        "start": 586.7649,
+        "duration": 2.011125,
+        "speaker": 1,
+        "gain": 0.6991,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_07",
+        "start": 591.4275,
         "duration": 4.802458333333333,
+        "speaker": 1,
+        "gain": 0.8468,
+        "category": "environment"
+      },
+      {
+        "id": "sleep_08",
+        "start": 594.454,
+        "duration": 4.455541666666667,
         "speaker": 3,
-        "gain": 0.8685,
-        "category": "environment"
-      },
-      {
-        "id": "sleep_10",
-        "start": 592.6741,
-        "duration": 4.802458333333333,
-        "speaker": 0,
-        "gain": 0.7644,
+        "gain": 0.871,
         "category": "environment"
       }
     ]

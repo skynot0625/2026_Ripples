@@ -100,6 +100,24 @@ def test_no_silent_stereo_fallback():
     validate_output({"max_output_channels":8},[4,5,6,7])
 
 
+def test_current_plans_exclude_speech_and_keep_dream_tails():
+    from ripples.tower_audio import _active_dry_bank
+    manifest,samples=load_bank(BANK)
+    voice_ids={b['id'] for b in manifest['bank'] if b['source'].get('category')=='speech_candidate'}
+    assert voice_ids
+    for state in DURATIONS:
+        for plan in (manifest['plans'][state],make_plan(manifest['bank'],state,123)):
+            assert not any(e['id'] in voice_ids for e in plan)
+    dry=dict(_active_dry_bank())
+    for b in manifest['bank']:
+        if b['state']!='activate': continue
+        x=samples[b['id']]
+        assert b['source']['origin']['profile']=='dream-work-v3'
+        assert len(x)==len(dry[b['id']])+round(2.4*RATE)
+        assert np.max(np.abs(x))<=.481
+        assert np.sqrt(np.mean(x[-RATE:-RATE//2]**2))>0  # tail is included in event duration
+
+
 def test_surround_stream_preserves_front_and_back_mapping():
     device={"max_output_channels":8}
     assert output_channels(device,[0,1,4,5],8)==8

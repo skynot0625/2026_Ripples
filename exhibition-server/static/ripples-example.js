@@ -163,7 +163,64 @@ class RipplesPositionSimulation {
 }
 
 /* Same envelope/budgets as ripples.transition, tested against Python. */
+const RipplesBezierTable=(()=>{
+  const table=new Float64Array(1025);
+  for(let i=1;i<1024;i++) {
+    let lo=0,hi=1;
+    for(let j=0;j<24;j++) {
+      const u=(lo+hi)/2,x=3*.42*(1-u)**2*u+3*(1-u)*u*u+u**3;
+      if(x<i/1024)lo=u;else hi=u;
+    }
+    const u=(lo+hi)/2;
+    table[i]=3*(1-u)*u*u+u**3;
+  }
+  table[1024]=1;return table;
+})();
 const RipplesTransition = {
+  bezier(x,inverse=false) {
+    x=Math.max(0,Math.min(1,x));
+    if(inverse) {
+      const u=.5+Math.sin(Math.asin(2*x-1)/3);
+      return 3*.42*(1-u)**2*u+3*(1-u)*u*u+u**3;
+    }
+    x*=1024;
+    const i=Math.min(1023,Math.floor(x)),f=x-i,table=RipplesBezierTable;
+    return table[i]+(table[i+1]-table[i])*f;
+  },
+  async sha256(data) {
+    if(globalThis.crypto?.subtle) return [...new Uint8Array(await crypto.subtle.digest('SHA-256',data))].map(x=>x.toString(16).padStart(2,'0')).join('');
+    return this.sha256Fallback(data);
+  },
+  // HTTP LAN pages do not expose WebCrypto. Keep integrity checking with SHA-256.
+  sha256Fallback(data) {
+    const bytes=data instanceof Uint8Array?data:new Uint8Array(data);
+    const n=bytes.length,padded=new Uint8Array(Math.ceil((n+9)/64)*64);
+    padded.set(bytes);padded[n]=128;
+    const view=new DataView(padded.buffer);
+    view.setUint32(padded.length-8,Math.floor(n/0x20000000));view.setUint32(padded.length-4,(n*8)>>>0);
+    const k=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+      0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+      0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+      0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+      0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+      0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+      0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+      0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+    const h=new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+    const w=new Uint32Array(64),rr=(x,n)=>(x>>>n)|(x<<(32-n));
+    for(let block=0;block<padded.length;block+=64) {
+      for(let i=0;i<16;i++)w[i]=view.getUint32(block+i*4);
+      for(let i=16;i<64;i++)w[i]=(w[i-16]+(rr(w[i-15],7)^rr(w[i-15],18)^(w[i-15]>>>3))+w[i-7]+(rr(w[i-2],17)^rr(w[i-2],19)^(w[i-2]>>>10)))>>>0;
+      let [a,b,c,d,e,f,g,q]=h;
+      for(let i=0;i<64;i++) {
+        const t1=(q+(rr(e,6)^rr(e,11)^rr(e,25))+((e&f)^(~e&g))+k[i]+w[i])>>>0;
+        const t2=((rr(a,2)^rr(a,13)^rr(a,22))+((a&b)^(a&c)^(b&c)))>>>0;
+        q=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+      }
+      [a,b,c,d,e,f,g,q].forEach((x,i)=>h[i]=(h[i]+x)>>>0);
+    }
+    return [...h].map(x=>x.toString(16).padStart(8,'0')).join('');
+  },
   smooth(x) { x = Math.max(0, Math.min(1, x)); return x*x*(3-2*x); },
   limit(rgb, weights) {
     const out = Float64Array.from(rgb, x => Math.max(0, Math.min(96, x)));
@@ -179,18 +236,18 @@ const RipplesTransition = {
   base(rgb, weights) { return this.limit(Float64Array.from(rgb, x => x*96/255), weights); },
   pulse(h, r, age, direction) {
     if (direction === 'up') {
-      const local=age-(1.4*Math.sqrt(h)+.20*r), startWidth=.12+1.02*Math.pow(.5,.8);
+      const local=age-(1.4*this.bezier(h,true)+.20*r), startWidth=.12+1.02*Math.pow(.5,.8);
       const width=startWidth+(1.14-startWidth)*this.smooth((h-.5)/.35);
       const aperture=this.smooth((width-r)/.16), gain=.12+.88*Math.pow(h,1.4);
-      return aperture*gain*this.smooth(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.2)/1.2));
+      return aperture*gain*this.bezier(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.2)/1.2));
     }
-    const local=age-1.4*(direction === 'up_flat' ? h : 1-h);
-    return this.smooth(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.4)/1.2));
+    const local=age-1.4*this.bezier(direction === 'up_flat' ? h : 1-h,true);
+    return this.bezier(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.4)/1.2));
   },
   composite(old, target, height, age, direction, weights, radius) {
     const out = this.base(target, weights);
     if (age >= 5) return out;
-    const mix = this.smooth(age/2.6), tint = [96,84,64];
+    const mix = this.bezier(age/2.6), tint = [96,84,64];
     for (let i=0; i<height.length; i++) {
       const pulse = this.pulse(height[i],radius ? radius[i] : 0,age,direction);
       for (let c=0; c<3; c++) {
@@ -250,7 +307,13 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
     onUpdate: null,
     audioState: () => {
       const state=phase(), p=(Date.now()/1000+9*3600)%1800;
-      return {state, mode, paused, offset:mode==='clock'?p-(state==='sleep'?1200:0):null};
+      return {state, mode, paused, revision:reset,
+        transitionAge:shownState===state&&origin?Math.max(0,elapsed-transitionStart):null,
+        offset:mode==='clock'?p-(state==='sleep'?1200:0):null};
+    },
+    compareTransitions() {
+      input='recorded';direction='up';mode='compare';elapsed=0;reset++;paused=false;
+      last=performance.now();changed();
     },
     enabled: () => mode !== 'off',
     setSimulation(msg) {
@@ -358,7 +421,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
         if (!r.ok) throw Error('예시 프레임 HTTP ' + r.status);
         const compressed = await r.arrayBuffer();
         if (compressed.byteLength !== f.bytes) throw Error('예시 파일 크기 불일치');
-        const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', compressed))].map(x => x.toString(16).padStart(2, '0')).join('');
+        const hash = await RipplesTransition.sha256(compressed);
         if (hash !== f.sha256) throw Error('예시 파일 해시 불일치');
         const raw = new Uint8Array(await new Response(new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
         if (raw.byteLength !== meta.frames * meta.neurons * 3) throw Error('예시 프레임 길이 불일치');
@@ -367,7 +430,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
       const a=meta.activity_clip;
       if(!a||a.encoding!=='gzip+base64'||a.frames!==680||a.neurons!==8460||a.channels!==3||a.fps!==10)throw Error('위치연동 발화 기록 형식 불일치');
       const packed=Uint8Array.from(atob(a.data),c=>c.charCodeAt(0));
-      const digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',packed))].map(x=>x.toString(16).padStart(2,'0')).join('');
+      const digest=await RipplesTransition.sha256(packed);
       if(digest!==a.sha256)throw Error('위치연동 발화 기록 해시 불일치');
       activityClip=new Uint8Array(await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
       if(activityClip.byteLength!==680*8460*3)throw Error('위치연동 발화 기록 길이 불일치');

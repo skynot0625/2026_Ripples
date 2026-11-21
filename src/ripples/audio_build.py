@@ -78,10 +78,11 @@ def write_sources(manifest, output):
         typ=('직접 코드 합성' if s['kind']=='original_procedural' else
              'Microsoft Heami Desktop / Windows SAPI 합성 음성' if origin.get('type')=='system_tts' else
              '합성 맥 환경음' if s['kind']=='synthetic_maek' else '제공된 녹음')
-        location=('active_bank · seed 214 · work-v2-low-hiss' if not parts else '<br>'.join(
+        location=('active_bank · seed 214 · dream-work-v3' if not parts else '<br>'.join(
             f"{p['relative_file']} · MIC {s['mic_channel']} · {p['file_frame']/s['sample_rate']:.2f}–{(p['file_frame']+p['frames'])/s['sample_rate']:.2f}s" for p in parts))
         effect=('음높이 유지 · 0.96배 속도 · 작은 2.4초 잔향' if s.get('category')=='speech_candidate' else
                 s.get('processing',''))
+        if s.get('category')=='speech_candidate': effect='현재 재생 제외 · 보관한 이전 음성 예시; '+effect
         lines.append(f"| [{b['id']}](../../exhibition-server/static/tower-audio/{b['file']}) | {typ} | {location} | {effect} |")
     lines += ['', '## 목소리 예시의 원본', '',
         '[voice.wav](synthetic_source/voice.wav) / [생성 정보와 문안](synthetic_source/voice.json). Microsoft Windows의 설치된 `Microsoft Heami Desktop` 음성, System.Speech/SAPI, Rate −1을 사용했습니다. 이 프로젝트 예시를 위해 작성한 문안이며 현장에서 들은 발화가 아닙니다.', '',
@@ -99,7 +100,10 @@ def write_sources(manifest, output):
         lines[2]='Active는 코드 합성입니다. Sleep에는 제공된 녹음에서 선택한 소리가 포함됩니다. 각 샘플의 실제 녹음·합성 구분과 원본 파일·발췌 구간·효과는 아래 표 및 manifest를 따릅니다.'
     if not has_tts:
         del lines[lines.index('## 목소리 예시의 원본'):lines.index('## 최종 재생 파일')]
+    lines[2]+=' 현재 Active/Sleep 재생 계획에서는 말소리 후보를 제외했습니다. 아래 음성 항목은 출처를 보존한 이전 예시입니다.'
     (output/'SOURCES.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+    with (output/'SOURCES.md').open('a',encoding='utf-8') as f:
+        f.write('\n## 상태 전환 큐\n\n`src/ripples/transition_audio.py::make_cue`가 직접 합성합니다. 외부 음원·녹음·TTS를 사용하지 않습니다. 기존 LED `pulse_field`의 5초 상승·감쇠 곡선과 부드러운 배음으로 만들며, [큐 파일과 SHA256](../../exhibition-server/static/tower-audio/cues.json)에 출처를 기록합니다. [두 방향 미리듣기](transitions/sleep_then_activate.wav)는 Sleep 진입, 1초 여백, Activate 진입 순서입니다.\n')
 
 
 def main():
@@ -141,12 +145,15 @@ def main():
         bank.append(dict(item,file=file,duration=len(x)/RATE,sha256=hashlib.sha256((args.bank/file).read_bytes()).hexdigest()))
     manifest={"schema":"ripples.tower-audio.v1","sample_rate":RATE,"channels":4,"max_voices":2,
               "master":MASTER,"max_master":MAX_MASTER,"peak_limit":PEAK_LIMIT,"stereo_matrix":STEREO.tolist(),
+              "active_profile":"dream-work-v3","speech_playback":False,
               "sleep_source":"synthetic_demo" if all(b['source']['kind']=='synthetic_maek' for b in bank if b['state']=='sleep') else
                              "mixed_recordings" if any(b['source']['kind']=='synthetic_maek' for b in bank if b['state']=='sleep') else "supplied_recordings",
               "schedule":{"timezone":"Asia/Seoul","anchor":"11:00","activate_minutes":20,"sleep_minutes":10},
               "bank":bank,"plans":{s:make_plan(bank,s,20261121+i) for i,s in enumerate(DURATIONS)}}
     (args.bank/"manifest.json").write_text(json.dumps(manifest,ensure_ascii=False,indent=2),encoding="utf-8")
     write_sources(manifest,args.output)
+    from .transition_audio import write_examples
+    write_examples(args.bank,args.output/'transitions')
     if not args.bank_only:
         render(args.bank,manifest,samples,args.output)
     print(f"Built {len(bank)} sounds: {args.bank}",flush=True)

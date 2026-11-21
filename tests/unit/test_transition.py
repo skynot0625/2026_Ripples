@@ -6,7 +6,7 @@ import subprocess
 import numpy as np
 import pytest
 
-from ripples.transition import StateTransition, composite, limit_rgb, DURATION, PEAK, MEAN, pulse_field
+from ripples.transition import StateTransition, composite, limit_rgb, DURATION, PEAK, MEAN, pulse_field, bezier_ease_in
 
 
 def test_direction_and_both_state_changes():
@@ -68,14 +68,14 @@ def test_physical_resampling_weights_and_budget():
 
 def test_bloom_starts_central_widens_and_strengthens_upward():
     h=np.array([0.,0.,.5,.5,1.,1.]); r=np.array([0.,.8,0.,.8,0.,.8])
-    peaks=pulse_field(h,1.4*np.sqrt(h)+.2*r+.2,"up",r)
+    peaks=pulse_field(h,1.4*bezier_ease_in(h,True)+.2*r+.2,"up",r)
     assert peaks[0] > 0 and peaks[1] == 0
     assert peaks[2] > peaks[0] and peaks[4] > peaks[2]
     assert peaks[5] > 0 and peaks[3] == 0
     early=pulse_field(h,.2,"up",r)
     assert early[0] > 0 and not early[1:].any()
     # Equal height steps take less time near the top: upward acceleration.
-    arrival=1.4*np.sqrt(np.array([0.,.25,.5,.75,1.]))
+    arrival=1.4*bezier_ease_in(np.array([0.,.25,.5,.75,1.]),True)
     assert np.all(np.diff(np.diff(arrival)) < 0)
     assert not pulse_field(h,5.,"up",r).any()
 
@@ -83,9 +83,19 @@ def test_bloom_starts_central_widens_and_strengthens_upward():
 def test_broad_start_keeps_width_until_midpoint_then_flares():
     h=np.array([0.,.25,.5,.7,1.])
     r=np.full_like(h,.45)
-    peak=pulse_field(h,1.4*np.sqrt(h)+.2*r+.2,"up",r)
+    peak=pulse_field(h,1.4*bezier_ease_in(h,True)+.2*r+.2,"up",r)
     assert peak[0] > .1  # wide lower region is visible, not only the innermost strip
     r[:]=.82
-    outside=pulse_field(h,1.4*np.sqrt(h)+.2*r+.2,"up",r)
+    outside=pulse_field(h,1.4*bezier_ease_in(h,True)+.2*r+.2,"up",r)
     assert not outside[:3].any()
     assert outside[3] > 0 and outside[4] > outside[3]
+
+
+def test_bezier_slow_start_accelerates_and_inverse_matches():
+    times=np.linspace(0,1,101)
+    progress=bezier_ease_in(times)
+    assert progress[0]==0 and progress[-1]==1
+    assert np.all(np.diff(progress)>0)
+    assert progress[25]<.1 and .30<progress[50]<.33
+    assert np.all(np.diff(np.diff(progress))>0)
+    np.testing.assert_allclose(bezier_ease_in(progress,True)[1:-1],times[1:-1],atol=.0003)

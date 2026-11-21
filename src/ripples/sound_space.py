@@ -216,7 +216,7 @@ class SoundSpace:
                 if i<len(voice): chosen.append(voice[i])
                 if i<len(ambient): chosen.append(ambient[i])
             chosen=chosen[:self.policy['export_clip_limit']]
-            selection=hashlib.sha256(('work-v2-low-hiss:'+','.join(r['id'] for r in chosen)).encode()).hexdigest()
+            selection=hashlib.sha256(('dream-work-v3-no-speech:'+','.join(r['id'] for r in chosen)).encode()).hexdigest()
             pointer=self.root/'CURRENT.json'
             if pointer.exists():
                 old_pointer=json.loads(pointer.read_text())

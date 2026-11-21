@@ -9,7 +9,7 @@ import numpy as np
 from scipy import signal
 
 RATE = 24000
-MASTER = 0.22
+MASTER = 0.26
 MAX_MASTER = 0.30
 PEAK_LIMIT = 0.16
 DURATIONS = {"activate": 1200, "sleep": 600}
@@ -19,9 +19,9 @@ STEREO = np.array([[.65, .15], [.15, .65], [.55, .30], [.30, .55]], np.float32)
 def procedural_source(name):
     return {'kind':'original_procedural','category':'mechanical',
             'origin':{'type':'procedural_synthesis','generator':'src/ripples/tower_audio.py::active_bank',
-                      'profile':'work-v2-low-hiss','seed':214,'design':name,
+                      'profile':'dream-work-v3','seed':214,'design':name,
                       'external_audio_samples':False},
-            'processing':'oscillators + damped resonances + small friction texture; filtered and faded'}
+            'processing':'soft mechanical synthesis; rounded attacks, low-pass, gentle chorus and 2.4s diffuse reverb tail; no speech'}
 
 
 def fade(x, seconds=.16, rate=RATE):
@@ -45,7 +45,7 @@ def finish(x, *, rms=.105, rate=RATE, cutoff=4300):
     return fade(x, .20, rate)
 
 
-def active_bank(seed=214):
+def _active_dry_bank(seed=214):
     """Original procedural sounds, not borrowed samples or speech."""
     rng = np.random.default_rng(seed)
     names = ["servo_breath", "soft_relay", "calculation", "air_valve",
@@ -90,6 +90,31 @@ def active_bank(seed=214):
             x+=.035*np.sin(2*np.pi*(125*t+9*np.sin(2*t)))*np.sin(np.pi*t/t[-1])**2
         result.append((name,finish(x,rms=.085,cutoff=3800)))
     return result
+
+
+def dreamy_work(x, index=0, rate=RATE):
+    """Soften the working gesture without turning it into hiss or intelligible speech."""
+    dry=signal.sosfilt(signal.butter(2,1600,fs=rate,output='sos'),x)
+    attack=max(2,round(.003*rate))
+    dry=np.convolve(dry,np.ones(attack)/attack,mode='same')
+    t=np.arange(len(dry))/rate
+    # Very slow micro-delay chorus, no pitch-jump or reversed fragments.
+    offset=.022+.004*np.sin(2*np.pi*.17*t+index*.31)
+    chorus=np.interp(t-offset,t,dry,left=0,right=0)
+    body=.78*dry+.20*chorus
+    bed=np.sin(2*np.pi*(110+index%4*18)*t)+.25*np.sin(2*np.pi*(220+index%4*36)*t)
+    body+=.012*bed*np.sin(np.pi*np.arange(len(t))/max(1,len(t)-1))**2
+    out=np.zeros(len(body)+round(2.4*rate))
+    out[:len(body)]=body
+    diffuse=signal.sosfilt(signal.butter(2,1100,fs=rate,output='sos'),body)
+    for delay in (.173,.293,.431,.617,.839,1.093,1.397,1.731,2.107):
+        pos=round(delay*rate)
+        out[pos:pos+len(body)]+=.19*np.exp(-delay/1.15)*diffuse
+    return finish(out,rms=.11,rate=rate,cutoff=2200)
+
+
+def active_bank(seed=214):
+    return [(name,dreamy_work(x,i)) for i,(name,x) in enumerate(_active_dry_bank(seed))]
 
 
 def synthetic_maek(seed=451, seconds=48):
@@ -289,11 +314,12 @@ def extract_sleep(folder, *, limit=12, max_seconds=1800, speech=True, paths=None
     return result
 
 
-def make_plan(bank, state, seed=20261121):
+def make_plan(bank, state, seed=20261121, *, include_speech=False):
     """Never more than two simultaneous complete samples, including their tails."""
     if state not in DURATIONS:
         raise ValueError("unknown state")
-    items = [x for x in bank if x["state"] == state]
+    items = [x for x in bank if x["state"] == state and
+             (include_speech or x.get('source',{}).get('category')!='speech_candidate')]
     if not items:
         return []
     rng = np.random.default_rng(seed)

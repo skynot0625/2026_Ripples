@@ -138,7 +138,7 @@
         <button type="button" data-ripples-compare="up" aria-pressed="false">중앙에서 위로 확산</button>
         <button type="button" data-ripples-compare="up_flat" aria-pressed="false">기존 수평 상승 비교</button>
       </div>
-      <p class="note">아래부터 넓은 중앙부 → 중간 높이부터 확산 · 5초 이내 잦아듦<br>출력 제한: 채널 96/255 · 전체 평균 18/255 (전류 실측값 아님)</p>
+      <p class="note">아래부터 넓은 중앙부 → 중간 높이부터 확산 · 5초 이내 잦아듦<br>양방향 상태 전환: 베지어 fade-in · 천천히 시작해 위로 갈수록 가속<br>출력 제한: 채널 96/255 · 전체 평균 18/255 (전류 실측값 아님)</p>
       <p class="note">청록 거리 면 · 보라 천장 표시 · 따뜻한 음량 기둥<br>Sleep: 은은한 공간 기억 · 느린 국소 아른거림</p>
       <p id="ripples-example-status" class="note">심탑 예시 불러오는 중…</p>
       <div class="row"><button type="button" id="ripples-example-pause" aria-pressed="false">예시 일시정지</button>
@@ -150,12 +150,16 @@
       <p class="note">LED의 Activate / Sleep 선택과 연동 · 전체 최대 2소리<br>브라우저는 스테레오 미리듣기입니다. 실제 4출력은 별도 장치에서 재생합니다.</p>
       <div class="row"><button type="button" id="tower-audio-start">미리듣기 시작</button><button type="button" id="tower-audio-stop">미리듣기 정지</button></div>
       <p id="tower-audio-status" class="note" aria-live="polite">소리 꺼짐</p>
-      <label id="tower-audio-volume-label" class="note" for="tower-audio-volume">디지털 음량 22% · 상한 30%</label>
-      <input id="tower-audio-volume" aria-label="소리 음량" type="range" min="0" max="30" step="1" value="22">
+      <label class="note"><input id="tower-cue-enabled" type="checkbox" checked> 상태 전환 큐 · 빛과 함께</label>
+      <div class="row"><button type="button" id="tower-cue-compare">빛 + 큐 전환 비교</button></div>
+      <p class="note">브라우저 미리듣기 · 2초에 Activate→Sleep, 10초에 Sleep→Activate<br>베지어 상승에 맞춰 작게 시작 → 넓어지는 울림 → 약 5초에 사라짐</p>
+      <p id="tower-cue-status" class="note" aria-live="polite">상태가 바뀔 때 한 번 · 직접 합성한 울림</p>
+      <label id="tower-audio-volume-label" class="note" for="tower-audio-volume">디지털 음량 26% · 상한 30%</label>
+      <input id="tower-audio-volume" aria-label="소리 음량" type="range" min="0" max="30" step="1" value="26">
       <input id="tower-audio-seek" aria-label="소리 재생 시점" type="range" min="0" max="1199" step="1" value="0" disabled>
       <p class="note"><span id="tower-audio-ch0">OUT 1 · 쉼</span><br><span id="tower-audio-ch1">OUT 2 · 쉼</span><br><span id="tower-audio-ch2">OUT 3 · 쉼</span><br><span id="tower-audio-ch3">OUT 4 · 쉼</span></p>
       <p id="tower-audio-provenance" class="note">Sleep 원음은 합성 맥 3채널 예시입니다.</p>
-      <p class="note">Active: 잡음은 작게 · 키보드·서보·기계 동작 중심<br>Sleep: 목소리의 음높이 유지 · 부드러운 잔향 · 목소리는 동시에 하나<br>전시 시간표는 한국 시각 20분/10분. 일시정지는 LED와 함께 적용됩니다.</p>
+      <p class="note">Active: 부드러운 기계 동작 · 느린 코러스 · 몽환적인 잔향<br>말소리는 두 상태 모두 재생 제외 · Sleep은 은은한 환경음<br>전시 시간표는 한국 시각 20분/10분. 일시정지는 LED와 함께 적용됩니다.</p>
       <details id="tower-audio-source-panel"><summary>소리 출처와 처리 내역</summary><div id="tower-audio-sources" class="note">샘플별 출처·발췌 위치·효과를 불러옵니다. 소리는 재생하지 않습니다.</div></details>
     </section>
     <section class="sec" aria-label="스피커 연결 시험" id="speaker-test-panel">

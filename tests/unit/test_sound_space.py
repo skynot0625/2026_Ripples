@@ -113,7 +113,7 @@ def test_voice_scheduling_never_layers_sentences():
     voice_ids={b['id'] for b in manifest['bank'] if b['source'].get('category')=='speech_candidate'}
     assert voice_ids
     for seed in range(25):
-        plan=make_plan(manifest['bank'],'sleep',seed)
+        plan=make_plan(manifest['bank'],'sleep',seed,include_speech=True)
         v=[e for e in plan if e['id'] in voice_ids]
         assert v
         assert all(b['start']>=a['start']+a['duration']+5.999 for a,b in zip(v,v[1:]))

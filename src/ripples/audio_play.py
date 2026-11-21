@@ -9,6 +9,7 @@ from scipy.signal import resample_poly
 
 from .schedule import ExhibitionSchedule, StateController
 from .tower_audio import RATE, DURATIONS, MAX_MASTER, load_bank, make_plan, mix_block
+from .transition_audio import make_cue, cue_block, DURATION as CUE_DURATION
 
 
 def validate_output(device, mapping):
@@ -82,9 +83,11 @@ def main():
     manifest,samples=load_bank(args.bank)
     if any(b["source"]["kind"]=="synthetic_maek" for b in manifest["bank"]) and not args.allow_demo:
         parser.error("Sleep bank is a synthetic example; use real recordings or explicitly pass --allow-demo")
-    master=float(cfg.get("master",.22))
+    master=float(cfg.get("master",.26))
     if not 0<=master<=MAX_MASTER:
         parser.error("master must be between 0 and 0.30")
+    cues={state:make_cue(state,output_rate) for state in DURATIONS}
+    cue_enabled=cfg.get('transition_cues',True)
     schedule=ExhibitionSchedule(manifest["schedule"])
     controller=StateController(schedule,mode=cfg.get("state_mode","scheduled"),
         state_file=Path(cfg["state_file"]) if cfg.get("state_file") else None)
@@ -94,17 +97,22 @@ def main():
     callback_job=None
     next_frame=0
     played=0
+    release=None
+    release_pos=0
 
     def callback(outdata,frames,timing,status):
-        nonlocal underruns, callback_job, next_frame, played
+        nonlocal underruns, callback_job, next_frame, played, release, release_pos
         outdata.fill(0)
         if status:
             underruns+=1
         current=job
         if current is None:
             return
-        events,bank_samples,base,epoch,state=current
+        events,bank_samples,base,epoch,state,with_cue=current
         if current is not callback_job:
+            if callback_job is not None and callback_job[4]!=state:
+                release=(callback_job,next_frame)
+                release_pos=0
             callback_job=current
             next_frame=base+round((time.monotonic()-epoch)*output_rate)
             played=0
@@ -113,6 +121,20 @@ def main():
         elapsed=played/output_rate
         played+=frames
         x=mix_block(events,bank_samples,frame,frames,master=master,rate=output_rate)
+        if with_cue:
+            x+=cue_block(cues[state],frame,frames,master)
+        if release is not None:
+            old,old_frame=release
+            count=min(frames,round(.12*output_rate)-release_pos)
+            tail=mix_block(old[0],old[1],old_frame+release_pos,count,master=master,rate=output_rate)
+            if old[5]:
+                tail+=cue_block(cues[old[4]],old_frame+release_pos,count,master)
+            fade=1-(release_pos+np.arange(count))/round(.12*output_rate)
+            # Finish old voices before the cue; the cue continues at the matching light age.
+            x[:count]=tail*fade[:,None]
+            release_pos+=count
+            if release_pos>=round(.12*output_rate):
+                release=None
         t=(frame+np.arange(frames))/output_rate
         envelope=np.minimum(1,np.maximum(0,(DURATIONS[state]-t)/.7))
         envelope*=min(1,max(0,elapsed/.7))
@@ -129,6 +151,9 @@ def main():
             while True:
                 current=controller.at()
                 state=args.state or current["state"]
+                changed=job is not None and state!=job[4]
+                if changed and current['mode']=='manual' and not args.state:
+                    manual_epoch=time.monotonic()
                 if args.state or current["mode"]=="manual":
                     phase=(time.monotonic()-manual_epoch)%DURATIONS[state]
                     newkey=(state,int((time.monotonic()-manual_epoch)//DURATIONS[state]))
@@ -146,14 +171,19 @@ def main():
                     manifest=fresh
                     samples={name:resample_poly(x,output_rate,RATE).astype(np.float32) if output_rate!=RATE else x
                              for name,x in fresh_samples.items()}
-                    job=(make_plan(manifest["bank"],state,seed),samples,round(phase*output_rate),time.monotonic(),state)
+                    with_cue=bool(cue_enabled and changed and phase<CUE_DURATION)
+                    plan=make_plan(manifest["bank"],state,seed)
+                    # The cue occupies the opening five seconds by itself; no clipped sentences.
+                    if with_cue:
+                        plan=[event for event in plan if event['start']>=CUE_DURATION]
+                    job=(plan,samples,round(phase*output_rate),time.monotonic(),state,with_cue)
                     key=newkey
                     print(f"{state}: {phase:.1f}s; outputs {mapping}; master {master:.2f}",flush=True)
                 elif current["mode"]=="scheduled" and not args.state:
                     # Correct wall-clock adjustments without accumulating callback timing drift.
                     predicted=job[2]/output_rate+time.monotonic()-job[3]
                     if abs(predicted-phase)>1:
-                        job=(job[0],job[1],round(phase*output_rate),time.monotonic(),state)
+                        job=(job[0],job[1],round(phase*output_rate),time.monotonic(),state,job[5])
                 time.sleep(.1)
         except KeyboardInterrupt:
             stopping=time.monotonic()

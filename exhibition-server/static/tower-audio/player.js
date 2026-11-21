@@ -40,11 +40,19 @@ else (() => {
   let manifest, buffers, context, master, running=false, loading=false, generation=0;
   let state=null, mode=null, epoch=0, offset=0, scheduled=new Set(), voices=[], waitUntil=0;
   let paused=false, uiError='';
+  let cueBuffers=null, cueVoice=null, cueUntil=0, revision=null;
   const clock = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
   const current = () => window.RipplesExample?.audioState() || {state:'off', mode:'off', paused:false};
   function stopVoices() {
     if (!context) return;
     const now=context.currentTime;
+    if(cueVoice) {
+      cueVoice.gain.gain.cancelScheduledValues(now);
+      cueVoice.gain.gain.setTargetAtTime(0,now,.04);
+      try {cueVoice.source.stop(now+.25);} catch(_) {}
+      cueVoice=null;
+    }
+    cueUntil=0;
     for (const v of voices) {
       v.gain.gain.cancelScheduledValues(now);
       v.gain.gain.setTargetAtTime(0,now,.07);
@@ -52,10 +60,27 @@ else (() => {
     }
     voices=[]; scheduled.clear(); waitUntil=now+.4;
   }
-  function begin(s, seek=0) {
+  function begin(s, seek=0, transition=false) {
     stopVoices(); state=s.state; mode=s.mode;
+    revision=s.revision;
     offset=Math.max(0,Math.min(state==='sleep'?599:1199,seek));
     epoch=waitUntil;
+    if(transition && $('tower-cue-enabled').checked && cueBuffers?.has(state)) {
+      const age=Math.max(0,s.transitionAge??0), delay=.4;
+      if(age+delay<5) {
+        const source=context.createBufferSource(),gain=context.createGain();
+        source.buffer=cueBuffers.get(state);gain.gain.value=1;
+        source.connect(gain);gain.connect(master);
+        const voice={source,gain};cueVoice=voice;
+        source.onended=()=>{source.disconnect();gain.disconnect();if(cueVoice===voice)cueVoice=null;};
+        source.start(context.currentTime+delay,age+delay);
+        cueUntil=context.currentTime+5-age;
+        waitUntil=cueUntil;
+        epoch=context.currentTime;
+        // Do not enter a sentence halfway through when the cue ends.
+        manifest.plans[state].forEach((e,i)=>{if(e.start<offset+5-age)scheduled.add(i);});
+      }
+    }
   }
   function stop() {
     generation++; loading=false; running=false;
@@ -92,8 +117,8 @@ else (() => {
         const entries=await Promise.all(m.bank.map(async b=>{
           const r=await fetch(new URL(b.file,root),{cache:'no-cache'}); if(!r.ok) throw Error(`sample HTTP ${r.status}`);
           const bytes=await r.arrayBuffer();
-          if(b.sha256 && window.crypto?.subtle) {
-            const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
+          if(b.sha256) {
+            const hash=await RipplesTransition.sha256(bytes);
             if(hash!==b.sha256) throw Error('소리 파일 SHA256 불일치');
           }
           const buffer=await context.decodeAudioData(bytes);
@@ -101,6 +126,32 @@ else (() => {
           return [b.id,buffer];
         }));
         manifest=m; buffers=new Map(entries); showSources();
+      }
+      if(!cueBuffers) {
+        const response=await fetch(new URL('cues.json',root),{cache:'no-cache'});
+        if(!response.ok) throw Error('전환 큐 정보를 불러오지 못했습니다');
+        const meta=await response.json();
+        if(meta.schema!=='ripples.transition-audio.v1'||meta.duration!==5) throw Error('전환 큐 형식 오류');
+        const entries=await Promise.all(['activate','sleep'].map(async state=>{
+          const item=meta.cues[state];
+          if(item.file!==`cues/to_${state}.wav`) throw Error('전환 큐 경로 오류');
+          const r=await fetch(new URL(item.file,root),{cache:'no-cache'});
+          if(!r.ok) throw Error('전환 큐 파일 오류');
+          const bytes=await r.arrayBuffer();
+          {
+            const hash=await RipplesTransition.sha256(bytes);
+            if(hash!==item.sha256) throw Error('전환 큐 SHA256 불일치');
+          }
+          const raw=await context.decodeAudioData(bytes);
+          if(raw.numberOfChannels!==4||Math.abs(raw.duration-5)>.002) throw Error('전환 큐 채널/길이 오류');
+          const stereo=context.createBuffer(2,raw.length,raw.sampleRate);
+          for(let ch=0;ch<4;ch++) for(let side=0;side<2;side++) {
+            const a=raw.getChannelData(ch),b=stereo.getChannelData(side);
+            for(let i=0;i<a.length;i++) b[i]+=a[i]*matrix[ch][side];
+          }
+          return [state,stereo];
+        }));
+        cueBuffers=new Map(entries);
       }
       if(token!==generation) return;
       loading=false; running=true; paused=false;
@@ -144,13 +195,18 @@ else (() => {
       if(paused) context.suspend(); else context.resume();
     }
     if(paused) {updateUI();return;}
-    if(s.state!==state || s.mode!==mode) begin(s,s.mode==='clock'?s.offset:0);
+    if(s.state!==state || s.mode!==mode) {
+      const transition=['activate','sleep'].includes(state)&&s.state!==state&&s.revision===revision;
+      begin(s,s.mode==='clock'?s.offset:0,transition);
+    }
+    revision=s.revision;
     let t=offset+context.currentTime-epoch;
     if(s.mode==='clock' && context.currentTime>epoch && Math.abs(t-s.offset)>1) {begin(s,s.offset);t=offset+context.currentTime-epoch;}
     const duration=state==='sleep'?600:1200;
     if(t>=duration) {begin(s,0); t=0;}
     if(context.currentTime>=waitUntil) {
       manifest.plans[state].forEach((e,i)=>{
+        if(e.category==='speech_candidate') return;
         if(!scheduled.has(i) && e.start<=t+.20 && e.start+e.duration>t+.02) play(e,i,t);
       });
     }
@@ -158,6 +214,9 @@ else (() => {
   }
   function updateUI(t=running&&context ? Math.max(0,offset+context.currentTime-epoch) : 0) {
     const label=state==='sleep'?'Sleep · 맥 원음 변형':'Activate · 작업·대사 소리';
+    $('tower-cue-status').textContent=cueVoice&&context.currentTime<cueUntil?
+      `전환 큐 · ${state==='sleep'?'Activate → Sleep · 낮고 아른한 울림':'Sleep → Activate · 밝아지는 울림'}${paused?' · 일시정지':''}`:
+      '빛과 함께 약 5초 · 직접 합성한 울림 · 상태가 바뀔 때 한 번';
     $('tower-audio-status').textContent=uiError?`소리 오류: ${uiError}`:loading?'소리 샘플 불러오는 중…':
       !running?'소리 꺼짐 · 시작 버튼으로 미리듣기':state==='off'?'LED 예시 꺼짐 · 소리 대기':
       `${label} · ${clock(t)} / ${state==='sleep'?'10:00':'20:00'}${paused?' · 일시정지':''}`;
@@ -170,8 +229,9 @@ else (() => {
     seek.max=state==='sleep'?599:1199; if(document.activeElement!==seek) seek.value=t;
     for(let i=0;i<4;i++) {
       const v=voices.find(v=>v.event.speaker===i && v.event.start<=t && v.event.start+v.event.duration>t);
-      const el=$(`tower-audio-ch${i}`);el.textContent=`OUT ${i+1} · ${v?v.event.id+(v.event.category==='speech_candidate'?' · 목소리 후보':''):'쉼'}`;
-      el.style.color=v?'#9de0cf':'';
+      const cue=cueVoice&&context.currentTime<cueUntil;
+      const el=$(`tower-audio-ch${i}`);el.textContent=`OUT ${i+1} · ${cue?'전환 큐':v?v.event.id+(v.event.category==='speech_candidate'?' · 목소리 후보':''):'쉼'}`;
+      el.style.color=cue||v?'#9de0cf':'';
     }
   }
   function showSources(m=manifest) {
@@ -181,7 +241,7 @@ else (() => {
       line.className='note';
       const type=s.kind==='original_procedural'?'직접 합성한 기계·작업음':origin?.type==='system_tts'?
         `합성 음성 · ${origin.voice}`:s.kind==='synthetic_maek'?'합성 환경음 예시':'맥에서 수집한 녹음';
-      line.textContent=`${b.id} — ${type} · ${b.duration.toFixed(1)}초`+
+      line.textContent=`${b.id} — ${s.category==='speech_candidate'?'재생 제외 · 이전 예시 보관 · ':''}${type} · ${b.duration.toFixed(1)}초`+
         (p?` · ${p.relative_file} / MIC ${s.mic_channel} / ${(p.file_frame/s.sample_rate).toFixed(2)}초부터`:'')+
         (s.category==='speech_candidate'?' · 음높이 유지, 0.96배 속도, 부드러운 잔향':'')+
         ` · SHA256 ${b.sha256?.slice(0,12)||'미기록'}`;
@@ -199,6 +259,18 @@ else (() => {
     } catch(e) {$('tower-audio-sources').textContent='출처를 불러오지 못했습니다: '+e.message;}
   });
   $('tower-audio-start').addEventListener('click',start);
+  $('tower-cue-compare').addEventListener('click',async()=>{
+    if(window.SpeakerPanel?.hardwareBusy()) return;
+    $('tower-cue-enabled').checked=true;
+    await start();
+    if(running) window.RipplesExample?.compareTransitions();
+  });
+  $('tower-cue-enabled').addEventListener('change',()=>{
+    if(!$('tower-cue-enabled').checked && cueVoice) {
+      cueVoice.gain.gain.setTargetAtTime(0,context.currentTime,.07);
+      try {cueVoice.source.stop(context.currentTime+.35);} catch(_) {}
+    }
+  });
   $('tower-audio-stop').addEventListener('click',stop);
   $('tower-audio-volume').addEventListener('input',()=>{
     const value=Math.max(0,Math.min(30,Number($('tower-audio-volume').value)));

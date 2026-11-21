@@ -1,0 +1,30 @@
+{
+  "schema": "ripples.transition-audio.v1",
+  "duration": 5.0,
+  "sample_rate": 24000,
+  "source": "Original procedural synthesis; no external recordings",
+  "generator": "src/ripples/transition_audio.py::make_cue",
+  "motion": "ripples.transition.pulse_field / up",
+  "bezier": [
+    0.42,
+    0.0,
+    1.0,
+    1.0
+  ],
+  "cues": {
+    "sleep": {
+      "file": "cues/to_sleep.wav",
+      "sha256": "19711d8dbb6777d5305b54bf31dc564cb2b110aa20f2034667a44121c8aa7c5c",
+      "channels": 4,
+      "peak_before_master": 0.139984130859375,
+      "preview_peak": 0.057477232068777084
+    },
+    "activate": {
+      "file": "cues/to_activate.wav",
+      "sha256": "b2aa6917bbd4eca1032a5e96447f7d02f29f69f1cffc9ce3644141119871a2fa",
+      "channels": 4,
+      "peak_before_master": 0.1400146484375,
+      "preview_peak": 0.058549195528030396
+    }
+  }
+}
