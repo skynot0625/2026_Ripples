@@ -34,7 +34,10 @@ def main():
     parser.add_argument("--bank",type=Path,default=Path("exhibition-server/static/tower-audio"))
     parser.add_argument("--device",help="PortAudio device ID or unique device name; never inferred")
     parser.add_argument("--list-devices",action="store_true")
-    parser.add_argument("--check-output",action="store_true",help="open a one-second silent callback stream, without loading or playing the bank")
+    checks=parser.add_mutually_exclusive_group()
+    checks.add_argument("--check-output",action="store_true",help="open a one-second silent callback stream, without loading or playing the bank")
+    checks.add_argument("--test-speakers",action="store_true",help="quiet identification pings on OUT 1 to 4, once, with two-second gaps")
+    checks.add_argument("--test-speaker",type=int,choices=[1,2,3,4],help="quiet identification pings on just this logical speaker")
     parser.add_argument("--allow-demo",action="store_true",help="explicitly permit synthetic Sleep fixture on hardware")
     parser.add_argument("--state",choices=["activate","sleep"],help="manual audition; otherwise exhibition wall clock")
     args=parser.parse_args()
@@ -53,6 +56,13 @@ def main():
     if output_rate not in (24000,44100,48000):
         parser.error("output sample_rate must be 24000, 44100 or 48000")
     sd.check_output_settings(device=device,channels=channels,dtype="float32",samplerate=output_rate)
+    if args.test_speakers or args.test_speaker is not None:
+        from .speaker_test import play_speaker_test
+        labels=cfg.get("speaker_labels",["OUT 1","OUT 2","OUT 3","OUT 4"])
+        if len(labels)!=4:
+            parser.error("speaker_labels must contain four labels")
+        play_speaker_test(sd,device,output_rate,channels,mapping,labels,args.test_speaker)
+        return
     if args.check_output:
         statuses=[]
         callbacks=0
