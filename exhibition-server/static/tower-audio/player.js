@@ -41,11 +41,13 @@ else (() => {
   let state=null, mode=null, epoch=0, offset=0, scheduled=new Set(), voices=[], waitUntil=0;
   let paused=false, uiError='';
   let cueBuffers=null, cueVoice=null, cueUntil=0, revision=null;
+  let sonifier=null;
   const clock = s => `${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
   const current = () => window.RipplesExample?.audioState() || {state:'off', mode:'off', paused:false};
   function stopVoices() {
     if (!context) return;
     const now=context.currentTime;
+    sonifier?.stop();
     if(cueVoice) {
       cueVoice.gain.gain.cancelScheduledValues(now);
       cueVoice.gain.gain.setTargetAtTime(0,now,.04);
@@ -104,6 +106,7 @@ else (() => {
       if(!context) {
         context=new AudioContext();
         master=context.createGain(); master.gain.value=0;
+        sonifier=new window.LedSonification.Player(context,master,matrix);
         const limiter=context.createWaveShaper(), curve=new Float32Array(8193);
         for(let i=0;i<curve.length;i++) curve[i]=Math.max(-.16,Math.min(.16,2*i/(curve.length-1)-1));
         limiter.curve=curve;
@@ -205,7 +208,8 @@ else (() => {
     const duration=state==='sleep'?600:1200;
     if(t>=duration) {begin(s,0); t=0;}
     if(context.currentTime>=waitUntil) {
-      manifest.plans[state].forEach((e,i)=>{
+      if(state==='activate') sonifier.update(window.RipplesExample?.audioFrame());
+      else manifest.plans[state].forEach((e,i)=>{
         if(e.category==='speech_candidate') return;
         if(!scheduled.has(i) && e.start<=t+.20 && e.start+e.duration>t+.02) play(e,i,t);
       });
@@ -213,7 +217,7 @@ else (() => {
     updateUI(Math.max(0,t));
   }
   function updateUI(t=running&&context ? Math.max(0,offset+context.currentTime-epoch) : 0) {
-    const label=state==='sleep'?'Sleep · 맥 원음 변형':'Activate · 작업·대사 소리';
+    const label=state==='sleep'?'Sleep · 맥 원음 변형':sonifier?.waiting?'Activate · 표시 LED 데이터 대기':'Activate · 표시 LED에서 추출한 소리';
     $('tower-cue-status').textContent=cueVoice&&context.currentTime<cueUntil?
       `전환 큐 · ${state==='sleep'?'Activate → Sleep · 낮고 아른한 울림':'Sleep → Activate · 밝아지는 울림'}${paused?' · 일시정지':''}`:
       '빛과 함께 약 5초 · 직접 합성한 울림 · 상태가 바뀔 때 한 번';
@@ -230,8 +234,9 @@ else (() => {
     for(let i=0;i<4;i++) {
       const v=voices.find(v=>v.event.speaker===i && v.event.start<=t && v.event.start+v.event.duration>t);
       const cue=cueVoice&&context.currentTime<cueUntil;
-      const el=$(`tower-audio-ch${i}`);el.textContent=`OUT ${i+1} · ${cue?'전환 큐':v?v.event.id+(v.event.category==='speech_candidate'?' · 목소리 후보':''):'쉼'}`;
-      el.style.color=cue||v?'#9de0cf':'';
+      const note=sonifier?.voices.find(v=>v.note.speaker===i)?.note;
+      const el=$(`tower-audio-ch${i}`);el.textContent=`OUT ${i+1} · ${cue?'전환 큐':note?`LED 영역 ${i+1} · ${note.frequency.toFixed(0)} Hz`:v?v.event.id:'쉼'}`;
+      el.style.color=cue||v||note?'#9de0cf':'';
     }
   }
   function showSources(m=manifest) {
@@ -241,7 +246,7 @@ else (() => {
       line.className='note';
       const type=s.kind==='original_procedural'?'직접 합성한 기계·작업음':origin?.type==='system_tts'?
         `합성 음성 · ${origin.voice}`:s.kind==='synthetic_maek'?'합성 환경음 예시':'맥에서 수집한 녹음';
-      line.textContent=`${b.id} — ${s.category==='speech_candidate'?'재생 제외 · 이전 예시 보관 · ':''}${type} · ${b.duration.toFixed(1)}초`+
+      line.textContent=`${b.id} — ${b.state==='activate'?'이전 작업음 보관 · 현재 Active는 LED 데이터 합성 · ':''}${s.category==='speech_candidate'?'재생 제외 · 이전 예시 보관 · ':''}${type} · ${b.duration.toFixed(1)}초`+
         (p?` · ${p.relative_file} / MIC ${s.mic_channel} / ${(p.file_frame/s.sample_rate).toFixed(2)}초부터`:'')+
         (s.category==='speech_candidate'?' · 음높이 유지, 0.96배 속도, 부드러운 잔향':'')+
         ` · SHA256 ${b.sha256?.slice(0,12)||'미기록'}`;

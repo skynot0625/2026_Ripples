@@ -7,6 +7,8 @@
   "physical_orientation": "unconfirmed",
   "master": 0.16,
   "transition_cues": true,
+  "active_source": "led",
+  "led_frame_file": null,
   "state_mode": "scheduled",
   "state_file": null,
   "notes": "ASRock B650M Pro X3D / ALC897. Silent 48kHz callback stream verified; physical jack retasking and speaker routing await cabling. 8-channel stream with center/LFE/side silent. Two stereo amplifiers or four independent amplifier channels are required. WDM-KS may bypass Windows mixer volume; start amplifier gain low. No automatic playback."

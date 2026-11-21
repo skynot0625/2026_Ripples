@@ -6,6 +6,8 @@
   "physical_orientation": "unconfirmed",
   "master": 0.26,
   "transition_cues": true,
+  "active_source": "led",
+  "led_frame_file": null,
   "state_mode": "scheduled",
   "state_file": null,
   "notes": "One interface with 4+ independent outputs. Separate jack devices require explicit routing/aggregation; do not assume HDMI or stereo provides 4 outputs."

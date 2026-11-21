@@ -265,6 +265,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
   'use strict';
   const root = '/static/', $ = id => document.getElementById(id);
   let input = 'position', positionEngine = null, pendingSimulation = null, activityClip = null;
+  let soundFrame=null;
   let direction = 'up', transitionStart = -Infinity, origin = null, shownState = null, reset = 0;
   let mode = 'activate', meta = null, clips = null, elapsed = 0, last = null, paused = false, error = '', uiAt = 0;
   const buttons = [...document.querySelectorAll('[data-ripples-example]')];
@@ -305,6 +306,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
   function changed() { uiAt = -Infinity; update(); if (api.onUpdate) api.onUpdate(); }
   const api = window.RipplesExample = {
     onUpdate: null,
+    audioFrame:()=>mode==='off'?null:soundFrame,
     audioState: () => {
       const state=phase(), p=(Date.now()/1000+9*3600)%1800;
       return {state, mode, paused, revision:reset,
@@ -334,7 +336,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
       shownState = state;
       let age = origin ? Math.max(0, elapsed-transitionStart) : 5;
       const key = input + ':' + (positionEngine ? positionEngine.revision : 0) + ':' + state + ':' + frame + ':' + Math.floor(age*10) + ':' + direction;
-      if (P.ripplesFrame === key && P.on) return true;
+      if (P.ripplesFrame === key && P.on) {if(soundFrame)soundFrame.timestamp=Date.now()/1000;return true;}
       if (!P.ripplesOffsets) {
         if (!P.address || P.address.length !== P.count) throw Error('심탑 스트립 주소 없음');
         P.ripplesOffsets = new Int32Array(P.count).fill(-1);
@@ -387,6 +389,7 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
       }
       const out = origin ? RipplesTransition.composite(origin, target, P.ripplesHeight, age, direction, P.ripplesWeight, P.ripplesRadius) : RipplesTransition.base(target, P.ripplesWeight);
       for (let i=0; i<P.count; i++) for (let c=0; c<3; c++) P.col[i*3+c] = P.ripplesWeight[i] ? Math.floor(out[i*3+c])/255 : 0;
+      if(window.LedSonification)soundFrame={...window.LedSonification.features(P),state};
       P.on = true; P.ripplesFrame = key;
       return true;
     }

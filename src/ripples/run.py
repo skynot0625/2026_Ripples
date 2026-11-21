@@ -17,6 +17,7 @@ from ripples.visualization import RipplesVisual, SLEEP_MEMORY_GAIN, DREAM_TAU_S
 from ripples.spikes import send_frames, spike_frame
 
 from ripples.paths import ROOT, DATA_DIR, RUNTIME_DIR
+from ripples.sonification import FeaturePublisher
 
 
 def import_events(memory, events):
@@ -233,6 +234,7 @@ def main():
                 pass
             begin = time.perf_counter()
             frame = visual.render(raw, count, events=batch, dt=dt)
+            audio_frames.publish(frame,visual.state)
             encoder.encode_packet(frame, i)
             timings.append(time.perf_counter()-begin)
             if preview:
@@ -242,6 +244,7 @@ def main():
                     preview.add(a, b, elapsed)
             yield frame
 
+    audio_frames=FeaturePublisher(visual,RUNTIME_DIR/'led-sonification.json')
     try:
         if args.port:
             from ripples.hardware.board import confirm_board
@@ -252,6 +255,7 @@ def main():
         else:
             info["frames"] = sum(1 for _ in frames())
     finally:
+        audio_frames.close()
         signal.signal(signal.SIGINT, previous_signal)
         source.close()
         if pool:

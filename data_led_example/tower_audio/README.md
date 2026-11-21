@@ -1,4 +1,8 @@
-# 심탑 소리 예시 — Active 20분 / Sleep 10분
+# 심탑 소리 예시 — LED 데이터 소리 / Sleep 환경음
+
+**현재 Active:** [LED에서 추출한 60초 WAV](led_sonification/led_60s_stereo.wav), [4채널 FLAC](led_sonification/led_60s_4ch.flac), [출처와 특징·발음 기록](led_sonification/provenance.json). 고정 음계 없이 표시된 빛의 밝기·높이·색을 사용합니다. 저장된 합성 센서 LED 예시이며 실녹음이 아닙니다.
+
+아래 Active 20분 파일과 샘플 뱅크는 이전 작업음 비교용 보관 자료입니다. 현재 3D·실제 출력의 기본 Active는 위 데이터 합성 방식입니다.
 
 Active와 환경음은 코드로 합성했습니다. 목소리는 **Windows 기본 한국어 TTS(Microsoft Heami Desktop)**로 만든 예시이며, 실제 현장 녹음이나 특정인의 복제 음성이 아닙니다. [샘플별 출처·원본 구간·처리 효과](SOURCES.md)를 명시했습니다. 실제 맥 녹음에는 같은 추출·변형 코드를 적용합니다. 현재 말소리 후보는 재생 계획에서 제외됩니다.
 

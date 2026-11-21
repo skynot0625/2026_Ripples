@@ -10,6 +10,8 @@ from scipy.signal import resample_poly
 from .schedule import ExhibitionSchedule, StateController
 from .tower_audio import RATE, DURATIONS, MAX_MASTER, load_bank, make_plan, mix_block
 from .transition_audio import make_cue, cue_block, DURATION as CUE_DURATION
+from .sonification import DataSynth, read_frame
+from .paths import RUNTIME_DIR
 
 
 def validate_output(device, mapping):
@@ -88,6 +90,11 @@ def main():
         parser.error("master must be between 0 and 0.30")
     cues={state:make_cue(state,output_rate) for state in DURATIONS}
     cue_enabled=cfg.get('transition_cues',True)
+    led_mode=cfg.get('active_source','bank')=='led'
+    led_path=Path(cfg.get('led_frame_file') or RUNTIME_DIR/'led-sonification.json')
+    data_synth=DataSynth(output_rate)
+    led_frame=None
+    last_data_report=-100.
     schedule=ExhibitionSchedule(manifest["schedule"])
     controller=StateController(schedule,mode=cfg.get("state_mode","scheduled"),
         state_file=Path(cfg["state_file"]) if cfg.get("state_file") else None)
@@ -120,13 +127,20 @@ def main():
         next_frame+=frames
         elapsed=played/output_rate
         played+=frames
-        x=mix_block(events,bank_samples,frame,frames,master=master,rate=output_rate)
+        if led_mode and state=='activate':
+            available=led_frame if not with_cue or frame/output_rate>=CUE_DURATION else None
+            x=data_synth.render(available,frames)*master
+        else:
+            if release is None or release[0][4]!='activate':
+                data_synth.reset()
+            x=mix_block(events,bank_samples,frame,frames,master=master,rate=output_rate)
         if with_cue:
             x+=cue_block(cues[state],frame,frames,master)
         if release is not None:
             old,old_frame=release
             count=min(frames,round(.12*output_rate)-release_pos)
-            tail=mix_block(old[0],old[1],old_frame+release_pos,count,master=master,rate=output_rate)
+            tail=(data_synth.render(None,count)*master if led_mode and old[4]=='activate' else
+                  mix_block(old[0],old[1],old_frame+release_pos,count,master=master,rate=output_rate))
             if old[5]:
                 tail+=cue_block(cues[old[4]],old_frame+release_pos,count,master)
             fade=1-(release_pos+np.arange(count))/round(.12*output_rate)
@@ -151,6 +165,11 @@ def main():
             while True:
                 current=controller.at()
                 state=args.state or current["state"]
+                if led_mode:
+                    led_frame=read_frame(led_path)
+                    if time.monotonic()-last_data_report>=5:
+                        print('LED sound: '+('fresh displayed values' if led_frame and led_frame['state']==state else 'waiting for matching LED frame'),flush=True)
+                        last_data_report=time.monotonic()
                 changed=job is not None and state!=job[4]
                 if changed and current['mode']=='manual' and not args.state:
                     manual_epoch=time.monotonic()

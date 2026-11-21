@@ -103,6 +103,7 @@ def build(venue, state, default_layout):
     for a, b in (('<script src="/simulator.js"></script>', f'<script src="static-sim.js?v={ver}"></script>'),
                  ('<script src="/static/ripples-example.js"></script>', '<script src="ripples-example.js"></script>'),
                  ('<script src="/static/tower-audio/player.js"></script>', '<script src="tower-audio/player.js"></script>'),
+                 ('<script src="/static/tower-audio/led-sonification.js"></script>', '<script src="tower-audio/led-sonification.js"></script>'),
                  ('<script src="/static/tower-audio/speaker-panel.js"></script>', '<script src="tower-audio/speaker-panel.js"></script>'),
                  ('  <script src="/testui.js"></script>\n', ''),
                  ("fetch('/api/venue', {cache: 'no-store'})", "fetch('venue.json', {cache: 'no-store'})"),

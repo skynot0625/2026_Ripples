@@ -15,6 +15,7 @@ from ripples.run import live_spikes, recorded_spikes, Preview
 from ripples.visualization import RipplesVisual, SLEEP_MEMORY_GAIN, DREAM_TAU_S
 from ripples.hardware.rgb565 import InstallationEncoder
 from ripples.schedule import ExhibitionSchedule, StateController
+from ripples.sonification import FeaturePublisher
 
 
 def main():
@@ -138,6 +139,7 @@ def main():
             batch = sensors.drain()
             tick = time.perf_counter()
             frame = visual.render(raw, count, events=batch, dt=dt)
+            audio_frames.publish(frame,visual.state)
             if not a.port:
                 encoder.encode_packet(frame, frames_done)
             timings.append(time.perf_counter()-tick)
@@ -152,6 +154,7 @@ def main():
                 print(json.dumps(report, ensure_ascii=False), flush=True)
             yield frame
 
+    audio_frames=FeaturePublisher(visual,RUNTIME_DIR/'led-sonification.json')
     try:
         if position_enabled(config) and a.accumulate:
             memory = LiveMemory(a.db, config)
@@ -175,6 +178,7 @@ def main():
             for _ in frames():
                 pass
     finally:
+        audio_frames.close()
         signal.signal(signal.SIGINT, previous_signal)
         sensors.close()
         if memory:

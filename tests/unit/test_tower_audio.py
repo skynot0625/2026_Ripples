@@ -157,7 +157,8 @@ def test_static_asset_traversal_and_allowed_types():
         assert module.asset_path(base,"/static/tower-audio/"+path) is None
 
 
-def test_player_resamples_and_routes_without_opening_real_hardware(monkeypatch,tmp_path):
+@pytest.mark.parametrize('source',['bank','led','missing'])
+def test_player_resamples_and_routes_without_opening_real_hardware(monkeypatch,tmp_path,source):
     import sys
     from types import SimpleNamespace
     from ripples import audio_play
@@ -173,7 +174,8 @@ def test_player_resamples_and_routes_without_opening_real_hardware(monkeypatch,t
         check_output_settings=lambda **kwargs:observed.update(checked=kwargs),OutputStream=Stream)
     monkeypatch.setitem(sys.modules,"sounddevice",fake)
     cfg=tmp_path/"config.json"
-    cfg.write_text(json.dumps({"device":3,"channel_map":[0,1,4,5],"stream_channels":8,"sample_rate":48000,"master":.22}))
+    cfg.write_text(json.dumps({"device":3,"channel_map":[0,1,4,5],"stream_channels":8,"sample_rate":48000,"master":.22,'active_source':'bank' if source=='bank' else 'led'}))
+    monkeypatch.setattr(audio_play,'read_frame',lambda path:None if source=='missing' else dict(state='activate',version='1',regions=[dict(level=.5,height=.4,warmth=.3)]*4))
     monkeypatch.setattr(sys,"argv",["audio","--config",str(cfg),"--bank",str(BANK),"--allow-demo"])
     class Controller:
         def __init__(self,*args,**kwargs):
@@ -195,5 +197,5 @@ def test_player_resamples_and_routes_without_opening_real_hardware(monkeypatch,t
     assert observed["closed"]
     x=np.concatenate(blocks)
     assert not np.any(x[:,[2,3,6,7]])
-    assert np.max(np.abs(x[:,[0,1,4,5]]))>0
+    assert (np.max(np.abs(x[:,[0,1,4,5]]))>0)==(source!='missing')
     assert np.max(np.abs(x))<=PEAK_LIMIT

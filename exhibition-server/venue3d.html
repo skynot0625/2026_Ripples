@@ -147,7 +147,7 @@
     </section>
     <section class="sec" aria-label="심탑 4출력 소리 예시">
       <strong>심탑 · 소리 미리듣기 (브라우저 스테레오)</strong>
-      <p class="note">LED의 Activate / Sleep 선택과 연동 · 전체 최대 2소리<br>브라우저는 스테레오 미리듣기입니다. 실제 4출력은 별도 장치에서 재생합니다.</p>
+      <p class="note">Active: LED 네 영역에서 최대 4음 · Sleep: 환경음 최대 2개<br>브라우저는 스테레오 미리듣기입니다. 실제 4출력은 별도 장치에서 재생합니다.</p>
       <div class="row"><button type="button" id="tower-audio-start">미리듣기 시작</button><button type="button" id="tower-audio-stop">미리듣기 정지</button></div>
       <p id="tower-audio-status" class="note" aria-live="polite">소리 꺼짐</p>
       <label class="note"><input id="tower-cue-enabled" type="checkbox" checked> 상태 전환 큐 · 빛과 함께</label>
@@ -159,7 +159,7 @@
       <input id="tower-audio-seek" aria-label="소리 재생 시점" type="range" min="0" max="1199" step="1" value="0" disabled>
       <p class="note"><span id="tower-audio-ch0">OUT 1 · 쉼</span><br><span id="tower-audio-ch1">OUT 2 · 쉼</span><br><span id="tower-audio-ch2">OUT 3 · 쉼</span><br><span id="tower-audio-ch3">OUT 4 · 쉼</span></p>
       <p id="tower-audio-provenance" class="note">Sleep 원음은 합성 맥 3채널 예시입니다.</p>
-      <p class="note">Active: 부드러운 기계 동작 · 느린 코러스 · 몽환적인 잔향<br>말소리는 두 상태 모두 재생 제외 · Sleep은 은은한 환경음<br>전시 시간표는 한국 시각 20분/10분. 일시정지는 LED와 함께 적용됩니다.</p>
+      <p class="note">Active: 표시 LED의 밝기 → 음량·시작, 빛의 높이 → 음높이, 색 → 음색<br>네 영역이 함께 밝아지면 동시 발음, 따로 밝아지면 엇갈린 발음 · 고정 음계 없음<br>말소리는 재생 제외 · Sleep은 은은한 수집 환경음<br>전시 시간표는 한국 시각 20분/10분. 일시정지는 LED와 함께 적용됩니다.</p>
       <details id="tower-audio-source-panel"><summary>소리 출처와 처리 내역</summary><div id="tower-audio-sources" class="note">샘플별 출처·발췌 위치·효과를 불러옵니다. 소리는 재생하지 않습니다.</div></details>
     </section>
     <section class="sec" aria-label="스피커 연결 시험" id="speaker-test-panel">
@@ -274,6 +274,7 @@
   </div>
   <script src="/simulator.js"></script>
   <script src="/static/ripples-example.js"></script>
+  <script src="/static/tower-audio/led-sonification.js"></script>
   <script src="/static/tower-audio/player.js"></script>
   <script src="/static/tower-audio/speaker-panel.js"></script>
   <script>
