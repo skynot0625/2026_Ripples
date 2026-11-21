@@ -1,0 +1,12 @@
+{
+  "device": "Speakers (Realtek HD Audio output), Windows WDM-KS",
+  "sample_rate": 48000,
+  "stream_channels": 8,
+  "channel_map": [0, 1, 4, 5],
+  "speaker_labels": ["FRONT L", "FRONT R", "REAR L", "REAR R"],
+  "physical_orientation": "unconfirmed",
+  "master": 0.10,
+  "state_mode": "scheduled",
+  "state_file": null,
+  "notes": "ASRock B650M Pro X3D / ALC897. Silent 48kHz callback stream verified; physical jack retasking and speaker routing await cabling. 8-channel stream with center/LFE/side silent. Two stereo amplifiers or four independent amplifier channels are required. WDM-KS may bypass Windows mixer volume; start amplifier gain low. No automatic playback."
+}

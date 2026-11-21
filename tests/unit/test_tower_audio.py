@@ -10,7 +10,7 @@ import pytest
 sf=pytest.importorskip("soundfile")
 from ripples.tower_audio import (RATE, PEAK_LIMIT, DURATIONS, active_bank, recording_runs,
                                  extract_sleep, load_bank, make_plan, mix_block)
-from ripples.audio_play import validate_output
+from ripples.audio_play import validate_output, output_channels
 
 ROOT=Path(__file__).resolve().parents[2]
 BANK=ROOT/"exhibition-server/static/tower-audio"
@@ -100,6 +100,14 @@ def test_no_silent_stereo_fallback():
     validate_output({"max_output_channels":8},[4,5,6,7])
 
 
+def test_surround_stream_preserves_front_and_back_mapping():
+    device={"max_output_channels":8}
+    assert output_channels(device,[0,1,4,5],8)==8
+    for count in (4,5,9,True):
+        with pytest.raises(ValueError,match="stream_channels"):
+            output_channels(device,[0,1,4,5],count)
+
+
 def test_rendered_files_are_exact_length_and_four_channels():
     report=json.loads((ROOT/"data_led_example/tower_audio/validation.json").read_text())
     for state,duration in DURATIONS.items():
@@ -147,7 +155,7 @@ def test_player_resamples_and_routes_without_opening_real_hardware(monkeypatch,t
         check_output_settings=lambda **kwargs:observed.update(checked=kwargs),OutputStream=Stream)
     monkeypatch.setitem(sys.modules,"sounddevice",fake)
     cfg=tmp_path/"config.json"
-    cfg.write_text(json.dumps({"device":3,"channel_map":[4,5,6,7],"sample_rate":48000,"master":.22}))
+    cfg.write_text(json.dumps({"device":3,"channel_map":[0,1,4,5],"stream_channels":8,"sample_rate":48000,"master":.22}))
     monkeypatch.setattr(sys,"argv",["audio","--config",str(cfg),"--bank",str(BANK),"--allow-demo"])
     class Controller:
         def __init__(self,*args,**kwargs):
@@ -168,6 +176,6 @@ def test_player_resamples_and_routes_without_opening_real_hardware(monkeypatch,t
     assert observed["samplerate"]==48000 and observed["channels"]==8
     assert observed["closed"]
     x=np.concatenate(blocks)
-    assert not np.any(x[:,:4])
-    assert np.max(np.abs(x[:,4:]))>0
+    assert not np.any(x[:,[2,3,6,7]])
+    assert np.max(np.abs(x[:,[0,1,4,5]]))>0
     assert np.max(np.abs(x))<=PEAK_LIMIT

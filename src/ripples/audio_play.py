@@ -18,6 +18,15 @@ def validate_output(device, mapping):
         raise ValueError("Selected device cannot supply all four independent outputs")
 
 
+def output_channels(device, mapping, requested=None):
+    """Keep the full surround stream when routing only front/back speakers."""
+    validate_output(device, mapping)
+    channels = max(mapping) + 1 if requested is None else requested
+    if type(channels) is not int or not max(mapping) < channels <= device["max_output_channels"]:
+        raise ValueError("stream_channels must include mapped channels and fit the selected device")
+    return channels
+
+
 def main():
     import sounddevice as sd
     parser=argparse.ArgumentParser(description=__doc__)
@@ -25,6 +34,7 @@ def main():
     parser.add_argument("--bank",type=Path,default=Path("exhibition-server/static/tower-audio"))
     parser.add_argument("--device",help="PortAudio device ID or unique device name; never inferred")
     parser.add_argument("--list-devices",action="store_true")
+    parser.add_argument("--check-output",action="store_true",help="open a one-second silent callback stream, without loading or playing the bank")
     parser.add_argument("--allow-demo",action="store_true",help="explicitly permit synthetic Sleep fixture on hardware")
     parser.add_argument("--state",choices=["activate","sleep"],help="manual audition; otherwise exhibition wall clock")
     args=parser.parse_args()
@@ -38,12 +48,27 @@ def main():
     if isinstance(device,str) and device.isdigit():
         device=int(device)
     mapping=cfg["channel_map"]
-    validate_output(sd.query_devices(device,"output"),mapping)
-    channels=max(mapping)+1
+    channels=output_channels(sd.query_devices(device,"output"),mapping,cfg.get("stream_channels"))
     output_rate=int(cfg.get("sample_rate",48000))
     if output_rate not in (24000,44100,48000):
         parser.error("output sample_rate must be 24000, 44100 or 48000")
     sd.check_output_settings(device=device,channels=channels,dtype="float32",samplerate=output_rate)
+    if args.check_output:
+        statuses=[]
+        callbacks=0
+        def silence(outdata,frames,timing,status):
+            nonlocal callbacks
+            outdata.fill(0)
+            callbacks+=1
+            if status:
+                statuses.append(str(status))
+        with sd.OutputStream(device=device,samplerate=output_rate,channels=channels,dtype="float32",
+                             blocksize=1024,latency="high",callback=silence) as stream:
+            sd.sleep(1000)
+            if not stream.active or not callbacks or statuses:
+                raise RuntimeError(f"Silent stream failed: callbacks={callbacks}, statuses={statuses}")
+        print(f"Silent stream OK: {output_rate} Hz, {channels} channels, map {mapping}. Physical jack routing is not verified.")
+        return
     manifest,samples=load_bank(args.bank)
     if any(b["source"]["kind"]=="synthetic_maek" for b in manifest["bank"]) and not args.allow_demo:
         parser.error("Sleep bank is a synthetic example; use real recordings or explicitly pass --allow-demo")

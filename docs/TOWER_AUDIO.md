@@ -70,7 +70,36 @@ flowchart LR
 
 ## 실제 장치와 녹음 연결
 
-[출력 설정](../configs/audio.m30.json)의 `device`는 아직 `null`입니다. 현재 세션에서는 PortAudio 출력 장치가 열거되지 않아 실출력은 시작하지 않았습니다. `channel_map: [0,1,2,3]`은 0부터 세는 물리 채널 네 개에 논리 OUT 1–4를 대응시킵니다. **단자가 네 개라는 사실과 독립 출력 채널이 네 개라는 사실은 다릅니다.** 우선 한 인터페이스의 4개 이상 출력을 지원하며, 서로 다른 USB/잭 장치 네 대를 자동으로 묶는 기능은 없습니다.
+[일반 출력 설정](../configs/audio.m30.json)의 `device`는 `null`이며, 현장 PC용 [Realtek 설정](../configs/audio.realtek.m30.json)을 별도로 준비했습니다. ASRock B650M Pro X3D / ALC897에 Realtek **6.0.9879.1** 드라이버 설치를 완료했고, WDM-KS 장치의 48kHz 8채널 무음 콜백 스트림을 확인했습니다. **아직 현장 케이블이 연결되지 않아 단자 전환과 네 스피커의 실제 소리 분리는 미검증입니다.** 자동 재생은 시작하지 않습니다.
+
+Realtek 설정은 `stream_channels: 8`, `channel_map: [0,1,4,5]`로 앞 L/R·뒤 L/R만 사용합니다. 센터·서브우퍼·측면 채널은 0으로 채웁니다. [Windows 표준 7.1 채널 순서](https://learn.microsoft.com/en-us/windows-hardware/drivers/audio/channel-mask)에 맞춘 것으로, 8채널 스트림에서 `[0,1,2,3]`을 쓰면 뒤 L/R 대신 센터·서브우퍼로 가므로 혼용하지 않습니다. 실제 단자 배치는 연결 후 확인합니다. 진짜 4채널(Quadraphonic) 스트림을 선택한다면 `stream_channels: 4`, `[0,1,2,3]`을 함께 사용해야 합니다.
+
+### 현장 배선 — 2채널 앰프 두 대
+
+사용자가 확인한 구성은 **BonoBoss BOS-5100 MK2 새틀라이트 4개, 4Ω, 별도 2채널 앰프 두 대**입니다. 앰프 상품 링크의 상세 사양은 접근되지 않아 모델명·허용 임피던스·출력 전력은 아직 확인하지 못했습니다. 각 앰프가 4Ω 부하를 지원하는지 제품 표기를 확인하며, 스피커는 각 증폭 채널에 하나씩 연결합니다.
+
+| PC 단자 | 앰프 입력 → 출력 | 논리 출력 | 8채널 인덱스 |
+|---|---|---|---|
+| 뒤 초록색 스테레오 | 앰프 A L/R → 스피커 1/2 | OUT 1/2 | 0/1 |
+| 뒤 하늘색 스테레오 | 앰프 B L/R → 스피커 3/4 | OUT 3/4 | 4/5 |
+
+[ASRock 공식 설명서 p.10](https://download.asrock.com/Manual/B650M%20Pro%20X3D.pdf)은 **7.1 구성에서** 뒤 초록색을 Front Out, 뒤 하늘색을 Rear Out으로 명시합니다. 하늘색 단자는 기본 상태에서는 Line In이므로, 현장에서 다채널 출력 구성·잭 전환 후 확인해야 합니다. 스피커 선을 PC 잭에 직접 연결하지 않고 PC → 앰프의 스테레오 라인 입력 → 스피커 순서로 연결합니다. 2채널 앰프 한 대에 스피커만 네 개 붙이면 네 독립 소리가 되지 않습니다. 심탑에서의 실제 방향 배치는 아직 미확정입니다.
+
+Realtek 초기 디지털 음량은 **10%**입니다. WDM-KS는 Windows 믹서 음량과 다르게 동작할 수 있어 앰프 게인도 낮게 시작합니다. 디지털 제한만으로 스피커의 허용 전력을 보장하지는 않습니다. 연결 후 네 출력을 한 개씩 확인하기 전에는 장시간 자동 재생을 켜지 않습니다.
+
+```text
+ripples-audio --config configs/audio.realtek.m30.json --check-output
+```
+
+이 명령은 음원 뱅크를 읽지 않고 1초 동안 **무음만** 보내 드라이버의 스트림 동작을 검사합니다. 성공해도 물리 배선 검증을 뜻하지 않습니다. 현장 배선 확인 후 예시 재생은 아래 설정으로 실행하며, 종료는 Ctrl+C입니다.
+
+```text
+ripples-audio --config configs/audio.realtek.m30.json --allow-demo
+```
+
+드라이버는 [Microsoft Update Catalog의 해당 하드웨어용 패키지](https://www.catalog.update.microsoft.com/ScopedViewInline.aspx?updateid=b7ef3fd3-20ae-4dff-acba-33ad85c4902d)에서 설치했고 Microsoft Windows Hardware Compatibility Publisher 서명을 확인했습니다. 설치 전 정보와 무음 시험 기록은 로컬 `runtime/realtek-setup/`에 보관합니다. 드라이버 바이너리는 Git에 포함하지 않습니다.
+
+한 인터페이스의 4개 이상 출력을 지원하며, 서로 다른 USB/잭 장치 네 대를 자동으로 묶는 기능은 없습니다.
 
 플레이어는 장치를 명시하고 채널 수·설정한 샘플레이트의 float32 출력을 검사한 뒤에만 엽니다. 기본 장치 출력은 48kHz이며, 24kHz 뱅크를 콜백 밖에서 미리 리샘플링합니다. 24/44.1/48kHz를 설정할 수 있습니다. 스테레오나 HDMI로 임의 대체하지 않습니다. 지원하지 않는 샘플레이트이면 시작 전에 실패합니다. 합성 Sleep을 실제 장치에서 시험하려면 `--allow-demo`를 명시합니다.
 
