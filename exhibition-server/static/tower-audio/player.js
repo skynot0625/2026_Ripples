@@ -65,10 +65,12 @@ else (() => {
       setTimeout(()=>{if(!running && context===old) old.suspend();},450);
     }
     $('tower-audio-start').disabled=false;
-    $('tower-audio-start').textContent='소리 시작';
+    $('tower-audio-start').textContent='미리듣기 시작';
     updateUI();
   }
   async function start() {
+    if(window.SpeakerPanel?.hardwareBusy()) return;
+    window.SpeakerPanel?.stopPreview();
     if(loading || running) return;
     loading=true; uiError=''; const token=++generation;
     $('tower-audio-start').disabled=true;
@@ -105,7 +107,7 @@ else (() => {
       const s=current(); begin(s,s.mode==='clock'?s.offset:0);
       master.gain.setTargetAtTime(Math.min(.30,Number($('tower-audio-volume').value)/100),context.currentTime,.2);
       $('tower-audio-start').disabled=false;
-      $('tower-audio-start').textContent='재생 중';
+      $('tower-audio-start').textContent='미리듣기 재생 중';
     } catch(e) {
       if(token===generation) {
         loading=false; running=false; uiError=String(e.message||e);
@@ -205,6 +207,7 @@ else (() => {
   });
   $('tower-audio-seek').addEventListener('change',()=>{if(running&&mode!=='clock') begin(current(),Number($('tower-audio-seek').value));});
   window.addEventListener('pagehide',()=>{stop();if(context)context.close();});
+  window.TowerAudio={stop, async silence() {stop(); if(context) await context.suspend();}};
   setInterval(tick,100);
   updateUI();
 })();

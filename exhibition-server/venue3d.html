@@ -146,9 +146,9 @@
       <p class="note">합성 센서 · 기록된 8,460 뉴런 · 추가 파동 없음<br>오른쪽 전시실을 LED 전체에 대응. 3D 위치 연동은 아래 기구 조종을 따릅니다.</p>
     </section>
     <section class="sec" aria-label="심탑 4출력 소리 예시">
-      <strong>심탑 · 4출력 소리</strong>
+      <strong>심탑 · 소리 미리듣기 (브라우저 스테레오)</strong>
       <p class="note">LED의 Activate / Sleep 선택과 연동 · 전체 최대 2소리<br>브라우저는 스테레오 미리듣기입니다. 실제 4출력은 별도 장치에서 재생합니다.</p>
-      <div class="row"><button type="button" id="tower-audio-start">소리 시작</button><button type="button" id="tower-audio-stop">소리 정지</button></div>
+      <div class="row"><button type="button" id="tower-audio-start">미리듣기 시작</button><button type="button" id="tower-audio-stop">미리듣기 정지</button></div>
       <p id="tower-audio-status" class="note" aria-live="polite">소리 꺼짐</p>
       <label id="tower-audio-volume-label" class="note" for="tower-audio-volume">디지털 음량 22% · 상한 30%</label>
       <input id="tower-audio-volume" aria-label="소리 음량" type="range" min="0" max="30" step="1" value="22">
@@ -157,6 +157,26 @@
       <p id="tower-audio-provenance" class="note">Sleep 원음은 합성 맥 3채널 예시입니다.</p>
       <p class="note">Active: 잡음은 작게 · 키보드·서보·기계 동작 중심<br>Sleep: 목소리의 음높이 유지 · 부드러운 잔향 · 목소리는 동시에 하나<br>전시 시간표는 한국 시각 20분/10분. 일시정지는 LED와 함께 적용됩니다.</p>
       <details id="tower-audio-source-panel"><summary>소리 출처와 처리 내역</summary><div id="tower-audio-sources" class="note">샘플별 출처·발췌 위치·효과를 불러옵니다. 소리는 재생하지 않습니다.</div></details>
+    </section>
+    <section class="sec" aria-label="스피커 연결 시험" id="speaker-test-panel">
+      <strong>스피커 연결 시험</strong>
+      <p class="note">시험음: 번호만큼 짧은 신호음 · 디지털 피크 2%<br>한 번에 하나만 재생합니다. 앰프 두 대의 볼륨도 낮춰 주세요.</p>
+      <fieldset style="border:1px solid #577d73;border-radius:8px;margin:10px 0;padding:10px">
+        <legend>실제 4채널 · 심탑 PC → 앰프 → 스피커</legend>
+        <p class="note">초록색 → 1·2 / 하늘색 Rear Out → 3·4<br>이 PC의 Realtek에 직접 출력합니다. 별도 전시 오디오 플레이어는 먼저 종료하세요.</p>
+        <div class="row"><button type="button" data-speaker-real="1" disabled>실제 1 · A 왼쪽</button><button type="button" data-speaker-real="2" disabled>실제 2 · A 오른쪽</button></div>
+        <div class="row"><button type="button" data-speaker-real="3" disabled>실제 3 · B 왼쪽</button><button type="button" data-speaker-real="4" disabled>실제 4 · B 오른쪽</button></div>
+        <button type="button" id="speaker-real-stop" disabled>실제 출력 중지</button>
+        <p id="speaker-real-status" class="note" aria-live="polite">심탑 서버 연결 확인 중…</p>
+        <p class="note">전송 종료는 배선 통과 판정이 아닙니다. 표시된 스피커 하나에서만 들리는지 확인하세요.</p>
+      </fieldset>
+      <fieldset style="border:1px solid #666;border-radius:8px;padding:10px">
+        <legend>시험음 미리듣기 · 브라우저 L/R</legend>
+        <p class="note">현재 브라우저의 출력 장치에서 듣습니다.<br>1·3은 왼쪽, 2·4는 오른쪽. 실제 네 스피커 연결을 검사하지 않습니다.</p>
+        <div class="row"><button type="button" data-speaker-preview="1">미리듣기 1</button><button type="button" data-speaker-preview="2">미리듣기 2</button><button type="button" data-speaker-preview="3">미리듣기 3</button><button type="button" data-speaker-preview="4">미리듣기 4</button></div>
+        <button type="button" id="speaker-preview-stop">시험음 미리듣기 중지</button>
+        <p id="speaker-preview-status" class="note" aria-live="polite">미리듣기 꺼짐 · 실제 출력과 별도</p>
+      </fieldset>
     </section>
     <section class="sec tour-keep">
       <div class="row" role="group" aria-label="조명">
@@ -251,6 +271,7 @@
   <script src="/simulator.js"></script>
   <script src="/static/ripples-example.js"></script>
   <script src="/static/tower-audio/player.js"></script>
+  <script src="/static/tower-audio/speaker-panel.js"></script>
   <script>
     // 공간 3D 확인 (read-only geometry; since 2026-11-06 the exhibition layout — big wall angles, lobby windows, small
     // walls — is edited here through the simulator state, venue.py checks every change). Draws whatever /api/venue returns (venues/<id>/geometry.json through venue.py): floor,
