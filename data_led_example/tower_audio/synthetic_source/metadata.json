@@ -5,5 +5,12 @@
   "start_frame": 0,
   "frames": 2116800,
   "demo": true,
-  "sha256": "cccb4b4f081c40dcaad38ac2c28a445225df2a446841c6a30be8cfc5069ffbb4"
+  "sha256": "cccb4b4f081c40dcaad38ac2c28a445225df2a446841c6a30be8cfc5069ffbb4",
+  "origin": {
+    "type": "procedural_synthesis",
+    "generator": "src/ripples/tower_audio.py::synthetic_maek",
+    "seed": 451,
+    "external_audio_samples": false,
+    "speech_content": false
+  }
 }

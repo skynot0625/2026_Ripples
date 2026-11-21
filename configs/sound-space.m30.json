@@ -1,0 +1,12 @@
+{
+  "raw_max_bytes": 536870912,
+  "raw_max_age_seconds": 3600,
+  "raw_max_items": 2048,
+  "clips_max_bytes": 268435456,
+  "clips_max_age_seconds": 2592000,
+  "clips_max_items": 512,
+  "exports_max_bytes": 67108864,
+  "export_clip_limit": 32,
+  "min_free_bytes": 2147483648,
+  "max_upload_bytes": 1048576
+}

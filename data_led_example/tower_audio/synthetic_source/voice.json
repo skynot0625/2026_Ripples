@@ -1,0 +1,24 @@
+{
+  "device_id": "SYNTHETIC-MAEK-VOICE",
+  "session_id": "tts-voice-demo-20261121",
+  "start_frame": 0,
+  "frames": 794218,
+  "demo": true,
+  "sha256": "c45d358d20e821c764a614665fd529b6e0e25ae26be57c287a5a5070c3c4e66d",
+  "origin": {
+    "type": "system_tts",
+    "engine": "Microsoft Windows SAPI System.Speech",
+    "voice": "Microsoft Heami Desktop",
+    "language": "ko-KR",
+    "rate": -1,
+    "text": [
+      "잠시 걸음을 멈추고, 이 공간의 소리를 들어보세요.",
+      "지나간 작은 소리들이, 천천히 기억 속에 머뭅니다.",
+      "우리는 같은 공간에서, 서로 다른 소리를 듣고 있습니다."
+    ],
+    "text_author": "Ripples example prepared for this project",
+    "generated_local_date": "2026-11-21",
+    "not_a_field_recording": true,
+    "not_voice_cloning": true
+  }
+}

@@ -16,6 +16,14 @@ DURATIONS = {"activate": 1200, "sleep": 600}
 STEREO = np.array([[.65, .15], [.15, .65], [.55, .30], [.30, .55]], np.float32)
 
 
+def procedural_source(name):
+    return {'kind':'original_procedural','category':'mechanical',
+            'origin':{'type':'procedural_synthesis','generator':'src/ripples/tower_audio.py::active_bank',
+                      'profile':'work-v2-low-hiss','seed':214,'design':name,
+                      'external_audio_samples':False},
+            'processing':'oscillators + damped resonances + small friction texture; filtered and faded'}
+
+
 def fade(x, seconds=.16, rate=RATE):
     x = np.asarray(x, dtype=np.float32).copy()
     n = min(len(x)//2, max(2, round(seconds*rate)))
@@ -51,13 +59,13 @@ def active_bank(seed=214):
         body = .10*np.sin(2*np.pi*(105+13*k)*t + .65*np.sin(2*np.pi*.38*t))
         if k % 4 == 0:
             x = body + .18*np.sin(2*np.pi*(210*t+26*np.sin(t*1.3))) * np.sin(np.pi*t/length)**2
-            x += .03*noise
+            x += .008*noise
         elif k % 4 == 1:
             x = body*.12
             for onset in np.cumsum(rng.uniform(.22, .75, 8)):
                 u = np.maximum(0, t-onset)
                 env = (t >= onset)*(1-np.exp(-u/.012))*np.exp(-u/.095)
-                x += env*(.38*np.sin(2*np.pi*(410+31*k)*u) + .12*noise)
+                x += env*(.38*np.sin(2*np.pi*(410+31*k)*u) + .025*noise)
         elif k % 4 == 2:
             x = body*.5
             for j, onset in enumerate(np.arange(.25, length-.25, .53)):
@@ -65,9 +73,22 @@ def active_bank(seed=214):
                 env = np.exp(-((u-.12)/.105)**2)
                 x += .21*env*np.sin(2*np.pi*(310+90*((j+k)%4))*u)
         else:
-            x = .12*noise*(.22+.78*np.sin(np.pi*t/length)**2)
+            x = .015*noise*(.22+.78*np.sin(np.pi*t/length)**2)
             x += .19*np.sin(2*np.pi*(160*t+40*np.sin(t*.9))) * (1-np.cos(2*np.pi*t/length))*.5
         result.append((name, finish(x)))
+    for k,name in enumerate(('keyboard_mechanical','keyboard_spacebar','scanner_steps','soft_latch')):
+        t=np.arange(round(RATE*(4.2+.3*k)))/RATE
+        x=np.zeros(len(t))
+        onsets=np.cumsum(rng.uniform(.12,.38,12))+.2 if k<2 else np.arange(.35,t[-1]-.3,.65)
+        for j,onset in enumerate(onsets):
+            u=np.maximum(0,t-onset)
+            env=(t>=onset)*(1-np.exp(-u/.003))*np.exp(-u/(.045 if k<2 else .11))
+            f=(340 if k==1 else 620)+rng.uniform(-50,50)
+            resonance=.28*np.sin(2*np.pi*f*u)+.13*np.sin(2*np.pi*(f*2.37)*u)
+            x+=env*(resonance+.012*rng.standard_normal(len(t)))
+        if k==2:
+            x+=.035*np.sin(2*np.pi*(125*t+9*np.sin(2*t)))*np.sin(np.pi*t/t[-1])**2
+        result.append((name,finish(x,rms=.085,cutoff=3800)))
     return result
 
 
@@ -90,7 +111,7 @@ def synthetic_maek(seed=451, seconds=48):
     return x.astype(np.float32), sr
 
 
-def recording_runs(folder, *, max_seconds=1800, slab_seconds=24):
+def recording_runs(folder, *, max_seconds=1800, slab_seconds=24, paths=None):
     """Join only verified contiguous packets. Never bridge sessions or missing frames.
 
     Each WAV has a sibling metadata.json or <stem>.json. Unknown metadata is an
@@ -98,7 +119,8 @@ def recording_runs(folder, *, max_seconds=1800, slab_seconds=24):
     """
     import soundfile as sf
     entries = []
-    for path in Path(folder).rglob("*.wav"):
+    files=paths if paths is not None else Path(folder).rglob("*")
+    for path in sorted(p for p in files if p.suffix.lower() in (".wav", ".flac")):
         meta_path = path.with_suffix(".json")
         if not meta_path.exists():
             meta_path = path.parent/"metadata.json"
@@ -108,8 +130,11 @@ def recording_runs(folder, *, max_seconds=1800, slab_seconds=24):
             continue
         if "frames" in meta and int(meta["frames"]) != info.frames:
             raise ValueError(f"frame count mismatch: {path}")
-        if meta.get("sha256") and hashlib.sha256(path.read_bytes()).hexdigest() != meta["sha256"]:
+        with path.open("rb") as stream:
+            source_hash=hashlib.file_digest(stream,"sha256").hexdigest()
+        if meta.get("sha256") and source_hash != meta["sha256"]:
             raise ValueError(f"SHA256 mismatch: {path}")
+        meta=dict(meta,sha256=source_hash)
         start = meta.get("start_frame")
         key = (str(meta.get("device_id", "")), str(meta.get("session_id", "")),
                info.samplerate, info.channels)
@@ -134,7 +159,10 @@ def recording_runs(folder, *, max_seconds=1800, slab_seconds=24):
                 provenance.append({"file": path.name, "relative_file": str(path.relative_to(folder)).replace("\\", "/"),
                                    "device_id": key[0], "session_id": key[1], "file_frame": offset,
                                    "session_frame": start+offset if start >= 0 else None,
-                                   "frames": len(block), "demo": meta.get("demo") is True})
+                                   "frames": len(block), "demo": meta.get("demo") is True,
+                                   "source_sha256":meta.get('sha256'),"origin":meta.get('origin'),
+                                   "input_parts":meta.get('original_parts'),
+                                   "captured_at":meta.get('captured_at',meta.get('received_at_utc'))})
                 info_rate = f.samplerate
                 used += len(block)/f.samplerate
                 if filled+len(block) >= round(slab_seconds*f.samplerate):
@@ -150,14 +178,14 @@ def recording_runs(folder, *, max_seconds=1800, slab_seconds=24):
         yield np.concatenate(pending), info_rate, provenance
 
 
-def extract_sleep(folder, *, limit=12, max_seconds=1800):
+def _extract_ambient(folder, *, limit=12, max_seconds=1800, paths=None):
     """Rank local energy contrast, onset change and spectral texture; suppress overlap.
 
     This is acoustic salience, not semantic classification. The selected mic is
     strongest in the segment; no phase cancellation from summing three microphones.
     """
     candidates = []
-    for run_id, (raw, sr, provenance) in enumerate(recording_runs(folder, max_seconds=max_seconds)):
+    for run_id, (raw, sr, provenance) in enumerate(recording_runs(folder, max_seconds=max_seconds,paths=paths)):
         if len(raw) < sr*.65:
             continue
         hop = max(1, sr//10)
@@ -215,6 +243,52 @@ def extract_sleep(folder, *, limit=12, max_seconds=1800):
     return bank
 
 
+def extract_sleep(folder, *, limit=12, max_seconds=1800, speech=True, paths=None):
+    """Keep pause-delimited speech candidates alongside unusual environmental sounds."""
+    if not 1<=limit<=128:
+        raise ValueError("sample limit must be 1..128")
+    voices=[]
+    if speech:
+        from .voice_memory import speech_regions, voice_effect
+        for raw,sr,provenance in recording_runs(folder,max_seconds=max_seconds,paths=paths):
+            if all(p['demo'] and (p.get('origin') or {}).get('speech_content') is False for p in provenance):
+                continue  # Known synthetic non-speech fixture, never a guess about field recordings.
+            for r in speech_regions(raw,sr):
+                parts,cursor=[],0
+                for p in provenance:
+                    lo,hi=max(r['start'],cursor),min(r['end'],cursor+p['frames'])
+                    if lo<hi:
+                        delta=lo-cursor
+                        parts.append(dict(p,file_frame=p['file_frame']+delta,frames=hi-lo,
+                            session_frame=None if p['session_frame'] is None else p['session_frame']+delta))
+                    cursor+=p['frames']
+                voices.append({'mono':raw[r['start']:r['end'],r['channel']].copy(),'sr':sr,
+                    'source':{'kind':'synthetic_maek' if all(p['demo'] for p in parts) else 'recording',
+                        'category':'speech_candidate','detector':'webrtcvad-mode2-20ms',
+                        'mic_channel':r['channel']+1,'sample_rate':sr,'parts':parts,'score':r['score'],
+                        'boundary_cut':r['boundary_cut'],'tempo':.96,'pitch_shift_semitones':0,
+                        'processing':'pitch-preserving 0.96 tempo; dry-leading dark 2.4s reverb, wet 0.22'}})
+            voices=sorted(voices,key=lambda x:x['source']['score'],reverse=True)[:limit]
+    ambient=_extract_ambient(folder,limit=limit,max_seconds=max_seconds,paths=paths)
+    # Voice-selected source intervals must not reappear through the pitch-shifting
+    # environmental branch (nor overlap another sentence via a different category).
+    def overlaps(a,b):
+        return any(p['relative_file']==q['relative_file'] and
+                   p['file_frame']<q['file_frame']+q['frames'] and
+                   q['file_frame']<p['file_frame']+p['frames']
+                   for p in a['parts'] for q in b['parts'])
+    ambient=[x for x in ambient if not any(overlaps(x['source'],v['source']) for v in voices)]
+    take=min(len(voices),max(1,limit//2)) if ambient else min(len(voices),limit)
+    result=[]
+    for v in voices[:take]:
+        result.append({'id':f'sleep_voice_{len(result):02d}',
+            'samples':voice_effect(v['mono'],v['sr']),'source':v['source']})
+    for x in ambient[:limit-len(result)]:
+        x['source']['category']='environment'
+        result.append(x)
+    return result
+
+
 def make_plan(bank, state, seed=20261121):
     """Never more than two simultaneous complete samples, including their tails."""
     if state not in DURATIONS:
@@ -224,16 +298,20 @@ def make_plan(bank, state, seed=20261121):
         return []
     rng = np.random.default_rng(seed)
     end, cursor, events, last, counts = DURATIONS[state], 1., [], {}, [0]*4
+    voice_end=-100.
     busy = [0.]*4
     while cursor < end-2:
         ongoing = sorted(e["start"]+e["duration"] for e in events if e["start"]+e["duration"] > cursor)
         if len(ongoing) >= 2:
             cursor = ongoing[0]+rng.uniform(.7,2.)
-        available = [x for x in items if cursor-last.get(x["id"], -1000) >= 16]
+        available = [x for x in items if cursor-last.get(x["id"], -1000) >=
+            (45 if x.get('source',{}).get('category')=='speech_candidate' else 16)
+            and (x.get('source',{}).get('category')!='speech_candidate' or cursor>=voice_end+6)]
         if not available:
             cursor += 2
             continue
         item = available[int(rng.integers(len(available)))]
+        is_voice=item.get('source',{}).get('category')=='speech_candidate'
         duration = item["duration"]
         if cursor+duration > end-1:
             break
@@ -241,10 +319,13 @@ def make_plan(bank, state, seed=20261121):
         speaker = min(speakers, key=lambda i: counts[i]+rng.uniform(0,.4))
         event = {"id": item["id"], "start": round(cursor,4), "duration": duration,
                  "speaker": speaker, "gain": round(float(rng.uniform(.68,.88)),4)}
+        event['category']='speech_candidate' if is_voice else 'environment'
         events.append(event)
         busy[speaker] = cursor+duration
         counts[speaker] += 1
         last[item["id"]] = cursor
+        if is_voice:
+            voice_end=cursor+duration
         # Some paired sounds; most phrases have a little room to breathe.
         cursor += duration*rng.uniform(.55,.8) if rng.random()<.30 else duration+rng.uniform(1.3,4.8 if state=="activate" else 7.)
     return events
@@ -265,12 +346,25 @@ def mix_block(events, samples, start_frame, frames, *, master=MASTER, rate=RATE)
 def load_bank(root):
     import soundfile as sf
     root = Path(root).resolve()
+    if (root/'CURRENT.json').exists():
+        import re
+        generation=json.loads((root/'CURRENT.json').read_text())['generation']
+        if not isinstance(generation,str) or not re.fullmatch('[a-f0-9]{32}',generation):
+            raise ValueError('invalid sound-space generation')
+        next_root=(root/'exports'/generation).resolve()
+        if not next_root.is_relative_to(root):
+            raise ValueError('sound-space generation outside root')
+        root=next_root
     manifest = json.loads((root/"manifest.json").read_text(encoding="utf-8"))
     samples = {}
     for item in manifest["bank"]:
         path = (root/item["file"]).resolve()
         if not path.is_relative_to(root):
             raise ValueError("sample path outside bank")
+        if item.get('sha256'):
+            with path.open('rb') as stream:
+                if hashlib.file_digest(stream,'sha256').hexdigest()!=item['sha256']:
+                    raise ValueError('bank SHA256 mismatch')
         x, sr = sf.read(path, dtype="float32")
         if sr != RATE or x.ndim != 1 or not np.all(np.isfinite(x)):
             raise ValueError("bank requires finite mono 24 kHz")
