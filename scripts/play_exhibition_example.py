@@ -96,8 +96,8 @@ def frames():
    sleep_visual.activity.fill(0)
    rgb=sleep_visual.render(raw,dt=dt,sensor_mask=sleep_replay.mask(sleep_xy,local))[VALID_MASK]
   frame=np.zeros((*VALID_MASK.shape,3),np.uint8)
-  shown=visual.transition.render(rgb,state,dt)
-  frame[VALID_MASK]=(shown.max(axis=1)[:,None]*final_tints*layer_separation(h)[:,None]).astype(np.uint8)
+  shown=visual.transition.render(rgb,state,dt,base_mask=layer_separation(h))
+  frame[VALID_MASK]=(shown.max(axis=1)[:,None]*final_tints).astype(np.uint8)
   frame[VALID_MASK]=limit_rgb(frame[VALID_MASK],visual.transition.weights).astype(np.uint8)
   stage=sleep_replay.stage(local) if state=='sleep' else '-'
   if previous!=(state,stage,preview_label):

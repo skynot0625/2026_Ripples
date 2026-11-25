@@ -96,6 +96,7 @@ def main():
                       config_file=str(a.config), memory_db=str(a.db) if memory else None,
                       accumulation_enabled=bool(memory),
                       display_state=state_status, transition_direction=a.transition_direction,
+                      transition_layer="after_base_mask", transition_age_s=visual.transition.age,
                       sleep_style="dream-v2", sleep_memory_gain=SLEEP_MEMORY_GAIN, dream_tau_s=DREAM_TAU_S,
                       output_limits={"channel_max": 96, "physical_weighted_rgb_mean": 18},
                       steps_per_frame=40, criticality=a.criticality, frames=frames_done,

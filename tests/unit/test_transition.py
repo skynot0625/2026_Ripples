@@ -6,7 +6,7 @@ import subprocess
 import numpy as np
 import pytest
 
-from ripples.transition import StateTransition, composite, limit_rgb, DURATION, PEAK, MEAN, pulse_field, bezier_ease_in
+from ripples.transition import StateTransition, composite, limit_rgb, DURATION, PEAK, MEAN, pulse_field, bezier_ease_in, base_frame
 
 
 def test_direction_and_both_state_changes():
@@ -99,3 +99,39 @@ def test_bezier_slow_start_accelerates_and_inverse_matches():
     assert progress[25]<.1 and .30<progress[50]<.33
     assert np.all(np.diff(np.diff(progress))>0)
     np.testing.assert_allclose(bezier_ease_in(progress,True)[1:-1],times[1:-1],atol=.0003)
+
+
+@pytest.mark.parametrize('first,second',[('activate','sleep'),('sleep','activate')])
+def test_real_renderer_transition_crosses_both_layer_gaps(first,second):
+    from ripples.visualization import RipplesVisual
+    from ripples.hardware.transport import VALID_MASK
+    v=RipplesVisual(first)
+    raw=np.zeros((*VALID_MASK.shape,3),np.uint8)
+    assert not v.render(raw,0,dt=.125).any()
+    v.set_state(second)
+    frames=np.array([v.render(raw,0,dt=.125)[VALID_MASK] for _ in range(44)])
+    h,r=v.transition.height,v.transition.radius
+    # Both separators used to suppress the pulse by 90%, making it look broken.
+    for lo,hi in ((.34,.38),(.70,.74)):
+        region=(h>lo)&(h<hi)&(r<.45)
+        assert region.any()
+        assert frames[:,region].max()>15
+    lower=(h<.2)&(r<.45);upper=(h>.8)&(r<.45)
+    assert frames[:,lower].mean(axis=(1,2)).argmax()<frames[:,upper].mean(axis=(1,2)).argmax()
+    assert not frames[-1].any()
+    assert frames.max()<=PEAK
+    assert np.all(np.average(frames.mean(axis=-1),axis=1,weights=v.transition.weights)<=MEAN)
+
+
+def test_base_mask_preserves_steady_frame_and_browser_parity():
+    h=np.array([.1,.36,.72,.95]);mask=np.array([1.,.1,.1,1.]);weights=np.array([1.,2.,3.,4.])
+    rgb=np.random.default_rng(19).integers(0,256,(4,3))
+    expected=(limit_rgb(rgb*PEAK/255.,weights).astype(np.uint8)*mask[:,None]).astype(np.uint8)
+    np.testing.assert_array_equal(base_frame(rgb,weights,mask),expected)
+    if not shutil.which('node'):pytest.skip('node unavailable')
+    js=Path(__file__).resolve().parents[2]/'exhibition-server/static/ripples-example.js'
+    old=expected.astype(float);radius=np.zeros(4)
+    for age in (0.,.7,1.4,5.):
+        code=f"const t=require({json.dumps(str(js))});console.log(JSON.stringify(Array.from(t.composite({old.ravel().tolist()},{rgb.ravel().tolist()},{h.tolist()},{age},'up',{weights.tolist()},{radius.tolist()},{mask.tolist()}))));"
+        out=np.array(json.loads(subprocess.check_output(['node','-e',code],text=True))).reshape(4,3)
+        np.testing.assert_allclose(out,composite(old,rgb,h,age,'up',weights,radius,mask),atol=1e-10)

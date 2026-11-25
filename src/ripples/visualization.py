@@ -290,8 +290,6 @@ class RipplesVisual:
             energy = sensor_strength + (255-sensor_strength)*firing
             colors = energy[:,None]*tint
         logical = np.clip(colors, 0, 255)
-        result[VALID_MASK] = (self.transition.render(logical, self.state, dt) if self.output_limits
+        result[VALID_MASK] = (self.transition.render(logical, self.state, dt, base_mask=layer_separation(h)) if self.output_limits
                               else logical.astype(np.uint8))
-        if self.output_limits:
-            result[VALID_MASK] = (result[VALID_MASK]*layer_separation(h)[:,None]).astype(np.uint8)
         return result

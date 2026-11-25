@@ -373,7 +373,14 @@ const RipplesTransition = {
     if (scale < 1) for (let i=0; i<out.length; i++) out[i] *= scale;
     return out;
   },
-  base(rgb, weights) { return this.limit(Float64Array.from(rgb, x => x*96/255), weights); },
+  base(rgb, weights, baseMask) {
+    const out=this.limit(Float64Array.from(rgb, x => x*96/255), weights);
+    if(baseMask){
+      if(baseMask.length!==out.length/3||Array.from(baseMask).some(x=>!Number.isFinite(x)||x<0||x>1))throw Error('Invalid base mask');
+      for(let i=0;i<out.length;i++)out[i]=Math.floor(Math.floor(out[i])*baseMask[Math.floor(i/3)]);
+    }
+    return out;
+  },
   pulse(h, r, age, direction) {
     if (direction === 'up') {
       const local=age-(1.4*this.bezier(h,true)+.20*r), startWidth=.12+1.02*Math.pow(.5,.8);
@@ -384,8 +391,8 @@ const RipplesTransition = {
     const local=age-1.4*this.bezier(direction === 'up_flat' ? h : 1-h,true);
     return this.bezier(local/.2)*Math.exp(-Math.max(local-.2,0)/.95)*(1-this.smooth((local-2.4)/1.2));
   },
-  composite(old, target, height, age, direction, weights, radius) {
-    const out = this.base(target, weights);
+  composite(old, target, height, age, direction, weights, radius, baseMask) {
+    const out = this.base(target, weights, baseMask);
     if (age >= 5) return out;
     const mix = this.bezier(age/2.6), tint = [96,96,96];
     for (let i=0; i<height.length; i++) {
@@ -558,10 +565,11 @@ else /* Local example playback: no sensor POST, no USB, no simulator layout writ
           origin=RipplesTransition.base(from,P.ripplesWeight);
         } else origin=null;
       }
-      const out = origin ? RipplesTransition.composite(origin, target, P.ripplesHeight, age, direction, P.ripplesWeight, P.ripplesRadius) : RipplesTransition.base(target, P.ripplesWeight);
+      const baseMask=Array.from(P.ripplesHeight,h=>RipplesTransition.layerSeparation(h));
+      const out = origin ? RipplesTransition.composite(origin, target, P.ripplesHeight, age, direction, P.ripplesWeight, P.ripplesRadius, baseMask) : RipplesTransition.base(target, P.ripplesWeight, baseMask);
       for(let i=0;i<P.count;i++) {
         const tint=[1,1,1];
-        const level=Math.max(out[i*3],out[i*3+1],out[i*3+2])*RipplesTransition.layerSeparation(P.ripplesHeight[i]);
+        const level=Math.max(out[i*3],out[i*3+1],out[i*3+2]);
         for(let c=0;c<3;c++)P.col[i*3+c]=P.ripplesWeight[i]?Math.floor(level*tint[c])/255:0;
       }
       if(window.LedSonification)soundFrame={...window.LedSonification.features(P),state};

@@ -74,10 +74,22 @@ def pulse_field(height, age, direction="up", radius=None):
     return bezier_ease_in(local/.2)*np.exp(-np.maximum(local-.2, 0)/.95)*(1-smooth((local-2.4)/1.2))
 
 
-def composite(old, target, height, age, direction="up", weights=None, radius=None):
+def base_frame(rgb, weights=None, base_mask=None):
+    """Separate sensor layers before adding the continuous transition light."""
+    out = limit_rgb(np.asarray(rgb)*PEAK/255., weights)
+    if base_mask is not None:
+        mask = np.asarray(base_mask)
+        if mask.shape != out.shape[:-1] or not np.isfinite(mask).all() or np.any((mask < 0)|(mask > 1)):
+            raise ValueError("base mask must match pixels and be in [0,1]")
+        # Preserve the previous steady frame's two uint8 quantization stages.
+        out = (out.astype(np.uint8)*mask[..., None]).astype(np.uint8).astype(float)
+    return out
+
+
+def composite(old, target, height, age, direction="up", weights=None, radius=None, base_mask=None):
     if direction not in ("up", "down", "up_flat"):
         raise ValueError("direction must be up, down or up_flat")
-    target = limit_rgb(np.asarray(target)*PEAK/255., weights)
+    target = base_frame(target, weights, base_mask)
     if age >= DURATION:
         return target
     pulse = pulse_field(height, age, direction, radius)
@@ -97,7 +109,7 @@ class StateTransition:
         self.previous = None
         self.origin = None
 
-    def render(self, rgb, state, dt):
+    def render(self, rgb, state, dt, *, base_mask=None):
         if state not in ("activate", "sleep") or not np.isfinite(dt) or dt <= 0:
             raise ValueError("invalid transition state/dt")
         if self.state is not None and state != self.state:
@@ -105,9 +117,9 @@ class StateTransition:
             self.age = 0.0
         self.state = state
         if self.age < DURATION:
-            result = composite(self.origin, rgb, self.height, self.age, self.direction, self.weights, self.radius)
+            result = composite(self.origin, rgb, self.height, self.age, self.direction, self.weights, self.radius, base_mask)
             self.age += dt
         else:
-            result = limit_rgb(np.asarray(rgb)*PEAK/255., self.weights)
+            result = base_frame(rgb, self.weights, base_mask)
         self.previous = result.copy()
         return result.astype(np.uint8)
