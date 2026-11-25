@@ -138,12 +138,15 @@ def test_audio_gap_cannot_discard_late_chunk(tmp_path):
 ])
 def test_same_values_same_spatial_encoding_with_softer_sleep(observation):
     raw = np.zeros((*VALID_MASK.shape, 3), np.uint8)
-    active, sleep = RipplesVisual("activate"), RipplesVisual("sleep")
+    # Compare the shared spatial encoding before the nonlinear output budget.
+    # Active sensory gain is 1.15; Sleep memory gain is 0.72.
+    active = RipplesVisual("activate", output_limits=False)
+    sleep = RipplesVisual("sleep", output_limits=False)
     sleep.set_memory([{**observation, "counts": {key: 10000 for key in observation["features"]}}])
     a = active.render(raw, 0, events=[observation])
     b = sleep.render(raw, 0)
     assert a.any()
-    np.testing.assert_allclose(b, a.astype(float)*.72, atol=1.)
+    np.testing.assert_allclose(b, a.astype(float)*(.72/1.15), atol=1.)
     assert np.all(b <= a)
     # Incoming moving measurements cannot draw trails over Sleep's fixed mean.
     for _ in range(10):

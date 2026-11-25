@@ -45,6 +45,9 @@ class SpatialMemory:
             n INTEGER NOT NULL, mean REAL NOT NULL, m2 REAL NOT NULL,
             PRIMARY KEY(day,source,x,y,feature));
           CREATE TABLE IF NOT EXISTS imports (key TEXT PRIMARY KEY, imported REAL NOT NULL, sequence INTEGER NOT NULL);
+          CREATE TABLE IF NOT EXISTS trajectory (
+            source TEXT NOT NULL, second INTEGER NOT NULL, x REAL NOT NULL, y REAL NOT NULL,
+            PRIMARY KEY(source,second)) WITHOUT ROWID;
         """)
         if "end_sequence" not in [r[1] for r in self.db.execute("PRAGMA table_info(imports)")]:
             self.db.execute("ALTER TABLE imports ADD COLUMN end_sequence INTEGER NOT NULL DEFAULT -1")
@@ -85,6 +88,7 @@ class SpatialMemory:
             raise RuntimeError("10,000 recording limit reached; consolidate batches before importing more")
         epoch = time.time() if epoch is None else epoch
         buckets = defaultdict(list)
+        positions = defaultdict(list)
         for event in events:
             cell = cell_xy(event["xy"])
             if cell is None:
@@ -93,6 +97,10 @@ class SpatialMemory:
             if source not in ("hyeol", "maek"):
                 raise ValueError("unknown sensor source")
             second = int(epoch+event["t"])
+            position = event.get('_track_xy', event['xy'])
+            if cell_xy(position) is None:
+                raise ValueError('invalid trajectory position')
+            positions[(source,second)].append(position)
             for feature, value in event["features"].items():
                 if feature not in FEATURES or not np.isfinite(value):
                     raise ValueError("unknown or nonfinite feature")
@@ -100,6 +108,8 @@ class SpatialMemory:
         now_day = int(time.time()//86400)
         try:
             with self.db:
+                self.db.executemany('INSERT OR IGNORE INTO trajectory VALUES (?,?,?,?)',
+                    [(source,second,*np.mean(xy,axis=0).tolist()) for (source,second),xy in positions.items()])
                 for (second, source, x, y, feature), values in buckets.items():
                     value = float(np.mean(values))
                     # day=-1 is lifetime memory, never pruned with the daily layer.
@@ -122,6 +132,35 @@ class SpatialMemory:
 
     def snapshot(self):
         return self._snapshot(self.db)
+
+    def history(self, max_points=9600):
+        """Full history remains on disk; only this display response is decimated.
+
+        Fourth column is a continuity segment ID, computed BEFORE decimation.
+        Never connect across missing acquisition intervals after time compression.
+        """
+        if not 4 <= max_points <= 9600:
+            raise ValueError('history display budget must be 4..9600')
+        count, low, high = self.db.execute('SELECT count(*),min(second),max(second) FROM trajectory').fetchone()
+        tracks = {'hyeol':[], 'maek':[]}
+        stride = max(1, int(np.ceil(((high or 0)-(low or 0)+1)/(max_points-2))))
+        rows = self.db.execute('''WITH previous AS (
+          SELECT *,lag(second) OVER(PARTITION BY source ORDER BY second) AS prev FROM trajectory
+        ), segmented AS (
+          SELECT *,sum(CASE WHEN prev IS NULL OR second-prev>3 THEN 1 ELSE 0 END)
+            OVER(PARTITION BY source ORDER BY second) AS segment FROM previous
+        ), sampled AS (
+          SELECT *,row_number() OVER(PARTITION BY source,cast((second-?)/? AS INTEGER) ORDER BY second DESC) AS rn,
+            min(second) OVER(PARTITION BY source) AS first FROM segmented
+        ) SELECT source,second,x,y,segment FROM sampled WHERE rn=1 OR second=first ORDER BY source,second''',(low or 0,stride))
+        for role, second, x, y, segment in rows:
+            tracks[role].append([second,x,y,segment])
+        return {'schema':'ripples.sleep-replay/1','example':self.namespace=='demo',
+                'replay_s':480,'all_s':120,'tracks':tracks,'snapshot':self.snapshot(),
+                'storage':{'points':count,'first_second':low,'last_second':high,
+                           'duration_s':0 if low is None else high-low,
+                           'display_sample_s':stride,'full_history_retained':True,
+                           'database_bytes':self.path.stat().st_size,'limit_MiB':LIMIT_MIB}}
 
     @classmethod
     def read_snapshot(cls, path):

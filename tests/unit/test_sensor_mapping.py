@@ -35,6 +35,15 @@ def test_camera_fixed_distance_axis_and_coverage():
     np.testing.assert_allclose(dim, a*.5)
 
 
+def test_camera_is_floor_anchored_with_bright_distance_endpoint():
+    volume = stamp('hyeol', {'depth_4': 4., 'coverage_4': 1.})
+    column = volume[16,16,:,1]
+    occupied = np.flatnonzero(column)
+    assert occupied[0] == 0
+    assert np.array_equal(occupied, np.arange(occupied[-1]+1))
+    assert column[occupied[-1]] > column[0] > 0
+
+
 def test_microphone_bars_grow_and_zero_is_silent():
     a = stamp("maek", {"mic_level_0": .2})
     b = stamp("maek", {"mic_level_0": .8})
@@ -44,6 +53,24 @@ def test_microphone_bars_grow_and_zero_is_silent():
     left_x = np.where(b.any(axis=(1, 2, 3)))[0]
     right_x = np.where(stamp("maek", {"mic_level_2": .8}).any(axis=(1, 2, 3)))[0]
     assert left_x.max() < right_x.min()
+
+
+def test_sound_ribbon_height_tracks_frequency_and_volume_tracks_strength():
+    def centroid(v):
+        weights=v.sum(axis=(0,1,3))
+        return np.dot(weights,np.arange(24))/weights.sum()
+    low=stamp('maek',{'mic_level_1':.7,'centroid_1':300})
+    high=stamp('maek',{'mic_level_1':.7,'centroid_1':3500})
+    quiet=stamp('maek',{'mic_level_1':.1,'centroid_1':3500})
+    assert centroid(high)-centroid(low)>2
+    assert high.sum()>quiet.sum()
+    for v in (low,high,quiet):
+        heights=np.flatnonzero(v.any(axis=(0,1,3)))/23
+        assert heights.min()>=.39 and heights.max()<.70
+    a=stamp('maek',{'mic_level_1':.7,'centroid_1':1700})
+    b=stamp('maek',{'mic_level_1':.7,'centroid_1':1710})
+    assert 0<centroid(b)-centroid(a)<.1  # Small frequency changes are not quantized into jumps.
+    assert not stamp('maek',{'centroid_1':800}).any()
 
 
 def test_clip_preserves_logical_rgb_and_strip_offsets(tmp_path):

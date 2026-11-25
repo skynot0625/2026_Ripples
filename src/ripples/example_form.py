@@ -57,7 +57,13 @@ def validate(event):
         if m["upward_m"] is not None:
             _number(m["upward_m"], 1e-9, 59.999999)
     else:
-        _keys(m, ("mics", "rms"))
+        _keys(m, ("mics", "rms", "centroid_hz") if "centroid_hz" in m else ("mics", "rms"))
+        if "centroid_hz" in m:
+            if not isinstance(m['centroid_hz'], list) or len(m['centroid_hz']) != 3:
+                raise ValueError('three optional PCM spectral centroids required')
+            for v in m['centroid_hz']:
+                if v is not None:
+                    _number(v, 0, 22050)
         for name in ("mics", "rms"):
             if not isinstance(m[name], list) or len(m[name]) != 3:
                 raise ValueError("three microphones in L/C/R order required")
@@ -87,6 +93,7 @@ def to_render_event(event, bounds_m):
             f["ceiling_0"] = m["upward_m"]
     else:
         f = {f"mic_level_{i}": v for i, v in enumerate(m["mics"])}
+        f.update({f'centroid_{i}': v for i,v in enumerate(m.get('centroid_hz', [])) if v is not None})
     return {"t": event["t_ms"]/1000., "source": event["source"],
             "xy": ((xy-bounds[:, 0])/(bounds[:, 1]-bounds[:, 0])*10-5).tolist(), "features": f}
 
@@ -123,6 +130,7 @@ def schema():
     hyeol = obj({"depth_m": vector(9, {"type": ["number", "null"], "exclusiveMinimum": 0, "maximum": 4}),
                  "coverage": vector(9, unit), "upward_m": {"type": ["number", "null"], "exclusiveMinimum": 0, "exclusiveMaximum": 60}})
     maek = obj({"mics": vector(3, unit), "rms": vector(3, unit)})
+    maek['properties']['centroid_hz'] = vector(3, {'type': ['number', 'null'], 'minimum': 0, 'maximum': 22050})
     shape.update({"$schema": "https://json-schema.org/draft/2020-12/schema",
                   "title": "Ripples explicit example event v1",
                   "allOf": [{"if": {"properties": {"source": {"const": "hyeol"}}},

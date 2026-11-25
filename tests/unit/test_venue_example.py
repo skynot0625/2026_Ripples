@@ -63,7 +63,10 @@ def test_mapping_preserves_axes_and_missing_values():
     e["position"]["xy_m"] = s.led_bounds[:, 1].tolist()
     assert to_render_event(e, s.led_bounds)["xy"] == [5, 5]
     r = to_render_event(sample("maek"), s.led_bounds)
-    assert set(r["features"]) == {"mic_level_0", "mic_level_1", "mic_level_2"}
+    assert {"mic_level_0", "mic_level_1", "mic_level_2"} <= set(r["features"])
+    for i,value in enumerate(sample('maek')['measurement'].get('centroid_hz', [])):
+        if value is not None:
+            assert r['features'][f'centroid_{i}'] == value
 
 
 def test_route_stays_in_clearance_grid_and_is_closed():

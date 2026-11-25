@@ -15,20 +15,21 @@ from ripples.paths import LAYOUT_DIR
 def recorded_activity_clip(frames=680):
     """Inline bounded, recorded firing-only layer for browser position simulation."""
     from ripples.run import recorded_spikes
+    from ripples.visualization import ACTIVITY_DECAY_TAU_S
     source = recorded_spikes()
     activity = np.zeros((*VALID_MASK.shape,3), np.float32)
     chunks = []
     try:
         for _ in range(frames):
             raw, _ = next(source)
-            activity *= np.exp(-.1/.65)
+            activity *= np.exp(-.1/ACTIVITY_DECAY_TAU_S)
             activity = np.maximum(activity, raw.astype(np.float32))
             chunks.append(activity[VALID_MASK].astype(np.uint8).tobytes())
     finally:
         source.close()
     compressed = gzip.compress(b"".join(chunks), compresslevel=6, mtime=0)
     return {"encoding":"gzip+base64", "frames":frames, "fps":10, "neurons":8460,
-            "channels":3, "source":"recorded reservoir gain9.5; firing + 0.65s afterglow only",
+            "channels":3, "source":"recorded reservoir gain9.5; firing + 1.5s exponential release time constant",
             "sha256":hashlib.sha256(compressed).hexdigest(),
             "data":base64.b64encode(compressed).decode("ascii")}
 

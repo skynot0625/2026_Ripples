@@ -1,6 +1,6 @@
 {
   "timezone": "Asia/Seoul",
-  "anchor": "11:00",
+  "anchor": "10:30",
   "activate_minutes": 20,
   "sleep_minutes": 10
 }

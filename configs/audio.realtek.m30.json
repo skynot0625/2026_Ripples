@@ -1,15 +1,25 @@
 {
-  "device": "Speakers (Realtek HD Audio output), Windows WDM-KS",
+  "device": "스피커(Realtek High Definition Audio), Windows DirectSound",
   "sample_rate": 48000,
   "stream_channels": 8,
-  "channel_map": [0, 1, 4, 5],
-  "speaker_labels": ["FRONT L", "FRONT R", "REAR L", "REAR R"],
+  "channel_map": [
+    0,
+    1,
+    4,
+    5
+  ],
+  "speaker_labels": [
+    "FRONT L",
+    "FRONT R",
+    "REAR L",
+    "REAR R"
+  ],
   "physical_orientation": "unconfirmed",
-  "master": 0.16,
+  "master": 0.26,
   "transition_cues": true,
   "active_source": "led",
   "led_frame_file": null,
   "state_mode": "scheduled",
   "state_file": null,
-  "notes": "ASRock B650M Pro X3D / ALC897. Silent 48kHz callback stream verified; physical jack retasking and speaker routing await cabling. 8-channel stream with center/LFE/side silent. Two stereo amplifiers or four independent amplifier channels are required. WDM-KS may bypass Windows mixer volume; start amplifier gain low. No automatic playback."
+  "notes": "HISTORICAL 8-channel audition profile; NOT the current exhibition setup. Use audio.site-quad.json: user-set Quadraphonic, channels 1/2/3/4 unchanged, player gain 1.0 and physical amplifiers control listening volume. ASRock B650M Pro X3D / ALC897. Silent 48kHz callback stream verified; physical jack retasking and speaker routing await cabling. 8-channel stream with center/LFE/side silent. Two stereo amplifiers or four independent amplifier channels are required. WDM-KS may bypass Windows mixer volume; start amplifier gain low. No automatic playback. Site audition: DirectSound Realtek audible; master raised to 0.26 by user request. Individual physical speaker routing still requires confirmation."
 }

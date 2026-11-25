@@ -1,0 +1,27 @@
+{
+  "device": "스피커(Realtek(R) Audio), Windows WASAPI",
+  "sample_rate": 48000,
+  "stream_channels": 4,
+  "channel_map": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "playback_gain": 1.0,
+  "windows_configuration": "User-set Quadraphonic; DO NOT CHANGE",
+  "order": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "view": "clockwise viewed from below, as specified by user",
+  "speakers": {
+    "1": "Front Left / 전시장 안쪽",
+    "2": "Front Right / 입구쪽",
+    "3": "Rear Left / 길가 창문쪽",
+    "4": "Rear Right / 위치 추가 확인 전"
+  },
+  "volume_policy": "Player gain 100%; physical listening level controlled at amplifiers; source retains headroom"
+}

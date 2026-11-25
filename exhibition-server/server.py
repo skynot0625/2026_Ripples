@@ -24,6 +24,7 @@ import numpy as np
 import pi_bundle
 import audio_assets
 import speaker_control
+import history_control
 from odometry import Odometry, OdometryWorker
 from host_stats import HostStats
 from inputs import InputChannel, create_channels, start_mock_sources
@@ -1050,6 +1051,9 @@ class ViewerHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == '/api/ripples-history':
+            history_control.handle(self)
+            return
         if parsed.path == '/api/speaker-test':
             speaker_control.handle(self)
             return
@@ -1397,6 +1401,9 @@ class ViewerHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == '/api/ripples-history':
+            history_control.handle(self, mutation=True)
+            return
         if parsed.path == '/api/speaker-test':
             speaker_control.handle(self, mutation=True)
             return

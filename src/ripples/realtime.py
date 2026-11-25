@@ -221,6 +221,9 @@ class LiveMemory:
         self.dropped = 0
         self.saved_seconds = 0
         self.snapshot = None
+        self.history = None
+        self.frequency = None
+        self.history_published = 0.
         self.thread = threading.Thread(target=self._run, name="spatial-memory", daemon=True)
         self.thread.start()
         if not self.ready.wait(10) or self.error:
@@ -248,10 +251,14 @@ class LiveMemory:
             def publish():
                 visual.set_memory(db.snapshot())
                 self.snapshot = (visual.memory.copy(), visual.memory_spread.copy())
+                self.frequency = visual.memory_frequency.copy()
+                if self.history is None or time.monotonic()-self.history_published>=30:
+                    self.history = db.history()
+                    self.history_published = time.monotonic()
 
             publish()
             self.ready.set()
-            second, bucket = None, {}
+            second, bucket, positions = None, {}, {}
             published = time.monotonic()
 
             def flush():
@@ -260,6 +267,7 @@ class LiveMemory:
                 events = []
                 for (source, x, y), values in bucket.items():
                     events.append({"source": source, "xy": [(x+.5)/24*10-5, (y+.5)/24*10-5],
+                                   "_track_xy": (positions[source][:2]/positions[source][2]).tolist(),
                                    "t": second, "features": {k: v[0]/v[1] for k, v in values.items()}})
                 if db.import_recording("live:"+ident, events, epoch=0, sequence=second):
                     self.saved_seconds += 1
@@ -273,7 +281,7 @@ class LiveMemory:
                 except queue.Empty:
                     if second is not None and time.time() >= second+1:
                         flush()
-                        second, bucket = None, {}
+                        second, bucket, positions = None, {}, {}
                     event = None
                 if event is not None:
                     tick = int(event["t"])
@@ -282,9 +290,10 @@ class LiveMemory:
                         continue
                     if tick != second:
                         flush()
-                        second, bucket = tick, {}
+                        second, bucket, positions = tick, {}, {}
                     cell = cell_xy(event["xy"])
                     if cell is not None:
+                        positions.setdefault(event['source'],np.zeros(3))[:] += [*event['xy'],1]
                         group = bucket.setdefault((event["source"], *cell), {})
                         for feature, value in event["features"].items():
                             total, n = group.get(feature, (0., 0))

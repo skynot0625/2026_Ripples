@@ -16,6 +16,7 @@ from ripples.visualization import RipplesVisual, SLEEP_MEMORY_GAIN, DREAM_TAU_S
 from ripples.hardware.rgb565 import InstallationEncoder
 from ripples.schedule import ExhibitionSchedule, StateController
 from ripples.sonification import FeaturePublisher
+from ripples.sleep_replay import SleepReplay
 
 
 def main():
@@ -111,6 +112,7 @@ def main():
     def frames():
         nonlocal frames_done, state_status
         last, due, snapshot = None, time.monotonic(), None
+        replay=None;last_sleep=None;manual_sleep_start=time.monotonic()
         for raw, count in itertools.chain([first], source):
             if not a.port:
                 time.sleep(max(0, due-time.monotonic()))
@@ -127,6 +129,8 @@ def main():
             current = memory.snapshot if memory else None
             if current is not None and current is not snapshot:
                 visual.memory, visual.memory_spread = current
+                if memory.frequency is not None:
+                    visual.memory_frequency=memory.frequency
                 if other:
                     other.memory, other.memory_spread = current
                 snapshot = current
@@ -135,10 +139,20 @@ def main():
             state_status = state_control.at()
             visual.set_state(state_status["state"])
             if state_status["state"] != previous_state:
+                manual_sleep_start=now
                 print(json.dumps({"state_transition": state_status}, ensure_ascii=False), flush=True)
             batch = sensors.drain()
             tick = time.perf_counter()
-            frame = visual.render(raw, count, events=batch, dt=dt)
+            mask=None
+            if visual.state=='sleep':
+                local=((state_status['phase_seconds']-schedule.active) if state_status['mode']=='scheduled' else now-manual_sleep_start)%600
+                if replay is None or last_sleep is None or local<last_sleep:
+                    replay=SleepReplay(memory.history['tracks'] if memory and memory.history else {})
+                last_sleep=local
+                mask=replay.mask(visual.coords[:2].T/31*10-5,local)
+            else:
+                last_sleep=None
+            frame = visual.render(raw, count, events=batch, dt=dt,sensor_mask=mask)
             audio_frames.publish(frame,visual.state)
             if not a.port:
                 encoder.encode_packet(frame, frames_done)

@@ -5,7 +5,7 @@ DURATION = 5.0
 SWEEP = 1.4
 PEAK = 96.0
 MEAN = 18.0
-TINT = np.array([96., 84., 64.])
+TINT = np.array([96., 96., 96.])
 BEZIER = (.42, 0., 1., 1.)
 
 

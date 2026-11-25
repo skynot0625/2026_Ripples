@@ -37,8 +37,8 @@
       "sha256": "113f903631afe768fd23638a7931906c75f300d12add264e3593c1902bc72fd3"
     },
     "events.jsonl": {
-      "bytes": 1956550,
-      "sha256": "f1696847637bb3c3c1c92d46dcabcff1fac36f63d7830c86ff4d50ee3987a23d"
+      "bytes": 2059045,
+      "sha256": "7a5264b5e3985a10e46baa48cfc3226ff6600b6a81388e3bd6c7b05a1eb056eb"
     },
     "beacon_wire.jsonl": {
       "bytes": 359584,
@@ -57,12 +57,12 @@
       "sha256": "eb39b015ef4af0c9dbbb440a80b6f1fef2f48d977e72bc81b831f0e586528e9e"
     },
     "sample_maek.json": {
-      "bytes": 549,
-      "sha256": "9b3bbfd131cedf002f78b28c9fd89c9cbbc413eaccba57a48898c756be5c69e4"
+      "bytes": 629,
+      "sha256": "b9c33d72a37666521c791bc972106ce9a9006a978375f73e239660d6c9c5f63b"
     },
     "event.schema.json": {
-      "bytes": 4202,
-      "sha256": "4cb4e2f1cd14e2247cb09a34a856e146e0efdf388ea4b852ec06a462b72f90e0"
+      "bytes": 4576,
+      "sha256": "87c03160697a68a1a3d898da62e27011f9d0c07012ca118d00bb254edfc5f7db"
     },
     "route.json": {
       "bytes": 27413,

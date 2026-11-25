@@ -35,6 +35,8 @@ def test_scene_coordinates_not_synthetic_path_and_outside_rejected():
 @pytest.mark.parametrize('source,features',[
  ('hyeol',{'depth_0':1.2,'coverage_0':.8,'depth_1':2.1,'coverage_1':.9,'ceiling_0':2.3}),
  ('maek',{'mic_level_0':.3,'mic_level_1':.6,'mic_level_2':.9}),
+ ('maek',{'mic_level_0':.3,'mic_level_1':.6,'mic_level_2':.9,'centroid_0':400,'centroid_1':1200,'centroid_2':3200}),
+ ('maek',{'power_0':.001,'centroid_0':800,'band_low':.0002}),
 ])
 def test_feature_mapping_and_spatial_smoothing_match_python(source,features):
     event={'source':source,'uv':[.7,.6],'features':features}
@@ -78,7 +80,7 @@ def test_pausing_stops_observation_and_implicit_storage_is_bounded():
 def test_led_light_centroid_follows_maek_and_trail_fades_on_disconnect():
     result=run("""
     const s=new S([[0,10],[0,10]]),P={count:1024,loc:[],ripplesWeight:[],ripplesHeight:[]};
-    for(let x=0;x<32;x++)for(let y=0;y<32;y++){P.loc.push(x,0,-y,0);P.ripplesWeight.push(1);P.ripplesHeight.push(.2);}
+    for(let x=0;x<32;x++)for(let y=0;y<32;y++){P.loc.push(x,0,-y,0);P.ripplesWeight.push(1);P.ripplesHeight.push(.55);}
     const centroid=rgb=>{let total=0,sum=0;for(let i=0;i<P.count;i++){const v=rgb[i*3]+rgb[i*3+1]+rgb[i*3+2];total+=v;sum+=Math.floor(i/32)*v;}return sum/total;};
     let now=0;
     for(let i=0;i<10;i++){now+=100;s.setPositions({maek:{x:2000,y:3000}},'m30',now);s.tick(now,false);}

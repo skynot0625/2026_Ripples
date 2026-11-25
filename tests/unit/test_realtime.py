@@ -136,7 +136,9 @@ def test_pcm_bands_and_channel_phase_do_not_cancel():
 def test_new_live_levels_are_not_frequency_bands():
     v = np.zeros((32, 32, 24, 3), np.float32)
     RipplesVisual.stamp(v, {"source": "maek", "xy": [0, 0], "features": {"mic_level_0": .7}})
-    assert v[:, :, 2].any() and v[:, :, 7].any() and not v[:, :, 12:].any()
+    occupied=np.flatnonzero(v.any(axis=(0,1,3)))
+    assert occupied.min()>=9 and occupied.max()<=16  # Sound now occupies the middle layer.
+    assert not v[...,:2].any()  # One microphone identity, no invented spectral bands.
 
 
 def test_latest_visual_and_stale_position(config):

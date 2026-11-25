@@ -11,7 +11,6 @@ import wave
 import zipfile
 
 import numpy as np
-from scipy.optimize import least_squares
 
 FEATURES = tuple([f"depth_{i}" for i in range(9)] +
                  [f"coverage_{i}" for i in range(9)] +
@@ -37,6 +36,7 @@ def estimate_position(rssi_dbm, anchors=DEFAULT_ANCHORS, reference_dbm=-59., exp
     if len(a) < 3 or np.linalg.matrix_rank(a - a.mean(axis=0)) < 2:
         return None
     distances = 10. ** ((refs-values)/(10.*exponent))
+    from scipy.optimize import least_squares
     result = least_squares(lambda xy: (np.linalg.norm(a-xy, axis=1)-distances),
                            a.mean(axis=0), loss="soft_l1", f_scale=.5)
     return result.x

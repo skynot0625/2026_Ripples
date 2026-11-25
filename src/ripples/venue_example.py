@@ -12,6 +12,8 @@ from pathlib import Path
 import struct
 import tempfile
 import time
+import wave
+from functools import lru_cache
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -23,14 +25,31 @@ from ripples.memory import SpatialMemory
 from ripples.paths import DATA_DIR, ROOT, RUNTIME_DIR
 from ripples.realtime import Positions
 from ripples.run import recorded_spikes
-from ripples.sensors import depth_features
+from ripples.sensors import depth_features, pcm_features
 from ripples.visualization import RipplesVisual
 from ripples.example_clip import ExampleClip
+from ripples.sleep_replay import example_sleep_data
 
 FOLDER = DATA_DIR/"m30_session"
 SEED = 20261120
 BASE_NS = int(datetime(2026, 11, 20, tzinfo=timezone.utc).timestamp()*1e9)
 BLOCKS = {"column", "wall", "glass", "door", "movable_wall", "fixture", "mock_frame", "mock_plate"}
+
+
+@lru_cache(maxsize=1)
+def frequency_profile():
+    """Bounded 0.1 s analysis of our existing synthetic PCM fixture, never live audio."""
+    path = DATA_DIR/'tower_audio/synthetic_source/audio.wav'
+    values = []
+    with wave.open(str(path), 'rb') as wav:
+        assert (wav.getnchannels(),wav.getsampwidth(),wav.getframerate()) == (3,2,44100)
+        assert wav.getnframes() <= 44100*60
+        while raw := wav.readframes(4410):
+            f = pcm_features(raw)
+            values.append([round(f[f'centroid_{i}'],3) if f'centroid_{i}' in f else None for i in range(3)])
+    return {'source': str(path.relative_to(ROOT)).replace('\\', '/'),
+            'synthetic': True, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+            'hop_s': .1, 'definition': 'power spectral centroid per PCM channel; not pitch', 'values': values}
 
 
 class Scene:
@@ -208,6 +227,8 @@ def generate(folder=FOLDER):
                 m = {"rms": rms.tolist(), "mics": np.round(np.clip((20*np.log10(rms)+70)/50, 0, 1), 4).tolist()}
                 audio.append({"v": 1, "device": "EXAMPLE-MAEK", "seq": tick, "t": BASE_NS/1e9+t,
                               **m, "haptic": [0, 0], "level_bias": 0., "direction_deg": None})
+                profile = frequency_profile()
+                m['centroid_hz'] = profile['values'][tick % len(profile['values'])]
             event = {"schema": VERSION, "example": True, "session_id": "m30-example-v1", "source": role,
                      "seq": tick, "t_ms": tick*100,
                      "position": {"frame": "m30", "method": "simulation_truth", "xy_m": np.round(xy, 5).tolist(),
@@ -339,6 +360,18 @@ def render(folder, scene, output):
                     movie.add_venue(images, t, count, places, latest)
             source.close()
             clip_doc = clip.close(scene.led_bounds, include_activity=True)
+            clip_doc['frequency_profile'] = frequency_profile()
+            clip_doc['layer_order_top_down'] = ['ceiling', 'sound', 'camera']
+            clip_doc['palette'] = 'white-both-states'
+            # Import each source recording once; playback loops never add observations.
+            archive=SpatialMemory(RUNTIME_DIR/'m30-example-history.sqlite3',namespace='demo')
+            try:
+                identity=hashlib.sha256((folder/'events.jsonl').read_bytes()).hexdigest()
+                archive.import_recording('m30:'+identity,normalized,epoch=BASE_NS/1e9)
+                clip_doc['sleep_replay']=archive.history()
+            finally:
+                archive.close()
+            write_json(ROOT/'exhibition-server/static/ripples-example.json', clip_doc)
             movie.save(output)
             snapshot = memory.snapshot()
             report = {"example": True, "venue": "m30", "history_s": 180, "visible_input_s": 60, "fade_s": 8,
